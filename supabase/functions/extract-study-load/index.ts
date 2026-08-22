@@ -53,6 +53,18 @@ function required(name: string) {
   return value;
 }
 
+async function hasAuthenticatedUser(req: Request) {
+  const authorization = req.headers.get('authorization');
+  if (!authorization) return false;
+  const response = await fetch(`${required('SUPABASE_URL')}/auth/v1/user`, {
+    headers: {
+      apikey: required('SUPABASE_ANON_KEY'),
+      authorization,
+    },
+  });
+  return response.ok;
+}
+
 function toBase64(bytes: Uint8Array) {
   let binary = '';
   for (let offset = 0; offset < bytes.length; offset += 0x8000) {
@@ -73,9 +85,10 @@ function outputText(response: { output_text?: string; output?: Array<{ content?:
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
-  if (!req.headers.get('authorization')) return json({ error: 'Authentication required' }, 401);
 
   try {
+    if (!(await hasAuthenticatedUser(req))) return json({ error: 'Sign in before importing a study load.' }, 401);
+
     const form = await req.formData();
     const file = form.get('file');
     if (!(file instanceof File)) return json({ error: 'Choose a photo or PDF of the study load.' }, 400);
@@ -115,7 +128,13 @@ Deno.serve(async (req: Request) => {
     const responseBody = await openAiResponse.json();
     if (!openAiResponse.ok) {
       console.error('OpenAI study-load extraction failed', openAiResponse.status, responseBody?.error?.code, responseBody?.error?.message);
-      return json({ error: 'The document reader is temporarily unavailable. Try again in a moment.' }, 502);
+      const code = responseBody?.error?.code ?? `openai_http_${openAiResponse.status}`;
+      return json({
+        code,
+        error: code === 'insufficient_quota'
+          ? 'Study-load reading has no available API credits. Add credits to the OpenAI API project, then try again.'
+          : 'The document reader is temporarily unavailable. Try again in a moment.',
+      }, 502);
     }
 
     const extracted = JSON.parse(outputText(responseBody));
