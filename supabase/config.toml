@@ -1,2 +1,5 @@
 [functions.send-reminders]
 verify_jwt = false
+
+[functions.extract-study-load]
+verify_jwt = true

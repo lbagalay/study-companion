@@ -17,16 +17,16 @@ import { getErrorMessage } from '@/lib/errors';
 import { deleteRecord, getSubject, saveSubject } from '@/services';
 
 const colors = ['#4F6F52', '#4779A8', '#8B5E83', '#B56B45', '#6B65A8', '#A28534'] as const;
-const schema = z.object({ name: z.string().trim().min(1, 'Enter a subject name.').max(100, 'Keep the name under 100 characters.'), code: z.string().trim().max(30, 'Keep the code under 30 characters.'), description: z.string().trim().max(1000, 'Keep the description under 1,000 characters.'), teacher: z.string().trim().max(100, 'Keep the teacher name under 100 characters.'), room: z.string().trim().max(50, 'Keep the room under 50 characters.'), color: z.string(), semester: z.string().trim().max(50, 'Keep the semester under 50 characters.'), academic_year: z.string().trim().max(20, 'Keep the academic year under 20 characters.') });
+const schema = z.object({ name: z.string().trim().min(1, 'Enter a subject name.').max(100, 'Keep the name under 100 characters.'), code: z.string().trim().max(30, 'Keep the code under 30 characters.'), description: z.string().trim().max(1000, 'Keep the description under 1,000 characters.'), teacher: z.string().trim().max(100, 'Keep the teacher name under 100 characters.'), room: z.string().trim().max(50, 'Keep the room under 50 characters.'), color: z.string(), semester: z.string().trim().max(50, 'Keep the semester under 50 characters.'), academic_year: z.string().trim().max(20, 'Keep the academic year under 20 characters.'), units: z.string().refine((value) => value.trim() !== '' && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 20, 'Enter units from 0 to 20.') });
 type Values = z.infer<typeof schema>;
-const defaults: Values = { name: '', code: '', description: '', teacher: '', room: '', color: colors[0], semester: '', academic_year: '' };
+const defaults: Values = { name: '', code: '', description: '', teacher: '', room: '', color: colors[0], semester: '', academic_year: '', units: '0' };
 
 export function SubjectForm({ id }: { id?: string }) {
   const router = useRouter(); const queryClient = useQueryClient();
   const subject = useQuery({ queryKey: ['subject', id], queryFn: () => getSubject(id!), enabled: Boolean(id) });
   const { control, handleSubmit, reset, formState: { errors } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: defaults });
-  useEffect(() => { if (subject.data) reset(subject.data); }, [reset, subject.data]);
-  const save = useMutation({ mutationFn: (values: Values) => saveSubject(values, id), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: keys.subjects }); router.back(); }, onError: (error) => Alert.alert('Could not save subject', getErrorMessage(error)) });
+  useEffect(() => { if (subject.data) reset({ ...subject.data, units: String(subject.data.units) }); }, [reset, subject.data]);
+  const save = useMutation({ mutationFn: (values: Values) => saveSubject({ ...values, units: Number(values.units) }, id), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: keys.subjects }); router.back(); }, onError: (error) => Alert.alert('Could not save subject', getErrorMessage(error)) });
   const remove = useMutation({ mutationFn: () => deleteRecord('subjects', id!), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: keys.subjects }); router.back(); }, onError: (error) => Alert.alert('Could not delete subject', getErrorMessage(error)) });
   const confirmDelete = () => Alert.alert('Delete subject?', 'Its classes, tasks, exams, materials, notes, and sessions will also be deleted.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => remove.mutate() }]);
   if (id && subject.error) return <FeedbackState actionLabel="Try again" message={subject.error.message} onAction={() => void subject.refetch()} title="Could not load subject" />;
@@ -37,6 +37,7 @@ export function SubjectForm({ id }: { id?: string }) {
       <Controller control={control} name="code" render={({ field }) => <FormField error={errors.code?.message} label="Subject code" onChangeText={field.onChange} value={field.value} />} />
       <Controller control={control} name="teacher" render={({ field }) => <FormField error={errors.teacher?.message} label="Teacher" onChangeText={field.onChange} value={field.value} />} />
       <Controller control={control} name="room" render={({ field }) => <FormField error={errors.room?.message} label="Room" onChangeText={field.onChange} value={field.value} />} />
+      <Controller control={control} name="units" render={({ field }) => <FormField error={errors.units?.message} keyboardType="decimal-pad" label="Units" onChangeText={field.onChange} value={field.value} />} />
       <Controller control={control} name="semester" render={({ field }) => <FormField label="Semester" onChangeText={field.onChange} value={field.value} />} />
       <Controller control={control} name="academic_year" render={({ field }) => <FormField label="Academic year" onChangeText={field.onChange} value={field.value} />} />
       <Controller control={control} name="description" render={({ field }) => <FormField label="Description" multiline onChangeText={field.onChange} value={field.value} />} />

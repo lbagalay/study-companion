@@ -50,5 +50,11 @@ begin
   if not has_function_privilege('service_role', 'public.claim_due_web_notifications(integer)', 'execute') then
     raise exception 'The service role must be able to claim reminder deliveries';
   end if;
+  if has_function_privilege('anon', 'public.import_study_load(jsonb)', 'execute') then
+    raise exception 'Anonymous users must not import study loads';
+  end if;
+  if not has_function_privilege('authenticated', 'public.import_study_load(jsonb)', 'execute') then
+    raise exception 'Authenticated users must be able to import study loads';
+  end if;
 end;
 $$;

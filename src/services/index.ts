@@ -2,6 +2,7 @@ import { requireSupabaseClient } from '@/lib/supabase/client';
 import type { Database } from '@/types/database';
 import { File } from 'expo-file-system';
 import type { DocumentPickerAsset } from 'expo-document-picker';
+import { studyLoadExtractionSchema, type StudyLoadImportSubject } from '@/lib/study-load/schema';
 
 type Tables = Database['public']['Tables'];
 type TableName = keyof Tables;
@@ -21,6 +22,23 @@ function check(error: { message: string } | null) {
 export async function listSubjects() { const { data, error } = await requireSupabaseClient().from('subjects').select('*').order('name'); check(error); return data ?? []; }
 export async function getSubject(id: string) { const { data, error } = await requireSupabaseClient().from('subjects').select('*').eq('id', id).single(); check(error); return data; }
 export async function saveSubject(input: InsertOf<'subjects'>, id?: string) { const query = id ? requireSupabaseClient().from('subjects').update(input).eq('id', id).select().single() : requireSupabaseClient().from('subjects').insert(input).select().single(); const { data, error } = await query; check(error); return data; }
+export async function extractStudyLoad(asset: DocumentPickerAsset) {
+  const form = new FormData();
+  if (asset.file) form.append('file', asset.file, asset.name);
+  else form.append('file', { name: asset.name, type: asset.mimeType ?? 'application/octet-stream', uri: asset.uri } as unknown as Blob);
+  const { data, error } = await requireSupabaseClient().functions.invoke('extract-study-load', { body: form });
+  if (error) {
+    const response = (error as { context?: Response }).context;
+    const payload = response ? await response.clone().json().catch(() => null) as { error?: string } | null : null;
+    throw new Error(payload?.error || 'The study load could not be read. Check the file and try again.');
+  }
+  return studyLoadExtractionSchema.parse(data);
+}
+export async function importStudyLoad(subjects: StudyLoadImportSubject[]) {
+  const { data, error } = await requireSupabaseClient().rpc('import_study_load', { p_subjects: subjects });
+  check(error);
+  return data;
+}
 
 export async function listSchedules() { const { data, error } = await requireSupabaseClient().from('class_schedules').select('*').order('day_of_week').order('start_time'); check(error); return data ?? []; }
 export async function getSchedule(id: string) { const { data, error } = await requireSupabaseClient().from('class_schedules').select('*').eq('id', id).single(); check(error); return data; }

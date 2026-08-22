@@ -12,13 +12,14 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase db push
 ```
 
-`db push` applies both migrations in order. They create the MVP schema, owner-only row-level security, the private `study-materials` bucket, browser push subscriptions, and the reminder delivery queue.
+`db push` applies all migrations in order. They create the MVP schema, owner-only row-level security, the private `study-materials` bucket, browser push subscriptions, the reminder delivery queue, and the transactional study-load importer.
 
 If you use the dashboard SQL editor instead, run these files in order:
 
 1. `migrations/202608220001_initial_schema.sql`
 2. `migrations/202608220002_web_push_notifications.sql`
-3. `tests/security_assertions.sql`
+3. `migrations/202608220003_study_load_import.sql`
+4. `tests/security_assertions.sql`
 
 ## 2. Configure the app
 
@@ -60,3 +61,16 @@ Finally, replace the placeholders in `setup_web_push_cron.sql` and run it once i
 Run `tests/security_assertions.sql`, then inspect Edge Function logs and the `cron.job_run_details` table after creating an activity or exam whose reminder time is due.
 
 On iPhone, Web Push can only be enabled from the installed Home Screen PWA. Open the deployed site in Safari, use Share > Add to Home Screen, launch the installed app, sign in, and choose Profile > Enable this device.
+
+## Study-load document extraction
+
+The Subjects > Import study load flow sends the selected photo or PDF to an authenticated Edge Function. The function uses the OpenAI Responses API to extract schema-constrained subject and weekly schedule data. The file is not saved by Study Companion, and the user must review the result before importing it.
+
+Set the server-only OpenAI secret and deploy the function:
+
+```sh
+npx supabase secrets set OPENAI_API_KEY=YOUR_OPENAI_API_KEY OPENAI_STUDY_LOAD_MODEL=gpt-5.6-luna
+npx supabase functions deploy extract-study-load
+```
+
+Do not add `OPENAI_API_KEY` to the Expo or Vercel environment. OpenAI API use is billed to the API project associated with that key, so configure project spend limits before enabling this feature for other users.

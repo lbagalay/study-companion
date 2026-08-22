@@ -28,6 +28,7 @@ export type Subject = Timestamps & {
   color: string;
   semester: string;
   academic_year: string;
+  units: number;
 };
 
 export type ClassSchedule = Timestamps & {
@@ -173,6 +174,7 @@ export type Database = {
       register_web_push_subscription: { Args: { p_auth: string; p_endpoint: string; p_p256dh: string; p_user_agent: string }; Returns: undefined };
       unregister_web_push_subscription: { Args: { p_endpoint: string }; Returns: undefined };
       claim_due_web_notifications: { Args: { p_limit?: number }; Returns: NotificationDelivery[] };
+      import_study_load: { Args: { p_subjects: Json }; Returns: Json };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
