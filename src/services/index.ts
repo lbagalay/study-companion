@@ -5,6 +5,7 @@ import type { DocumentPickerAsset } from 'expo-document-picker';
 
 type Tables = Database['public']['Tables'];
 type TableName = keyof Tables;
+type EntityTableName = Exclude<TableName, 'profiles' | 'web_push_subscriptions' | 'notification_deliveries'>;
 export type InsertOf<T extends TableName> = Tables[T]['Insert'];
 export type UpdateOf<T extends TableName> = Tables[T]['Update'];
 function check(error: { message: string } | null) {
@@ -60,4 +61,4 @@ export async function saveSessions(inputs: InsertOf<'study_sessions'>[]) { const
 
 export async function getProfile(id: string) { const { data, error } = await requireSupabaseClient().from('profiles').select('*').eq('id', id).single(); check(error); return data; }
 export async function updateProfile(id: string, input: UpdateOf<'profiles'>) { const { data, error } = await requireSupabaseClient().from('profiles').update(input).eq('id', id).select().single(); check(error); return data; }
-export async function deleteRecord(table: Exclude<TableName, 'profiles'>, id: string) { const { error } = await requireSupabaseClient().from(table).delete().eq('id', id); check(error); }
+export async function deleteRecord(table: EntityTableName, id: string) { const { error } = await requireSupabaseClient().from(table).delete().eq('id', id); check(error); }

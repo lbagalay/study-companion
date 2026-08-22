@@ -16,4 +16,10 @@ export function FormField({ accessibilityLabel, error, label, multiline, style, 
   );
 }
 
-const styles = StyleSheet.create({ wrapper: { gap: spacing.xs }, label: typography.label, input: { borderRadius: radii.md, borderWidth: 1, fontSize: typography.body.fontSize, minHeight: 50, paddingHorizontal: spacing.md }, multiline: { minHeight: 112, paddingTop: spacing.md }, error: { ...typography.caption, marginLeft: spacing.xs } });
+const styles = StyleSheet.create({
+  wrapper: { gap: spacing.sm },
+  label: { ...typography.label, fontSize: 13 },
+  input: { borderRadius: radii.md, borderWidth: 1, boxShadow: '0 3px 10px rgba(180, 72, 78, 0.05)', fontSize: typography.body.fontSize, minHeight: 52, outlineColor: '#F26167', paddingHorizontal: spacing.md },
+  multiline: { minHeight: 112, paddingTop: spacing.md },
+  error: { ...typography.caption, marginLeft: spacing.xs },
+});

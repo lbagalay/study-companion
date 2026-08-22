@@ -26,7 +26,7 @@ export function PlaceholderScreen({
   return (
     <ScreenContainer>
       <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: palette.accent }]}>{eyebrow}</Text>
+        <Text style={[styles.eyebrow, { color: palette.accentStrong }]}>{eyebrow}</Text>
         <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
         <Text style={[styles.description, { color: palette.textMuted }]}>{description}</Text>
       </View>

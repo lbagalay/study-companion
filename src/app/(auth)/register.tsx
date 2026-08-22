@@ -24,7 +24,7 @@ export default function RegisterScreen() {
     <Controller control={control} name="email" render={({ field }) => <FormField autoCapitalize="none" error={errors.email?.message} keyboardType="email-address" label="Email" onBlur={field.onBlur} onChangeText={field.onChange} value={field.value} />} />
     <Controller control={control} name="password" render={({ field }) => <FormField error={errors.password?.message} label="Password" onBlur={field.onBlur} onChangeText={field.onChange} secureTextEntry value={field.value} />} />
     <AppButton label="Create account" loading={isSubmitting} onPress={submit} />
-    <Link href="/login" style={[styles.link, { color: palette.accent }]}>Already have an account?</Link>
+    <Link href="/login" style={[styles.link, { color: palette.accentStrong }]}>Already have an account?</Link>
   </AuthScreen>;
 }
 const styles = StyleSheet.create({ link: { ...typography.body, textAlign: 'center' } });

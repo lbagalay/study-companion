@@ -14,4 +14,14 @@ export function EntityList({ addLabel, children, description, empty, emptyMessag
     <View style={styles.list}>{loading ? <FeedbackState loading message="Fetching the latest information." title="Loading" /> : error ? <FeedbackState actionLabel="Try again" message={error.message} onAction={onRefresh} title="Could not load" /> : empty ? <FeedbackState message={emptyMessage} title="Nothing here yet" /> : children}</View>
   </ScrollView>;
 }
-const styles = StyleSheet.create({ content: { flexGrow: 1, paddingBottom: spacing.xxl, paddingHorizontal: spacing.lg }, list: { gap: spacing.md, marginTop: spacing.lg } });
+const styles = StyleSheet.create({
+  content: {
+    alignSelf: 'center',
+    flexGrow: 1,
+    maxWidth: 900,
+    paddingBottom: 124,
+    paddingHorizontal: spacing.lg,
+    width: '100%',
+  },
+  list: { gap: spacing.md, marginTop: spacing.lg },
+});

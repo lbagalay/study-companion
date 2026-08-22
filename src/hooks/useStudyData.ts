@@ -11,4 +11,4 @@ export function useMaterials() { return useQuery({ queryKey: keys.materials, que
 export function useNotes() { return useQuery({ queryKey: keys.notes, queryFn: service.listNotes }); }
 export function useSessions() { return useQuery({ queryKey: keys.sessions, queryFn: service.listSessions }); }
 export function useProfile(id?: string) { return useQuery({ queryKey: ['profile', id], queryFn: () => service.getProfile(id!), enabled: Boolean(id) }); }
-export function useDeleteRecord(table: Exclude<keyof Database['public']['Tables'], 'profiles'>, key: readonly string[]) { const client = useQueryClient(); return useMutation({ mutationFn: (id: string) => service.deleteRecord(table, id), onSuccess: () => client.invalidateQueries({ queryKey: key }) }); }
+export function useDeleteRecord(table: Exclude<keyof Database['public']['Tables'], 'profiles' | 'web_push_subscriptions' | 'notification_deliveries'>, key: readonly string[]) { const client = useQueryClient(); return useMutation({ mutationFn: (id: string) => service.deleteRecord(table, id), onSuccess: () => client.invalidateQueries({ queryKey: key }) }); }

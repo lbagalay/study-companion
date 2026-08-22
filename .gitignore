@@ -9,6 +9,7 @@ dist/
 dist-*-check/
 web-build/
 .playwright-cli/
+output/
 expo-env.d.ts
 
 # Native

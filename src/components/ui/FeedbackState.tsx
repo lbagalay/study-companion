@@ -7,10 +7,10 @@ import { useAppTheme } from '@/hooks/useAppTheme';
 type Props = { actionLabel?: string; loading?: boolean; message: string; onAction?: () => void; title: string };
 export function FeedbackState({ actionLabel, loading = false, message, onAction, title }: Props) {
   const palette = useAppTheme();
-  return <View style={[styles.container, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+  return <View style={[styles.container, { backgroundColor: palette.surfaceAlt, borderColor: palette.border }]}>
     {loading ? <ActivityIndicator color={palette.accent} size="large" /> : <Ionicons color={palette.accent} name="leaf-outline" size={30} />}
     <Text style={[styles.title, { color: palette.text }]}>{title}</Text><Text style={[styles.message, { color: palette.textMuted }]}>{message}</Text>
     {actionLabel && onAction ? <AppButton label={actionLabel} onPress={onAction} variant="secondary" /> : null}
   </View>;
 }
-const styles = StyleSheet.create({ container: { alignItems: 'center', borderRadius: radii.lg, borderWidth: 1, gap: spacing.md, margin: spacing.lg, padding: spacing.xl }, title: { ...typography.sectionTitle, textAlign: 'center' }, message: { ...typography.body, textAlign: 'center' } });
+const styles = StyleSheet.create({ container: { alignItems: 'center', borderRadius: radii.xl, borderWidth: 1, gap: spacing.md, marginVertical: spacing.sm, padding: spacing.xl }, title: { ...typography.sectionTitle, textAlign: 'center' }, message: { ...typography.body, maxWidth: 420, textAlign: 'center' } });

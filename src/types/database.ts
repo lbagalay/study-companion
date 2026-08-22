@@ -117,6 +117,34 @@ export type StudySession = Timestamps & {
   notification_id: string | null;
 };
 
+export type WebPushSubscription = Timestamps & {
+  endpoint: string;
+  user_id: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string;
+  last_seen_at: string;
+};
+
+export type NotificationDelivery = {
+  id: string;
+  user_id: string;
+  source_type: 'ASSIGNMENT' | 'EXAM' | 'SESSION';
+  source_id: string;
+  reminder_offset: number;
+  scheduled_for: string;
+  title: string;
+  body: string;
+  target_path: string;
+  status: 'PENDING' | 'PROCESSING' | 'DELIVERED' | 'FAILED';
+  attempt_count: number;
+  claimed_at: string | null;
+  delivered_at: string | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type TableDefinition<Row, Insert, Update> = {
   Row: Row;
   Insert: Insert;
@@ -137,9 +165,15 @@ export type Database = {
       study_materials: TableDefinition<StudyMaterial, CreateFields & Pick<StudyMaterial, 'subject_id' | 'title' | 'type'> & Partial<Omit<StudyMaterial, keyof CreateFields | 'subject_id' | 'title' | 'type'>>, Partial<StudyMaterial>>;
       notes: TableDefinition<Note, CreateFields & Pick<Note, 'subject_id' | 'title'> & Partial<Omit<Note, keyof CreateFields | 'subject_id' | 'title'>>, Partial<Note>>;
       study_sessions: TableDefinition<StudySession, CreateFields & Pick<StudySession, 'subject_id' | 'topic' | 'planned_at'> & Partial<Omit<StudySession, keyof CreateFields | 'subject_id' | 'topic' | 'planned_at'>>, Partial<StudySession>>;
+      web_push_subscriptions: TableDefinition<WebPushSubscription, Pick<WebPushSubscription, 'endpoint' | 'p256dh' | 'auth'> & Partial<WebPushSubscription>, Partial<WebPushSubscription>>;
+      notification_deliveries: TableDefinition<NotificationDelivery, Pick<NotificationDelivery, 'user_id' | 'source_type' | 'source_id' | 'reminder_offset' | 'scheduled_for' | 'title' | 'body' | 'target_path'> & Partial<NotificationDelivery>, Partial<NotificationDelivery>>;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      register_web_push_subscription: { Args: { p_auth: string; p_endpoint: string; p_p256dh: string; p_user_agent: string }; Returns: undefined };
+      unregister_web_push_subscription: { Args: { p_endpoint: string }; Returns: undefined };
+      claim_due_web_notifications: { Args: { p_limit?: number }; Returns: NotificationDelivery[] };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

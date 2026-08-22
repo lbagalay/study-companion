@@ -55,7 +55,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signUp = useCallback(async ({ email, password, fullName, preferredName }: RegisterInput) => {
     if (!supabase) throw new Error('Connect Supabase in .env before registering.');
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, preferred_name: preferredName } } });
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, preferred_name: preferredName }, emailRedirectTo: Linking.createURL('/') } });
     if (error) throw error;
     return Boolean(data.session);
   }, [supabase]);

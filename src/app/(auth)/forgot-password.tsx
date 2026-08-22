@@ -20,7 +20,7 @@ export default function ForgotPasswordScreen() {
   return <AuthScreen description="We’ll email a secure link to your account." title="Reset password">
     <Controller control={control} name="email" render={({ field }) => <FormField autoCapitalize="none" error={errors.email?.message} keyboardType="email-address" label="Email" onBlur={field.onBlur} onChangeText={field.onChange} value={field.value} />} />
     <AppButton label="Send reset link" loading={isSubmitting} onPress={submit} />
-    <Link href="/login" style={[styles.link, { color: palette.accent }]}>Back to sign in</Link>
+    <Link href="/login" style={[styles.link, { color: palette.accentStrong }]}>Back to sign in</Link>
   </AuthScreen>;
 }
 const styles = StyleSheet.create({ link: { ...typography.body, textAlign: 'center' } });

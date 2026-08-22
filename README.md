@@ -17,8 +17,11 @@ Configure these public client variables in the Vercel project before deploying:
 
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `EXPO_PUBLIC_VAPID_PUBLIC_KEY`
 
 After deployment, add the Vercel domain to the Supabase Auth site URL and redirect URL allow list.
+
+The web export includes an installable PWA manifest, iPhone Home Screen metadata, and a push service worker. The reminder dispatcher must also be configured in Supabase; follow `supabase/README.md` before enabling reminders in production.
 
 ## Validation
 
@@ -32,4 +35,4 @@ Apply the migration and security assertions described in `supabase/README.md`. U
 
 ## Implemented MVP
 
-The application includes authentication and password recovery, profiles, subjects, weekly schedules, assignments, exams, private study-material uploads, notes, deterministic study-plan generation, study sessions, local reminders, dashboard urgency ordering, offline query caching, loading/error/empty states, light/dark appearance, and five-tab mobile navigation.
+The application includes authentication and password recovery, profiles, subjects, weekly schedules, assignments, exams, private study-material uploads, notes, deterministic study-plan generation, study sessions, native local reminders, reliable PWA Web Push reminders, dashboard urgency ordering, offline query caching, loading/error/empty states, light/dark appearance, and five-tab mobile navigation.

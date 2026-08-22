@@ -24,8 +24,8 @@ export default function LoginScreen() {
     <Controller control={control} name="email" render={({ field }) => <FormField autoCapitalize="none" autoComplete="email" error={errors.email?.message} keyboardType="email-address" label="Email" onBlur={field.onBlur} onChangeText={field.onChange} value={field.value} />} />
     <Controller control={control} name="password" render={({ field }) => <FormField autoCapitalize="none" autoComplete="password" error={errors.password?.message} label="Password" onBlur={field.onBlur} onChangeText={field.onChange} secureTextEntry value={field.value} />} />
     <AppButton label="Sign in" loading={isSubmitting} onPress={submit} />
-    <Link href="/forgot-password" style={[styles.link, { color: palette.accent }]}>Forgot password?</Link>
-    <Link href="/register" style={[styles.link, { color: palette.accent }]}>Create an account</Link>
+    <Link href="/forgot-password" style={[styles.link, { color: palette.accentStrong }]}>Forgot password?</Link>
+    <Link href="/register" style={[styles.link, { color: palette.accentStrong }]}>Create an account</Link>
   </AuthScreen>;
 }
 const styles = StyleSheet.create({ notice: { ...typography.body, marginBottom: spacing.sm }, link: { ...typography.body, textAlign: 'center' } });

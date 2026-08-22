@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme, useWindowDimensions } from 'react-native';
 
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { colors, typography } from '@/constants/theme';
@@ -7,6 +7,8 @@ import { colors, typography } from '@/constants/theme';
 export default function TabLayout() {
   const isDark = useColorScheme() === 'dark';
   const palette = isDark ? colors.dark : colors.light;
+  const { width } = useWindowDimensions();
+  const tabBarWidth = Math.min(width - 28, 720);
 
   return (
     <Tabs
@@ -18,11 +20,20 @@ export default function TabLayout() {
         tabBarInactiveTintColor: palette.textMuted,
         tabBarStyle: {
           backgroundColor: palette.surface,
-          borderTopColor: palette.border,
-          height: 82,
-          paddingBottom: 20,
+          borderColor: palette.border,
+          borderRadius: 24,
+          borderTopWidth: 1,
+          borderWidth: 1,
+          bottom: 12,
+          boxShadow: '0 12px 32px rgba(180, 72, 78, 0.14)',
+          height: 72,
+          left: (width - tabBarWidth) / 2,
+          paddingBottom: Platform.OS === 'ios' ? 12 : 8,
           paddingTop: 8,
+          position: 'absolute',
+          width: tabBarWidth,
         },
+        tabBarItemStyle: { borderRadius: 18 },
         tabBarLabelStyle: {
           fontSize: typography.caption.fontSize,
           fontWeight: typography.label.fontWeight,

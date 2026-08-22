@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { requireSupabaseClient } from '@/lib/supabase/client';
+import type { NotificationStatus } from './types';
 
 let configured = false;
 export function configureNotifications() {
@@ -15,6 +16,17 @@ export async function requestNotificationPermission() {
   if (current.granted) return true;
   const requested = await Notifications.requestPermissionsAsync();
   return requested.granted;
+}
+
+export async function getNotificationStatus(): Promise<NotificationStatus> {
+  const permission = await Notifications.getPermissionsAsync();
+  return {
+    detail: permission.granted ? 'This device will receive scheduled reminders.' : 'Enable reminders to receive activity, exam, quiz, and study alerts.',
+    permission: permission.granted ? 'granted' : permission.canAskAgain ? 'default' : 'denied',
+    requiresInstall: false,
+    subscribed: permission.granted,
+    supported: true,
+  };
 }
 
 export async function cancelNotifications(ids: readonly string[]) {
@@ -47,3 +59,5 @@ export async function scheduleExamReminders(title: string, eventAt: string, offs
   if (morning.getTime() > Date.now() && morning < exam) ids.push(await Notifications.scheduleNotificationAsync({ content: { title, body: 'Today is exam day. You’ve prepared for this.' }, trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: morning, channelId: 'reminders' } }));
   return ids;
 }
+
+export type { NotificationStatus } from './types';

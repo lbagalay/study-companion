@@ -11,7 +11,7 @@ export function ChoiceField<T extends string | number | boolean>({ choices, labe
     <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
     <View style={styles.choices}>{choices.map((choice) => {
       const selected = choice.value === value;
-      return <Pressable accessibilityRole="button" accessibilityState={{ selected }} key={String(choice.value)} onPress={() => onChange(choice.value)} style={[styles.choice, { backgroundColor: selected ? palette.accent : palette.surface, borderColor: selected ? palette.accent : palette.border }]}><Text style={[styles.choiceText, { color: selected ? '#FFFFFF' : palette.text }]}>{choice.label}</Text></Pressable>;
+      return <Pressable accessibilityRole="button" accessibilityState={{ selected }} key={String(choice.value)} onPress={() => onChange(choice.value)} style={[styles.choice, { backgroundColor: selected ? palette.accentSolid : palette.surface, borderColor: selected ? palette.accentSolid : palette.border }]}><Text style={[styles.choiceText, { color: selected ? '#FFFFFF' : palette.text }]}>{choice.label}</Text></Pressable>;
     })}</View>
   </View>;
 }

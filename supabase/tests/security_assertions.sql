@@ -10,7 +10,7 @@ begin
   from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
   where n.nspname = 'public'
-    and c.relname = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'study_sessions'])
+    and c.relname = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries'])
     and not c.relrowsecurity;
 
   if missing_rls is not null then
@@ -20,10 +20,10 @@ begin
   select count(*) into policy_count
   from pg_policies
   where schemaname = 'public'
-    and tablename = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'study_sessions']);
+    and tablename = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries']);
 
-  if policy_count <> 30 then
-    raise exception 'Expected 30 public-table policies, found %', policy_count;
+  if policy_count <> 35 then
+    raise exception 'Expected 35 public-table policies, found %', policy_count;
   end if;
 
   select public into bucket_is_public from storage.buckets where id = 'study-materials';
@@ -36,6 +36,19 @@ begin
 
   if (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname like 'material_files_%_own') <> 4 then
     raise exception 'Expected four per-user storage policies';
+  end if;
+
+  if has_function_privilege('anon', 'public.register_web_push_subscription(text,text,text,text)', 'execute') then
+    raise exception 'Anonymous users must not register Web Push subscriptions';
+  end if;
+  if not has_function_privilege('authenticated', 'public.register_web_push_subscription(text,text,text,text)', 'execute') then
+    raise exception 'Authenticated users must be able to register Web Push subscriptions';
+  end if;
+  if has_function_privilege('authenticated', 'public.claim_due_web_notifications(integer)', 'execute') then
+    raise exception 'Authenticated users must not claim reminder deliveries';
+  end if;
+  if not has_function_privilege('service_role', 'public.claim_due_web_notifications(integer)', 'execute') then
+    raise exception 'The service role must be able to claim reminder deliveries';
   end if;
 end;
 $$;

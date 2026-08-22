@@ -27,8 +27,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    alignSelf: 'center',
     flexGrow: 1,
+    maxWidth: 840,
+    width: '100%',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 124,
   },
 });

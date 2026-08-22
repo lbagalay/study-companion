@@ -1,10 +1,11 @@
 import { differenceInCalendarDays, format, formatDistanceToNow, isThisWeek, parse } from 'date-fns';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '@/components/ui/AppButton';
 import { EntityCard } from '@/components/ui/EntityCard';
 import { FeedbackState } from '@/components/ui/FeedbackState';
-import { spacing, typography } from '@/constants/theme';
+import { radii, spacing, typography } from '@/constants/theme';
 import { useAssignments, useExams, useProfile, useSchedules, useSessions, useSubjects } from '@/hooks/useStudyData';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useAuth } from '@/providers/AuthProvider';
@@ -24,15 +25,44 @@ export default function HomeScreen() {
   const nextSession = sessions.data?.find((s) => ['PLANNED', 'IN_PROGRESS'].includes(s.status) && new Date(s.planned_at) >= now);
   const loading = profile.isLoading || subjects.isLoading || schedules.isLoading || assignments.isLoading || exams.isLoading || sessions.isLoading;
   if (loading) return <FeedbackState loading message="Preparing today’s overview." title="One moment" />;
-  return <ScrollView contentContainerStyle={styles.content} style={{ backgroundColor: palette.background }}>
-    <View style={styles.header}><Text style={[styles.greeting, { color: palette.text }]}>{greeting}, {name}</Text><Text style={[styles.date, { color: palette.textMuted }]}>{format(now, 'EEEE, MMMM d')}</Text></View>
+  return <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} style={{ backgroundColor: palette.background }}>
+    <View style={[styles.hero, { backgroundColor: palette.surfaceAlt, borderColor: palette.border }]}>
+      <View style={[styles.heroGlow, { backgroundColor: palette.lavenderSoft }]} />
+      <View style={styles.heroTop}><View style={[styles.heroIcon, { backgroundColor: palette.surface }]}><Ionicons color={palette.accent} name="sparkles" size={22} /></View><Text style={[styles.date, { color: palette.accentStrong }]}>{format(now, 'EEEE, MMMM d')}</Text></View>
+      <Text style={[styles.greeting, { color: palette.text }]}>{greeting}, {name}</Text>
+      <Text style={[styles.heroCopy, { color: palette.textMuted }]}>{upcoming[0] ? `${upcoming[0].title} is ${formatDistanceToNow(upcoming[0].date, { addSuffix: true })}. You’ve got this.` : 'Your study space is calm and clear today.'}</Text>
+    </View>
+    <View style={styles.quickActions}>
+      <QuickAction color={palette.accent} icon="checkbox-outline" label="Activity" onPress={() => router.push('/assignments/create')} surface={palette.accentSoft} />
+      <QuickAction color={palette.lavender} icon="school-outline" label="Exam or quiz" onPress={() => router.push('/exams/create')} surface={palette.lavenderSoft} />
+      <QuickAction color={palette.warning} icon="book-outline" label="Study plan" onPress={() => router.push('/sessions/create-plan')} surface={palette.peachSoft} />
+    </View>
     <Section title="Today" color={palette.text}>{todayClasses.map((item) => { const subject = bySubject.get(item.subject_id); const current = isClassCurrent(item.start_time, item.end_time, now); return <EntityCard accent={subject?.color} badge={current ? 'NOW' : clock(item.start_time)} key={item.id} metadata={item.room || subject?.room} onPress={() => router.push({ pathname: '/schedule/[id]', params: { id: item.id } })} subtitle={`${clock(item.start_time)}–${clock(item.end_time)}`} title={subject?.name ?? 'Class'} />; })}{!todayClasses.length ? <FeedbackState message="No classes are scheduled today." title="A clear day" /> : null}</Section>
     <Section title="Coming up" color={palette.text}>{upcoming.map((item) => <EntityCard accent={item.accent} badge={item.badge} key={`${item.href}-${item.id}`} onPress={() => router.push({ pathname: item.href, params: { id: item.id } })} subtitle={item.subtitle} title={item.title} />)}{!upcoming.length ? <FeedbackState message="Everything currently recorded is complete." title="You’re caught up" /> : null}</Section>
     <Section title="Continue studying" color={palette.text}>{nextSession ? <EntityCard accent={bySubject.get(nextSession.subject_id)?.color} badge={`${nextSession.planned_duration} MIN`} metadata={format(new Date(nextSession.planned_at), 'MMM d · h:mm a')} onPress={() => router.push({ pathname: '/sessions/[id]', params: { id: nextSession.id } })} subtitle={bySubject.get(nextSession.subject_id)?.name} title={nextSession.topic} /> : <FeedbackState message="Generate a study plan from an upcoming exam." title="No active session" />}</Section>
-    <Section title="This week" color={palette.text}><View style={styles.stats}><Stat color={palette.text} label="Tasks done" value={assignments.data?.filter((a) => a.completed_at && isThisWeek(new Date(a.completed_at), { weekStartsOn: 1 })).length ?? 0} /><Stat color={palette.text} label="Remaining" value={assignments.data?.filter((a) => a.status !== 'COMPLETED').length ?? 0} /><Stat color={palette.text} label="Study sessions" value={sessions.data?.filter((s) => s.status === 'COMPLETED' && isThisWeek(new Date(s.updated_at), { weekStartsOn: 1 })).length ?? 0} /><Stat color={palette.text} label="Upcoming exams" value={exams.data?.filter((e) => e.status === 'UPCOMING').length ?? 0} /></View></Section>
+    <Section title="This week" color={palette.text}><View style={styles.stats}><Stat color={palette.text} label="Tasks done" surface={palette.surface} value={assignments.data?.filter((a) => a.completed_at && isThisWeek(new Date(a.completed_at), { weekStartsOn: 1 })).length ?? 0} /><Stat color={palette.text} label="Remaining" surface={palette.surface} value={assignments.data?.filter((a) => a.status !== 'COMPLETED').length ?? 0} /><Stat color={palette.text} label="Study sessions" surface={palette.surface} value={sessions.data?.filter((s) => s.status === 'COMPLETED' && isThisWeek(new Date(s.updated_at), { weekStartsOn: 1 })).length ?? 0} /><Stat color={palette.text} label="Upcoming exams" surface={palette.surface} value={exams.data?.filter((e) => e.status === 'UPCOMING').length ?? 0} /></View></Section>
     <AppButton label="Manage subjects" onPress={() => router.push('/subjects')} variant="secondary" />
   </ScrollView>;
 }
 function Section({ children, color, title }: React.PropsWithChildren<{ color: string; title: string }>) { return <View style={styles.section}><Text style={[styles.sectionTitle, { color }]}>{title}</Text>{children}</View>; }
-function Stat({ color, label, value }: { color: string; label: string; value: number }) { return <View style={styles.stat}><Text style={[styles.statValue, { color }]}>{value}</Text><Text style={[styles.statLabel, { color }]}>{label}</Text></View>; }
-const styles = StyleSheet.create({ content: { gap: spacing.xl, paddingBottom: spacing.xxl, paddingHorizontal: spacing.lg, paddingTop: spacing.xl }, header: { gap: spacing.xs }, greeting: typography.title, date: typography.body, section: { gap: spacing.md }, sectionTitle: typography.sectionTitle, stats: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }, stat: { flexBasis: '46%', gap: spacing.xs, paddingVertical: spacing.md }, statValue: { fontSize: 28, fontWeight: '700' }, statLabel: typography.caption });
+function QuickAction({ color, icon, label, onPress, surface }: { color: string; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; onPress: () => void; surface: string }) { return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, { backgroundColor: surface, opacity: pressed ? 0.76 : 1 }]}><Ionicons color={color} name={icon} size={21} /><Text numberOfLines={1} style={[styles.quickLabel, { color }]}>{label}</Text></Pressable>; }
+function Stat({ color, label, surface, value }: { color: string; label: string; surface: string; value: number }) { return <View style={[styles.stat, { backgroundColor: surface }]}><Text style={[styles.statValue, { color }]}>{value}</Text><Text style={[styles.statLabel, { color }]}>{label}</Text></View>; }
+const styles = StyleSheet.create({
+  content: { alignSelf: 'center', gap: spacing.xl, maxWidth: 920, paddingBottom: 124, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, width: '100%' },
+  hero: { borderRadius: radii.xl, borderWidth: 1, boxShadow: '0 14px 36px rgba(180, 72, 78, 0.10)', gap: spacing.sm, overflow: 'hidden', padding: spacing.xl },
+  heroGlow: { borderRadius: radii.pill, height: 180, opacity: 0.8, pointerEvents: 'none', position: 'absolute', right: -70, top: -70, width: 180 },
+  heroTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  heroIcon: { alignItems: 'center', borderRadius: radii.pill, height: 40, justifyContent: 'center', width: 40 },
+  greeting: typography.title,
+  date: { ...typography.label, flex: 1 },
+  heroCopy: { ...typography.body, maxWidth: 620 },
+  quickActions: { flexDirection: 'row', gap: spacing.sm },
+  quickAction: { alignItems: 'center', borderRadius: radii.lg, flex: 1, gap: 6, justifyContent: 'center', minHeight: 78, paddingHorizontal: spacing.sm, paddingVertical: spacing.md },
+  quickLabel: { ...typography.caption, fontWeight: '700', textAlign: 'center' },
+  section: { gap: spacing.md },
+  sectionTitle: typography.sectionTitle,
+  stats: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  stat: { borderRadius: radii.lg, flexBasis: '47%', flexGrow: 1, gap: spacing.xs, minWidth: 140, padding: spacing.lg },
+  statValue: { fontSize: 30, fontWeight: '700' },
+  statLabel: typography.caption,
+});
