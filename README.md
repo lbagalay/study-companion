@@ -10,6 +10,16 @@ A mobile-first Expo application for helping a student understand what is happeni
 
 Use `npm run ios`, `npm run android`, or `npm run web` to target a specific platform.
 
+## Deploy to Vercel
+
+The included `vercel.json` builds the Expo Router web export into `dist`.
+Configure these public client variables in the Vercel project before deploying:
+
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+After deployment, add the Vercel domain to the Supabase Auth site URL and redirect URL allow list.
+
 ## Validation
 
 - `npm run typecheck`
