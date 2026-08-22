@@ -37,6 +37,7 @@ yarn-error.*
 .env
 .env.*
 !.env.example
+/supabase/.temp/
 
 # typescript
 *.tsbuildinfo
