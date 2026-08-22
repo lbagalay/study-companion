@@ -1,0 +1,52 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as DocumentPicker from 'expo-document-picker';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { z } from 'zod';
+import { SubjectField } from '@/components/forms/SubjectField';
+import { AppButton } from '@/components/ui/AppButton';
+import { ChoiceField } from '@/components/ui/ChoiceField';
+import { FeedbackState } from '@/components/ui/FeedbackState';
+import { FormField } from '@/components/ui/FormField';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { spacing, typography } from '@/constants/theme';
+import { keys, useSubjects } from '@/hooks/useStudyData';
+import { useAppTheme } from '@/hooks/useAppTheme';
+import { getErrorMessage } from '@/lib/errors';
+import { deleteMaterial, getMaterial, getMaterialUrl, saveMaterial, uploadMaterialFile } from '@/services';
+import type { MaterialType } from '@/types';
+
+const materialTypes: { label: string; value: MaterialType }[] = ['PDF', 'IMAGE', 'DOCUMENT', 'LINK', 'VIDEO_LINK', 'NOTE', 'OTHER'].map((v) => ({ label: v.replace('_', ' '), value: v as MaterialType }));
+const schema = z.object({ subject_id: z.string().min(1, 'Choose a subject.'), title: z.string().trim().min(1, 'Enter a material title.').max(150, 'Keep the title under 150 characters.'), description: z.string().trim().max(3000, 'Keep the description under 3,000 characters.'), type: z.enum(['PDF', 'IMAGE', 'DOCUMENT', 'LINK', 'VIDEO_LINK', 'NOTE', 'OTHER']), external_url: z.string(), favorite: z.boolean(), completed: z.boolean() }).refine((v) => !['LINK', 'VIDEO_LINK'].includes(v.type) || z.url().safeParse(v.external_url).success, { path: ['external_url'], message: 'Enter a valid URL.' });
+type Values = z.infer<typeof schema>;
+
+export function MaterialForm({ id }: { id?: string }) {
+  const router = useRouter(); const client = useQueryClient(); const palette = useAppTheme(); const subjects = useSubjects(); const [asset, setAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const item = useQuery({ queryKey: ['material', id], queryFn: () => getMaterial(id!), enabled: Boolean(id) });
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { subject_id: '', title: '', description: '', type: 'PDF', external_url: '', favorite: false, completed: false } });
+  const type = useWatch({ control, name: 'type' });
+  useEffect(() => { if (!id && subjects.data?.[0]) reset((v) => ({ ...v, subject_id: v.subject_id || subjects.data![0].id })); }, [id, reset, subjects.data]);
+  useEffect(() => { if (item.data) reset({ subject_id: item.data.subject_id, title: item.data.title, description: item.data.description, type: item.data.type, external_url: item.data.external_url ?? '', favorite: item.data.favorite, completed: item.data.completed }); }, [item.data, reset]);
+  const save = useMutation({ mutationFn: async (v: Values) => { let fileUrl = item.data?.file_url ?? null; if (asset) fileUrl = await uploadMaterialFile(v.subject_id, asset); if (!fileUrl && !v.external_url && v.type !== 'NOTE') throw new Error('Choose a file or enter a link.'); return saveMaterial({ ...v, external_url: v.external_url || null, file_url: fileUrl }, id); }, onSuccess: async () => { await client.invalidateQueries({ queryKey: keys.materials }); router.back(); }, onError: (e) => Alert.alert('Could not save material', getErrorMessage(e)) });
+  const remove = useMutation({ mutationFn: () => deleteMaterial(id!, item.data?.file_url), onSuccess: async () => { await client.invalidateQueries({ queryKey: keys.materials }); router.back(); }, onError: (e) => Alert.alert('Could not delete material', getErrorMessage(e)) });
+  const pick = async () => { const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true }); if (!result.canceled) setAsset(result.assets[0]); };
+  if (id && item.error) return <FeedbackState actionLabel="Try again" message={item.error.message} onAction={() => void item.refetch()} title="Could not load material" />;
+  if (id && item.isLoading) return <FeedbackState loading message="Loading material." title="One moment" />;
+  return <ScreenContainer><ScreenHeader back description="Files stay in a private, user-scoped bucket." title={id ? 'Material details' : 'Add material'} /><View style={styles.form}>
+    <Controller control={control} name="subject_id" render={({ field }) => <SubjectField onChange={field.onChange} value={field.value} />} />
+    <Controller control={control} name="title" render={({ field }) => <FormField error={errors.title?.message} label="Title" onChangeText={field.onChange} value={field.value} />} />
+    <Controller control={control} name="type" render={({ field }) => <ChoiceField choices={materialTypes} label="Type" onChange={field.onChange} value={field.value} />} />
+    {['LINK', 'VIDEO_LINK'].includes(type) ? <Controller control={control} name="external_url" render={({ field }) => <FormField autoCapitalize="none" error={errors.external_url?.message} keyboardType="url" label="URL" onChangeText={field.onChange} value={field.value} />} /> : type !== 'NOTE' ? <><AppButton label={asset ? 'Choose a different file' : 'Choose file'} onPress={() => void pick()} variant="secondary" />{asset ? <Text style={[styles.file, { color: palette.textMuted }]}>{asset.name}</Text> : item.data?.file_url ? <Text style={[styles.file, { color: palette.textMuted }]}>Existing upload will be kept.</Text> : null}</> : null}
+    <Controller control={control} name="description" render={({ field }) => <FormField label={type === 'NOTE' ? 'Content' : 'Description'} multiline onChangeText={field.onChange} value={field.value} />} />
+    <Controller control={control} name="favorite" render={({ field }) => <ChoiceField choices={[{ label: 'Standard', value: false }, { label: 'Favorite', value: true }]} label="Favorite" onChange={field.onChange} value={field.value} />} />
+    <Controller control={control} name="completed" render={({ field }) => <ChoiceField choices={[{ label: 'To review', value: false }, { label: 'Completed', value: true }]} label="Progress" onChange={field.onChange} value={field.value} />} />
+    <AppButton label={id ? 'Save changes' : 'Add material'} loading={save.isPending} onPress={handleSubmit((v) => save.mutate(v))} />
+    {id && (item.data?.file_url || item.data?.external_url) ? <AppButton label="Open material" onPress={() => void (async () => { try { const url = item.data?.file_url ? await getMaterialUrl(item.data.file_url) : item.data?.external_url; if (url) await Linking.openURL(url); } catch (error) { Alert.alert('Could not open material', getErrorMessage(error)); } })()} variant="secondary" /> : null}
+    {id ? <AppButton label="Delete material" loading={remove.isPending} onPress={() => Alert.alert('Delete material?', 'The stored file will also be removed.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => remove.mutate() }])} variant="danger" /> : null}
+  </View></ScreenContainer>;
+}
+const styles = StyleSheet.create({ form: { gap: spacing.md, paddingBottom: spacing.xxl }, file: typography.body });

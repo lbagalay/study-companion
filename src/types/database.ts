@@ -1,0 +1,146 @@
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
+type Timestamps = {
+  created_at: string;
+  updated_at: string;
+};
+
+export type Profile = Timestamps & {
+  id: string;
+  email: string;
+  full_name: string;
+  preferred_name: string;
+  avatar_url: string | null;
+  theme: 'SYSTEM' | 'LIGHT' | 'DARK';
+  theme_color: string;
+  timezone: string;
+  notifications_enabled: boolean;
+};
+
+export type Subject = Timestamps & {
+  id: string;
+  user_id: string;
+  name: string;
+  code: string;
+  description: string;
+  teacher: string;
+  room: string;
+  color: string;
+  semester: string;
+  academic_year: string;
+};
+
+export type ClassSchedule = Timestamps & {
+  id: string;
+  user_id: string;
+  subject_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  room: string;
+};
+
+export type AssignmentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+export type AssignmentStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+
+export type Assignment = Timestamps & {
+  id: string;
+  user_id: string;
+  subject_id: string;
+  title: string;
+  description: string;
+  due_at: string;
+  priority: AssignmentPriority;
+  status: AssignmentStatus;
+  attachment_url: string | null;
+  notes: string;
+  reminder_offsets: number[];
+  notification_ids: string[];
+  completed_at: string | null;
+};
+
+export type ExamType = 'QUIZ' | 'EXAM' | 'MIDTERM' | 'FINAL' | 'PRACTICAL' | 'PRESENTATION' | 'OTHER';
+export type ExamStatus = 'UPCOMING' | 'COMPLETED' | 'CANCELLED';
+
+export type Exam = Timestamps & {
+  id: string;
+  user_id: string;
+  subject_id: string;
+  title: string;
+  type: ExamType;
+  exam_at: string;
+  room: string;
+  coverage: string;
+  notes: string;
+  status: ExamStatus;
+  reminder_offsets: number[];
+  notification_ids: string[];
+};
+
+export type MaterialType = 'PDF' | 'IMAGE' | 'DOCUMENT' | 'LINK' | 'VIDEO_LINK' | 'NOTE' | 'OTHER';
+
+export type StudyMaterial = Timestamps & {
+  id: string;
+  user_id: string;
+  subject_id: string;
+  title: string;
+  description: string;
+  type: MaterialType;
+  file_url: string | null;
+  external_url: string | null;
+  favorite: boolean;
+  completed: boolean;
+};
+
+export type Note = Timestamps & {
+  id: string;
+  user_id: string;
+  subject_id: string;
+  title: string;
+  content: string;
+  favorite: boolean;
+};
+
+export type StudySessionStatus = 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED';
+
+export type StudySession = Timestamps & {
+  id: string;
+  user_id: string;
+  subject_id: string;
+  exam_id: string | null;
+  topic: string;
+  planned_at: string;
+  planned_duration: number;
+  actual_duration: number | null;
+  status: StudySessionStatus;
+  notes: string;
+  notification_id: string | null;
+};
+
+type TableDefinition<Row, Insert, Update> = {
+  Row: Row;
+  Insert: Insert;
+  Update: Update;
+  Relationships: [];
+};
+
+type CreateFields = { id?: string; user_id?: string; created_at?: string; updated_at?: string };
+
+export type Database = {
+  public: {
+    Tables: {
+      profiles: TableDefinition<Profile, Partial<Profile> & Pick<Profile, 'id' | 'email'>, Partial<Profile>>;
+      subjects: TableDefinition<Subject, CreateFields & Pick<Subject, 'name'> & Partial<Omit<Subject, keyof CreateFields | 'name'>>, Partial<Subject>>;
+      class_schedules: TableDefinition<ClassSchedule, CreateFields & Pick<ClassSchedule, 'subject_id' | 'day_of_week' | 'start_time' | 'end_time'> & Partial<Pick<ClassSchedule, 'room'>>, Partial<ClassSchedule>>;
+      assignments: TableDefinition<Assignment, CreateFields & Pick<Assignment, 'subject_id' | 'title' | 'due_at'> & Partial<Omit<Assignment, keyof CreateFields | 'subject_id' | 'title' | 'due_at'>>, Partial<Assignment>>;
+      exams: TableDefinition<Exam, CreateFields & Pick<Exam, 'subject_id' | 'title' | 'exam_at'> & Partial<Omit<Exam, keyof CreateFields | 'subject_id' | 'title' | 'exam_at'>>, Partial<Exam>>;
+      study_materials: TableDefinition<StudyMaterial, CreateFields & Pick<StudyMaterial, 'subject_id' | 'title' | 'type'> & Partial<Omit<StudyMaterial, keyof CreateFields | 'subject_id' | 'title' | 'type'>>, Partial<StudyMaterial>>;
+      notes: TableDefinition<Note, CreateFields & Pick<Note, 'subject_id' | 'title'> & Partial<Omit<Note, keyof CreateFields | 'subject_id' | 'title'>>, Partial<Note>>;
+      study_sessions: TableDefinition<StudySession, CreateFields & Pick<StudySession, 'subject_id' | 'topic' | 'planned_at'> & Partial<Omit<StudySession, keyof CreateFields | 'subject_id' | 'topic' | 'planned_at'>>, Partial<StudySession>>;
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
