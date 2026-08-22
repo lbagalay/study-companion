@@ -1,8 +1,9 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
+import { StyleSheet, useColorScheme, View } from 'react-native';
 
 import { FeedbackState } from '@/components/ui/FeedbackState';
+import { LaunchAnimation } from '@/components/ui/LaunchAnimation';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
@@ -17,8 +18,10 @@ export default function RootLayout() {
 
 function AppProviders() {
   const { user } = useAuth();
-  return <QueryProvider cacheKey={`study-companion-cache-${user?.id ?? 'guest'}`} key={user?.id ?? 'guest'}><RootNavigator /></QueryProvider>;
+  return <QueryProvider cacheKey={`study-companion-cache-${user?.id ?? 'guest'}`} key={user?.id ?? 'guest'}><View style={styles.root}><RootNavigator /><LaunchAnimation /></View></QueryProvider>;
 }
+
+const styles = StyleSheet.create({ root: { flex: 1 } });
 
 function RootNavigator() {
   const isDark = useColorScheme() === 'dark';
