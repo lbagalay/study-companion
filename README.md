@@ -35,4 +35,4 @@ Apply the migration and security assertions described in `supabase/README.md`. U
 
 ## Implemented MVP
 
-The application includes authentication and password recovery, profiles, subjects, AI-assisted study-load photo/PDF importing with review, weekly schedules, assignments, exams, private study-material uploads, notes, deterministic study-plan generation, study sessions, native local reminders, reliable PWA Web Push reminders, dashboard urgency ordering, offline query caching, loading/error/empty states, light/dark appearance, and five-tab mobile navigation.
+The application includes authentication and password recovery, profiles, subjects, free on-device study-load screenshot importing with editable review, weekly schedules, assignments, exams, private study-material uploads, notes, deterministic study-plan generation, study sessions, native local reminders, reliable PWA Web Push reminders, dashboard urgency ordering, offline query caching, loading/error/empty states, light/dark appearance, and five-tab mobile navigation.

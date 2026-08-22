@@ -15,6 +15,7 @@ import { radii, spacing, typography } from '@/constants/theme';
 import { keys } from '@/hooks/useStudyData';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { getErrorMessage } from '@/lib/errors';
+import type { StudyLoadProgress } from '@/lib/study-load/localExtractor';
 import { studyLoadExtractionSchema, type ExtractedSchedule, type ExtractedSubject, type StudyLoadImportSubject } from '@/lib/study-load/schema';
 import { extractStudyLoad, importStudyLoad } from '@/services';
 
@@ -27,10 +28,11 @@ export default function ImportStudyLoadScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [asset, setAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [progress, setProgress] = useState<StudyLoadProgress>({ progress: 0, status: 'Preparing your study load' });
   const [subjects, setSubjects] = useState<ReviewSubject[]>([]);
 
   const analyze = useMutation({
-    mutationFn: extractStudyLoad,
+    mutationFn: (selected: DocumentPicker.DocumentPickerAsset) => extractStudyLoad(selected, setProgress),
     onSuccess: (data) => setSubjects(data.subjects.map((subject, index) => ({ ...subject, color: subjectColors[index % subjectColors.length], selected: true, units: String(subject.units) }))),
   });
   const save = useMutation({
@@ -52,14 +54,15 @@ export default function ImportStudyLoadScreen() {
   });
 
   const chooseFile = async () => {
-    const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: ['application/pdf', 'image/*'] });
+    const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: 'image/*' });
     if (result.canceled) return;
     const selected = result.assets[0];
     if (selected.size && selected.size > 12 * 1024 * 1024) {
-      Alert.alert('File is too large', 'Choose a photo or PDF smaller than 12 MB.');
+      Alert.alert('File is too large', 'Choose a screenshot or photo smaller than 12 MB.');
       return;
     }
     setAsset(selected);
+    setProgress({ progress: 0, status: 'Preparing your study load' });
     setSubjects([]);
     analyze.mutate(selected);
   };
@@ -70,23 +73,28 @@ export default function ImportStudyLoadScreen() {
   const removeSchedule = (subjectIndex: number, scheduleIndex: number) => setSubjects((current) => current.map((subject, index) => index === subjectIndex ? { ...subject, schedules: subject.schedules.filter((_schedule, currentIndex) => currentIndex !== scheduleIndex) } : subject));
   const selectedCount = subjects.filter((subject) => subject.selected).length;
 
-  return <ScreenContainer><ScreenHeader back description="Upload a clear photo or PDF, then review everything before saving." title="Import study load" />
+  return <ScreenContainer><ScreenHeader back description="Upload a clear screenshot or photo, then review everything before saving." title="Import study load" />
     <View style={styles.content}>
       <View style={[styles.uploadCard, { backgroundColor: palette.surfaceAlt, borderColor: palette.border }]}>
         <View style={[styles.uploadIcon, { backgroundColor: palette.accentSoft }]}><Ionicons color={palette.accentSolid} name="document-text-outline" size={28} /></View>
         <View style={styles.uploadCopy}>
           <Text style={[styles.uploadTitle, { color: palette.text }]}>{asset ? asset.name : 'Choose your study load'}</Text>
-          <Text style={[styles.body, { color: palette.textMuted }]}>{asset ? `${formatBytes(asset.size)} · ${asset.mimeType ?? 'document'}` : 'Supported files: photos and PDF documents up to 12 MB.'}</Text>
+          <Text style={[styles.body, { color: palette.textMuted }]}>{asset ? `${formatBytes(asset.size)} · ${asset.mimeType ?? 'image'}` : 'Free on-device reading supports screenshots and photos up to 12 MB.'}</Text>
         </View>
-        <AppButton label={asset ? 'Choose another file' : 'Choose photo or PDF'} onPress={() => void chooseFile()} variant={asset ? 'secondary' : 'primary'} />
+        <AppButton label={asset ? 'Choose another image' : 'Choose screenshot or photo'} onPress={() => void chooseFile()} variant={asset ? 'secondary' : 'primary'} />
       </View>
 
-      {analyze.isPending ? <FeedbackState loading message="Finding subjects, instructors, rooms, units, and class times." title="Reading your study load" /> : null}
+      {analyze.isPending ? <View style={styles.progressGroup}>
+        <FeedbackState loading message={`${progress.status} · ${progress.progress}%`} title="Reading privately on this device" />
+        <View accessibilityLabel={`Study-load reading ${progress.progress}% complete`} accessibilityRole="progressbar" style={[styles.progressTrack, { backgroundColor: palette.border }]}>
+          <View style={[styles.progressFill, { backgroundColor: palette.accentSolid, width: `${progress.progress}%` }]} />
+        </View>
+      </View> : null}
       {analyze.error ? <FeedbackState actionLabel="Try again" message={getErrorMessage(analyze.error)} onAction={() => asset && analyze.mutate(asset)} title="Could not read this file" /> : null}
-      {!analyze.isPending && analyze.isSuccess && !subjects.length ? <FeedbackState actionLabel="Choose another file" message="No clear subject rows were found. Try a sharper photo or the original PDF." onAction={() => void chooseFile()} title="Nothing recognized" /> : null}
+      {!analyze.isPending && analyze.isSuccess && !subjects.length ? <FeedbackState actionLabel="Choose another image" message="No clear subject rows were found. Try the full-resolution screenshot with the complete table visible." onAction={() => void chooseFile()} title="Nothing recognized" /> : null}
 
       {subjects.length ? <>
-        <View style={styles.reviewHeader}><View style={styles.uploadCopy}><Text style={[styles.sectionTitle, { color: palette.text }]}>Review extracted details</Text><Text style={[styles.body, { color: palette.textMuted }]}>AI can misread documents. Correct anything below and deselect rows you do not want.</Text></View><Text style={[styles.count, { backgroundColor: palette.accentSoft, color: palette.accentStrong }]}>{selectedCount}/{subjects.length}</Text></View>
+        <View style={styles.reviewHeader}><View style={styles.uploadCopy}><Text style={[styles.sectionTitle, { color: palette.text }]}>Review extracted details</Text><Text style={[styles.body, { color: palette.textMuted }]}>Image text can be misread. Correct anything below and deselect rows you do not want.</Text></View><Text style={[styles.count, { backgroundColor: palette.accentSoft, color: palette.accentStrong }]}>{selectedCount}/{subjects.length}</Text></View>
         {subjects.map((subject, subjectIndex) => <View key={`${subject.code}-${subjectIndex}`} style={[styles.subjectCard, { backgroundColor: palette.surface, borderColor: subject.selected ? subject.color : palette.border, opacity: subject.selected ? 1 : 0.58 }]}>
           <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: subject.selected }} onPress={() => updateSubject(subjectIndex, { selected: !subject.selected })} style={styles.subjectHeader}>
             <Ionicons color={subject.selected ? palette.accentSolid : palette.textMuted} name={subject.selected ? 'checkmark-circle' : 'ellipse-outline'} size={25} />
@@ -138,4 +146,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   meetingTitle: { ...typography.sectionTitle, fontSize: 17, marginTop: spacing.sm },
   meeting: { borderRadius: radii.lg, borderWidth: 1, gap: spacing.md, padding: spacing.md },
+  progressGroup: { gap: spacing.sm },
+  progressTrack: { borderRadius: radii.pill, height: 8, overflow: 'hidden' },
+  progressFill: { borderRadius: radii.pill, height: '100%' },
 });

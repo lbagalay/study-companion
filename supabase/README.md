@@ -62,15 +62,8 @@ Run `tests/security_assertions.sql`, then inspect Edge Function logs and the `cr
 
 On iPhone, Web Push can only be enabled from the installed Home Screen PWA. Open the deployed site in Safari, use Share > Add to Home Screen, launch the installed app, sign in, and choose Profile > Enable this device.
 
-## Study-load document extraction
+## Study-load screenshot import
 
-The Subjects > Import study load flow sends the selected photo or PDF to an authenticated Edge Function. The function uses the OpenAI Responses API to extract schema-constrained subject and weekly schedule data. The file is not saved by Study Companion, and the user must review the result before importing it.
+The Schedule > Upload study load and Subjects > Import study load flows read screenshots and photos directly in the browser with Tesseract.js. No paid API key is required, and the selected image is not uploaded to Study Companion or Supabase. The parser is tailored to the tabular Subject #, Subject Title, Offer #, Schedule, and Units format, and the user reviews normal editable UI fields before the transactional database import.
 
-Set the server-only OpenAI secret and deploy the function:
-
-```sh
-npx supabase secrets set OPENAI_API_KEY=YOUR_OPENAI_API_KEY OPENAI_STUDY_LOAD_MODEL=gpt-5.6-luna
-npx supabase functions deploy extract-study-load
-```
-
-Do not add `OPENAI_API_KEY` to the Expo or Vercel environment. OpenAI API use is billed to the API project associated with that key, so configure project spend limits before enabling this feature for other users.
+For the clearest result, use the original screenshot at full resolution with the complete table visible. PDF users can save the study-load page as a screenshot before importing it.
