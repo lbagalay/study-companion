@@ -56,5 +56,11 @@ begin
   if not has_function_privilege('authenticated', 'public.import_study_load(jsonb)', 'execute') then
     raise exception 'Authenticated users must be able to import study loads';
   end if;
+  if has_function_privilege('anon', 'public.update_pdf_reading_progress(uuid,integer,integer)', 'execute') then
+    raise exception 'Anonymous users must not update PDF reading progress';
+  end if;
+  if not has_function_privilege('authenticated', 'public.update_pdf_reading_progress(uuid,integer,integer)', 'execute') then
+    raise exception 'Authenticated users must be able to update their PDF reading progress';
+  end if;
 end;
 $$;

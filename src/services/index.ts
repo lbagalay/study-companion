@@ -2,7 +2,9 @@ import { requireSupabaseClient } from '@/lib/supabase/client';
 import type { Database } from '@/types/database';
 import { File } from 'expo-file-system';
 import type { DocumentPickerAsset } from 'expo-document-picker';
+import { randomUUID } from 'expo-crypto';
 import { extractStudyLoadLocally, type StudyLoadProgress } from '@/lib/study-load/localExtractor';
+import type { InspectedPdf } from '@/lib/pdf/types';
 import { studyLoadExtractionSchema, type StudyLoadImportSubject } from '@/lib/study-load/schema';
 
 type Tables = Database['public']['Tables'];
@@ -49,6 +51,40 @@ export async function updateExam(id: string, input: UpdateOf<'exams'>) { const {
 export async function listMaterials() { const { data, error } = await requireSupabaseClient().from('study_materials').select('*').order('created_at', { ascending: false }); check(error); return data ?? []; }
 export async function getMaterial(id: string) { const { data, error } = await requireSupabaseClient().from('study_materials').select('*').eq('id', id).single(); check(error); return data; }
 export async function saveMaterial(input: InsertOf<'study_materials'>, id?: string) { const query = id ? requireSupabaseClient().from('study_materials').update(input).eq('id', id).select().single() : requireSupabaseClient().from('study_materials').insert(input).select().single(); const { data, error } = await query; check(error); return data; }
+export async function savePdfMaterial(input: Pick<InsertOf<'study_materials'>, 'completed' | 'description' | 'favorite' | 'subject_id' | 'title'>, pdf: InspectedPdf, id?: string, previousPath?: string | null) {
+  const supabase = requireSupabaseClient();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  check(userError);
+  if (!userData.user) throw new Error('Your session has expired. Please sign in again.');
+
+  const materialId = id ?? randomUUID();
+  const path = `${userData.user.id}/${input.subject_id}/${materialId}/material.pdf`;
+  const { error: uploadError } = await supabase.storage.from('study-materials').upload(path, pdf.bytes, { cacheControl: '3600', contentType: 'application/pdf', upsert: Boolean(id && previousPath === path) });
+  check(uploadError);
+
+  const values: InsertOf<'study_materials'> = {
+    ...input,
+    external_url: null,
+    file_name: pdf.fileName,
+    file_size: pdf.fileSize,
+    file_url: path,
+    id: materialId,
+    last_read_page: 1,
+    page_count: pdf.pageCount,
+    type: 'PDF',
+    uploaded_at: new Date().toISOString(),
+  };
+  const query = id
+    ? supabase.from('study_materials').update(values).eq('id', id).select().single()
+    : supabase.from('study_materials').insert(values).select().single();
+  const { data, error } = await query;
+  if (error) {
+    if (!id || previousPath !== path) await supabase.storage.from('study-materials').remove([path]);
+    check(error);
+  }
+  if (previousPath && previousPath !== path) await supabase.storage.from('study-materials').remove([previousPath]);
+  return data!;
+}
 export async function uploadMaterialFile(subjectId: string, asset: DocumentPickerAsset) {
   const supabase = requireSupabaseClient(); const { data: userData, error: userError } = await supabase.auth.getUser(); check(userError);
   if (!userData.user) throw new Error('Your session has expired. Please sign in again.');
@@ -56,7 +92,12 @@ export async function uploadMaterialFile(subjectId: string, asset: DocumentPicke
   const bytes = asset.file ? await asset.file.arrayBuffer() : await new File(asset.uri).arrayBuffer();
   const { error } = await supabase.storage.from('study-materials').upload(path, bytes, { contentType: asset.mimeType ?? 'application/octet-stream', upsert: false }); check(error); return path;
 }
-export async function getMaterialUrl(path: string) { const { data, error } = await requireSupabaseClient().storage.from('study-materials').createSignedUrl(path, 300); check(error); return data!.signedUrl; }
+export async function getMaterialUrl(path: string, expiresIn = 300) { const { data, error } = await requireSupabaseClient().storage.from('study-materials').createSignedUrl(path, expiresIn); check(error); return data!.signedUrl; }
+export async function updatePdfReadingProgress(materialId: string, page: number, pageCount: number) {
+  const { data, error } = await requireSupabaseClient().rpc('update_pdf_reading_progress', { p_material_id: materialId, p_page: page, p_page_count: pageCount });
+  check(error);
+  return data as { last_opened_at: string; last_read_page: number; page_count: number };
+}
 export async function deleteMaterial(id: string, path?: string | null) { const supabase = requireSupabaseClient(); if (path) { const { error } = await supabase.storage.from('study-materials').remove([path]); check(error); } const { error } = await supabase.from('study_materials').delete().eq('id', id); check(error); }
 
 export async function listNotes() { const { data, error } = await requireSupabaseClient().from('notes').select('*').order('updated_at', { ascending: false }); check(error); return data ?? []; }

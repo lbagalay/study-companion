@@ -88,9 +88,15 @@ export type StudyMaterial = Timestamps & {
   description: string;
   type: MaterialType;
   file_url: string | null;
+  file_name: string | null;
+  file_size: number | null;
   external_url: string | null;
   favorite: boolean;
   completed: boolean;
+  page_count: number | null;
+  uploaded_at: string | null;
+  last_opened_at: string | null;
+  last_read_page: number;
 };
 
 export type Note = Timestamps & {
@@ -175,6 +181,7 @@ export type Database = {
       unregister_web_push_subscription: { Args: { p_endpoint: string }; Returns: undefined };
       claim_due_web_notifications: { Args: { p_limit?: number }; Returns: NotificationDelivery[] };
       import_study_load: { Args: { p_subjects: Json }; Returns: Json };
+      update_pdf_reading_progress: { Args: { p_material_id: string; p_page: number; p_page_count: number }; Returns: Json };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

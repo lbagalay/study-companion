@@ -8,5 +8,5 @@ import { useState } from 'react';
 export function QueryProvider({ cacheKey, children }: PropsWithChildren<{ cacheKey: string }>) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { networkMode: 'offlineFirst', retry: 1, staleTime: 30_000, gcTime: 1000 * 60 * 60 * 24 } } }));
   const [persister] = useState(() => createAsyncStoragePersister({ storage: AsyncStorage, key: cacheKey }));
-  return <PersistQueryClientProvider client={client} persistOptions={{ maxAge: 1000 * 60 * 60 * 24, persister }}>{children}</PersistQueryClientProvider>;
+  return <PersistQueryClientProvider client={client} persistOptions={{ dehydrateOptions: { shouldDehydrateQuery: (query) => query.meta?.persist !== false }, maxAge: 1000 * 60 * 60 * 24, persister }}>{children}</PersistQueryClientProvider>;
 }
