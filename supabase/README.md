@@ -21,7 +21,8 @@ If you use the dashboard SQL editor instead, run these files in order:
 3. `migrations/202608220003_study_load_import.sql`
 4. `migrations/202608220004_pdf_reader_phase_one.sql`
 5. `migrations/202608220005_pdf_reader_function_privileges.sql`
-6. `tests/security_assertions.sql`
+6. `migrations/202608230006_pdf_page_notes_phase_two.sql`
+7. `tests/security_assertions.sql`
 
 ## 2. Configure the app
 

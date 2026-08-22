@@ -103,7 +103,9 @@ export type Note = Timestamps & {
   id: string;
   user_id: string;
   subject_id: string;
-  title: string;
+  material_id: string | null;
+  page_number: number | null;
+  title: string | null;
   content: string;
   favorite: boolean;
 };

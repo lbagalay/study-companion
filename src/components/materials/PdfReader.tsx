@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PdfNotesPanel } from '@/components/materials/PdfNotesPanel';
 import { AppButton } from '@/components/ui/AppButton';
 import { FeedbackState } from '@/components/ui/FeedbackState';
 import { FormField } from '@/components/ui/FormField';
@@ -17,7 +18,7 @@ import { clampPdfPage, pdfReadingProgress } from '@/lib/pdf/progress';
 import { getMaterial, getMaterialUrl, updatePdfReadingProgress } from '@/services';
 import type { StudyMaterial } from '@/types/database';
 
-export function PdfReader({ materialId }: { materialId: string }) {
+export function PdfReader({ initialPage, materialId }: { initialPage?: number; materialId: string }) {
   const palette = useAppTheme();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
@@ -37,6 +38,7 @@ export function PdfReader({ materialId }: { materialId: string }) {
   const [readerError, setReaderError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const scrollRef = useRef<ScrollView | null>(null);
   const renderTask = useRef<RenderTask | null>(null);
   const initialized = useRef(false);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
@@ -76,18 +78,20 @@ export function PdfReader({ materialId }: { materialId: string }) {
       setDocument(loadedDocument);
       if (!initialized.current) {
         initialized.current = true;
-        const resumePage = clampPdfPage(material.data?.last_read_page ?? 1, loadedDocument.numPages);
-        setResumedFromPage(resumePage > 1 ? resumePage : null);
-        setCurrentPage(resumePage);
-        setJumpPage(String(resumePage));
-        persistPosition(resumePage, loadedDocument.numPages);
+        const savedPage = clampPdfPage(material.data?.last_read_page ?? 1, loadedDocument.numPages);
+        const hasRequestedPage = initialPage !== undefined;
+        const openingPage = hasRequestedPage ? clampPdfPage(initialPage, loadedDocument.numPages) : savedPage;
+        setResumedFromPage(!hasRequestedPage && savedPage > 1 ? savedPage : null);
+        setCurrentPage(openingPage);
+        setJumpPage(String(openingPage));
+        persistPosition(openingPage, loadedDocument.numPages);
       }
     })().catch((error) => { if (active) setReaderError(getErrorMessage(error)); });
     return () => {
       active = false;
       if (loadingTask) void loadingTask.destroy();
     };
-  }, [material.data?.last_read_page, persistPosition, signedUrl.data]);
+  }, [initialPage, material.data?.last_read_page, persistPosition, signedUrl.data]);
 
   useEffect(() => {
     if (!document || !canvasRef.current) return;
@@ -139,7 +143,7 @@ export function PdfReader({ materialId }: { materialId: string }) {
 
   const progress = pdfReadingProgress(currentPage, document.numPages);
   return <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: palette.background }]}>
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={styles.content} ref={scrollRef} showsVerticalScrollIndicator={false}>
       <ScreenHeader back description={material.data.file_name ?? 'Private PDF'} title={material.data.title} />
       {resumedFromPage ? <View style={[styles.resume, { backgroundColor: palette.accentSoft, borderColor: palette.border }]}><View style={styles.resumeCopy}><Text style={[styles.resumeTitle, { color: palette.text }]}>Resumed from page {resumedFromPage}</Text><Text style={[styles.caption, { color: palette.textMuted }]}>Your reading position saves as you move through pages.</Text></View><AppButton label="Start over" onPress={() => { setResumedFromPage(null); goToPage(1); }} variant="ghost" /></View> : null}
       <View style={styles.progressHeader}><Text style={[styles.pageLabel, { color: palette.text }]}>Page {currentPage} of {document.numPages}</Text><Text style={[styles.progressLabel, { color: palette.accentStrong }]}>{progress}% read</Text></View>
@@ -151,6 +155,7 @@ export function PdfReader({ materialId }: { materialId: string }) {
       <View style={styles.navigation}><AppButton disabled={currentPage <= 1} label="Previous" onPress={() => goToPage(currentPage - 1)} style={styles.navButton} variant="secondary" /><AppButton disabled={currentPage >= document.numPages} label="Next" onPress={() => goToPage(currentPage + 1)} style={styles.navButton} /></View>
       <View style={styles.jump}><View style={styles.jumpField}><FormField keyboardType="number-pad" label="Jump to page" onChangeText={setJumpPage} onSubmitEditing={() => goToPage(Number(jumpPage))} returnKeyType="go" value={jumpPage} /></View><AppButton label="Go" onPress={() => goToPage(Number(jumpPage))} style={styles.goButton} variant="secondary" /></View>
       {saveError ? <Text style={[styles.saveError, { color: palette.danger }]}>Reading position could not be saved: {saveError}</Text> : null}
+      <PdfNotesPanel currentPage={currentPage} material={material.data} onJumpToPage={(page) => { goToPage(page); scrollRef.current?.scrollTo({ animated: true, y: 0 }); }} pageCount={document.numPages} />
     </ScrollView>
   </SafeAreaView>;
 }

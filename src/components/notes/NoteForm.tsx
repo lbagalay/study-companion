@@ -22,7 +22,7 @@ export function NoteForm({ id }: { id?: string }) {
   const router = useRouter(); const client = useQueryClient(); const subjects = useSubjects(); const item = useQuery({ queryKey: ['note', id], queryFn: () => getNote(id!), enabled: Boolean(id) });
   const { control, handleSubmit, reset, formState: { errors } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { subject_id: '', title: '', content: '', favorite: false } });
   useEffect(() => { if (!id && subjects.data?.[0]) reset((v) => ({ ...v, subject_id: v.subject_id || subjects.data![0].id })); }, [id, reset, subjects.data]);
-  useEffect(() => { if (item.data) reset({ subject_id: item.data.subject_id, title: item.data.title, content: item.data.content, favorite: item.data.favorite }); }, [item.data, reset]);
+  useEffect(() => { if (item.data) reset({ subject_id: item.data.subject_id, title: item.data.title ?? '', content: item.data.content, favorite: item.data.favorite }); }, [item.data, reset]);
   const save = useMutation({ mutationFn: (v: Values) => saveNote(v, id), onSuccess: async () => { await client.invalidateQueries({ queryKey: keys.notes }); router.back(); }, onError: (e) => Alert.alert('Could not save note', getErrorMessage(e)) });
   const remove = useMutation({ mutationFn: () => deleteRecord('notes', id!), onSuccess: async () => { await client.invalidateQueries({ queryKey: keys.notes }); router.back(); }, onError: (e) => Alert.alert('Could not delete note', getErrorMessage(e)) });
   if (id && item.error) return <FeedbackState actionLabel="Try again" message={item.error.message} onAction={() => void item.refetch()} title="Could not load note" />;

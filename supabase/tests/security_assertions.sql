@@ -62,5 +62,14 @@ begin
   if not has_function_privilege('authenticated', 'public.update_pdf_reading_progress(uuid,integer,integer)', 'execute') then
     raise exception 'Authenticated users must be able to update their PDF reading progress';
   end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'notes' and column_name = 'material_id'
+  ) or not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'notes' and column_name = 'page_number'
+  ) then
+    raise exception 'PDF page-note linkage columns are missing';
+  end if;
 end;
 $$;

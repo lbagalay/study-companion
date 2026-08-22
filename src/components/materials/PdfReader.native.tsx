@@ -8,7 +8,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { getErrorMessage } from '@/lib/errors';
 import { getMaterial, getMaterialUrl } from '@/services';
 
-export function PdfReader({ materialId }: { materialId: string }) {
+export function PdfReader({ materialId }: { initialPage?: number; materialId: string }) {
   const material = useQuery({ queryKey: ['material', materialId], queryFn: () => getMaterial(materialId), enabled: Boolean(materialId) });
   if (material.isLoading) return <FeedbackState loading message="Checking your private material." title="Opening PDF" />;
   if (material.error) return <FeedbackState actionLabel="Try again" message={getErrorMessage(material.error)} onAction={() => void material.refetch()} title="Could not load this PDF" />;

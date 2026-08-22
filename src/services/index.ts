@@ -101,6 +101,7 @@ export async function updatePdfReadingProgress(materialId: string, page: number,
 export async function deleteMaterial(id: string, path?: string | null) { const supabase = requireSupabaseClient(); if (path) { const { error } = await supabase.storage.from('study-materials').remove([path]); check(error); } const { error } = await supabase.from('study_materials').delete().eq('id', id); check(error); }
 
 export async function listNotes() { const { data, error } = await requireSupabaseClient().from('notes').select('*').order('updated_at', { ascending: false }); check(error); return data ?? []; }
+export async function listPdfNotes(materialId: string) { const { data, error } = await requireSupabaseClient().from('notes').select('*').eq('material_id', materialId).order('page_number').order('updated_at', { ascending: false }); check(error); return data ?? []; }
 export async function getNote(id: string) { const { data, error } = await requireSupabaseClient().from('notes').select('*').eq('id', id).single(); check(error); return data; }
 export async function saveNote(input: InsertOf<'notes'>, id?: string) { const query = id ? requireSupabaseClient().from('notes').update(input).eq('id', id).select().single() : requireSupabaseClient().from('notes').insert(input).select().single(); const { data, error } = await query; check(error); return data; }
 
