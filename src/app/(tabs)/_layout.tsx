@@ -19,11 +19,11 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: palette.background },
-        tabBarActiveBackgroundColor: brand.mauve,
+        tabBarActiveBackgroundColor: 'transparent',
         tabBarActiveTintColor: brand.ink,
         tabBarAllowFontScaling: false,
         tabBarHideOnKeyboard: true,
-        tabBarIconStyle: { height: 28, marginTop: 2 },
+        tabBarIconStyle: { height: 34, marginTop: 1 },
         tabBarInactiveTintColor: brand.ink,
         tabBarLabelPosition: 'below-icon',
         tabBarStyle: {
@@ -47,7 +47,7 @@ export default function TabLayout() {
           fontWeight: typography.label.fontWeight,
           lineHeight: 14,
           marginBottom: 1,
-          marginTop: 1,
+          marginTop: 0,
         },
       }}
     >
