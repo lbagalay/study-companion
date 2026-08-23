@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
-import { forwardRef, type ComponentProps, type ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, type ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { radii, spacing, typography } from '@/constants/theme';
@@ -11,16 +11,19 @@ import { hasMeaningfulStroke, inkStrokeHitTest, normalizedInkPoint, parsePdfInkS
 import { getPdfAnnotations, savePdfAnnotations } from '@/services';
 import type { PdfInkPoint, PdfInkStroke, PdfInkTool } from '@/types/database';
 
-type EditorTool = 'HAND' | PdfInkTool | 'ERASER';
+type DrawingTool = 'FOUNTAIN' | 'PENCIL' | 'BALLPOINT' | 'HIGHLIGHTER';
+type EditorTool = 'HAND' | DrawingTool | 'ERASER';
 type SaveState = 'IDLE' | 'SAVING' | 'SAVED' | 'ERROR';
 type PageSize = { height: number; width: number };
 type InkEditorHandle = { clear: () => void; redo: () => void; retry: () => void; undo: () => void };
 
-const PEN_COLORS = ['#252124', '#D14350', '#486FC7', '#4D8C70', '#8067B7'];
-const HIGHLIGHTER_COLORS = ['#FFD84D', '#8FD8A5', '#7FB7FF', '#FF9EC4'];
-const PEN_WIDTHS = [0.0015, 0.003, 0.0055];
-const HIGHLIGHTER_WIDTHS = [0.012, 0.022, 0.035];
-const WIDTH_LABELS = ['Thin', 'Medium', 'Thick'];
+const COLOR_SWATCHES = ['#171F26', '#FF6B55', '#FFFFFF', '#6658F5', '#B8F711'];
+const TOOL_WIDTHS: Record<DrawingTool, number[]> = {
+  FOUNTAIN: [0.0025, 0.004, 0.0065],
+  PENCIL: [0.0012, 0.002, 0.0035],
+  BALLPOINT: [0.001, 0.0016, 0.0025],
+  HIGHLIGHTER: [0.012, 0.022, 0.035],
+};
 
 function drawStroke(context: CanvasRenderingContext2D, stroke: PdfInkStroke, size: PageSize) {
   if (!hasMeaningfulStroke(stroke)) return;
@@ -54,11 +57,33 @@ function drawStroke(context: CanvasRenderingContext2D, stroke: PdfInkStroke, siz
   context.restore();
 }
 
-function ToolButton({ active, icon, label, onPress }: { active: boolean; icon: ComponentProps<typeof Ionicons>['name']; label: string; onPress: () => void }) {
+function ToolIllustration({ tool }: { tool: EditorTool }) {
+  if (tool === 'HAND') return <Ionicons color="#3A3537" name="hand-left-outline" size={27} />;
+  if (tool === 'FOUNTAIN') return <svg aria-hidden="true" height="58" viewBox="0 0 32 70" width="30">
+    <path d="M16 2 28 26 23 66H9L4 26Z" fill="#F5F4F2" stroke="#918C89" strokeWidth="1.4" />
+    <path d="M16 2v31" stroke="#5D5755" strokeWidth="1.5" /><circle cx="16" cy="27" fill="#242124" r="2.5" />
+  </svg>;
+  if (tool === 'PENCIL') return <svg aria-hidden="true" height="58" viewBox="0 0 30 70" width="28">
+    <path d="m15 2 8 17H7Z" fill="#E7CC9D" /><path d="m15 2 3 7h-6Z" fill="#292628" />
+    <path d="M7 19h16v48H7Z" fill="#D9B47B" /><path d="M7 19h5v48H7Z" fill="#EACB97" /><path d="M18 19h5v48h-5Z" fill="#B98F57" />
+  </svg>;
+  if (tool === 'BALLPOINT') return <svg aria-hidden="true" height="58" viewBox="0 0 30 70" width="28">
+    <path d="m15 2 6 16H9Z" fill="#373335" /><rect fill="#FAF9F7" height="46" rx="7" width="16" x="7" y="17" />
+    <rect fill="#3D393B" height="5" rx="2" width="18" x="6" y="43" /><rect fill="#E7E4E1" height="7" rx="3" width="14" x="8" y="61" />
+  </svg>;
+  if (tool === 'HIGHLIGHTER') return <svg aria-hidden="true" height="58" viewBox="0 0 32 70" width="30">
+    <path d="m8 2 18 6-6 13H6Z" fill="#B060FF" /><path d="M6 20h20v44a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5Z" fill="#F8F7F5" />
+    <rect fill="#8E8A87" height="5" rx="2" width="22" x="5" y="29" /><circle cx="16" cy="52" fill="#B060FF" r="4" />
+  </svg>;
+  return <svg aria-hidden="true" height="58" viewBox="0 0 32 70" width="30">
+    <rect fill="#F6F4F2" height="52" rx="8" stroke="#D8D3CF" width="22" x="5" y="8" /><rect fill="#FF9B92" height="17" rx="6" width="22" x="5" y="45" />
+  </svg>;
+}
+
+function ToolButton({ active, label, onPress, tool }: { active: boolean; label: string; onPress: () => void; tool: EditorTool }) {
   const palette = useAppTheme();
-  return <Pressable accessibilityLabel={label} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={({ pressed }) => [styles.toolButton, { backgroundColor: active ? palette.accentSolid : palette.surface, borderColor: active ? palette.accentSolid : palette.border, opacity: pressed ? 0.75 : 1 }]}>
-    <Ionicons color={active ? '#FFFFFF' : palette.text} name={icon} size={19} />
-    <Text style={[styles.toolLabel, { color: active ? '#FFFFFF' : palette.text }]}>{label}</Text>
+  return <Pressable accessibilityLabel={label} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={({ pressed }) => [styles.toolButton, { backgroundColor: active ? palette.accentSoft : 'transparent', borderColor: active ? palette.accent : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
+    <ToolIllustration tool={tool} />
   </Pressable>;
 }
 
@@ -89,7 +114,10 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
   const lastFailedRef = useRef<PdfInkStroke[] | null>(null);
   const currentStrokes = useMemo(() => history[historyIndex] ?? [], [history, historyIndex]);
 
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   useEffect(() => { historyRef.current = history; }, [history]);
   useEffect(() => { historyIndexRef.current = historyIndex; }, [historyIndex]);
   useEffect(() => { draftRef.current = draft; }, [draft]);
@@ -192,9 +220,9 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
         eraseAt(points[points.length - 1]);
         return;
       }
-      const inkTool = tool as PdfInkTool;
-      const widths = inkTool === 'HIGHLIGHTER' ? HIGHLIGHTER_WIDTHS : PEN_WIDTHS;
-      const nextDraft: PdfInkStroke = { color, id: randomUUID(), points, tool: inkTool, width: widths[widthIndex] };
+      const drawingTool = tool as DrawingTool;
+      const inkTool: PdfInkTool = drawingTool === 'HIGHLIGHTER' ? 'HIGHLIGHTER' : 'PEN';
+      const nextDraft: PdfInkStroke = { color, id: randomUUID(), points, tool: inkTool, width: TOOL_WIDTHS[drawingTool][widthIndex] };
       draftRef.current = nextDraft;
       setDraft(nextDraft);
     };
@@ -275,8 +303,10 @@ export function PdfAnnotationWorkspace({ children, height, materialId, pageNumbe
   const palette = useAppTheme();
   const queryClient = useQueryClient();
   const editorRef = useRef<InkEditorHandle | null>(null);
+  const customColorRef = useRef<HTMLInputElement | null>(null);
   const [tool, setTool] = useState<EditorTool>('HAND');
-  const [color, setColor] = useState(PEN_COLORS[0]);
+  const [lastDrawingTool, setLastDrawingTool] = useState<DrawingTool>('FOUNTAIN');
+  const [color, setColor] = useState(COLOR_SWATCHES[0]);
   const [widthIndex, setWidthIndex] = useState(1);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -287,8 +317,15 @@ export function PdfAnnotationWorkspace({ children, height, materialId, pageNumbe
 
   const chooseTool = (nextTool: EditorTool) => {
     setTool(nextTool);
-    if (nextTool === 'HIGHLIGHTER' && !HIGHLIGHTER_COLORS.includes(color)) setColor(HIGHLIGHTER_COLORS[0]);
-    if (nextTool === 'PEN' && !PEN_COLORS.includes(color)) setColor(PEN_COLORS[0]);
+    if (['FOUNTAIN', 'PENCIL', 'BALLPOINT', 'HIGHLIGHTER'].includes(nextTool)) {
+      setLastDrawingTool(nextTool as DrawingTool);
+    }
+    if (nextTool === 'HIGHLIGHTER' && ['#171F26', '#FFFFFF'].includes(color)) setColor('#FF6B55');
+  };
+
+  const chooseColor = (nextColor: string) => {
+    setColor(nextColor);
+    if (tool === 'HAND' || tool === 'ERASER') chooseTool(lastDrawingTool);
   };
 
   const persist = useCallback(async (strokes: PdfInkStroke[]) => {
@@ -301,33 +338,45 @@ export function PdfAnnotationWorkspace({ children, height, materialId, pageNumbe
     setSaveError(error ?? null);
   }, []);
   const onHistoryChange = useCallback((undo: boolean, redo: boolean) => { setCanUndo(undo); setCanRedo(redo); }, []);
-  const colors = tool === 'HIGHLIGHTER' ? HIGHLIGHTER_COLORS : PEN_COLORS;
   const editorReady = annotations.isFetched && !annotations.error;
+  const customColorSelected = !COLOR_SWATCHES.includes(color);
+  const toolHint = tool === 'HAND' ? 'Read mode · swipe the page' : tool === 'ERASER' ? 'Stroke eraser · drag over a mark' : `${tool === 'FOUNTAIN' ? 'Fountain pen' : tool === 'PENCIL' ? 'Pencil' : tool === 'BALLPOINT' ? 'Ballpoint pen' : 'Highlighter'} · draw on the page`;
 
   return <View style={styles.workspace}>
-    <View style={[styles.toolbar, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-      <View style={styles.toolGroup}>
-        <ToolButton active={tool === 'HAND'} icon="hand-left-outline" label="Read" onPress={() => chooseTool('HAND')} />
-        <ToolButton active={tool === 'PEN'} icon="pencil-outline" label="Pen" onPress={() => chooseTool('PEN')} />
-        <ToolButton active={tool === 'HIGHLIGHTER'} icon="brush-outline" label="Highlight" onPress={() => chooseTool('HIGHLIGHTER')} />
-        <ToolButton active={tool === 'ERASER'} icon="remove-circle-outline" label="Erase" onPress={() => chooseTool('ERASER')} />
+    <div style={{ maxWidth: '100%', overflowX: 'auto', padding: '8px 4px 14px', width: '100%' }}>
+      <View style={[styles.toolbar, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <View style={styles.actionGroup}>
+          <Pressable accessibilityLabel="Undo annotation" disabled={!canUndo} onPress={() => editorRef.current?.undo()} style={[styles.iconButton, { borderColor: palette.border, opacity: canUndo ? 1 : 0.3 }]}><Ionicons color={palette.text} name="arrow-undo-outline" size={25} /></Pressable>
+          <Pressable accessibilityLabel="Redo annotation" disabled={!canRedo} onPress={() => editorRef.current?.redo()} style={[styles.iconButton, { borderColor: palette.border, opacity: canRedo ? 1 : 0.3 }]}><Ionicons color={palette.text} name="arrow-redo-outline" size={25} /></Pressable>
+        </View>
+        <View style={[styles.divider, { backgroundColor: palette.border }]} />
+        <View style={styles.toolGroup}>
+          <ToolButton active={tool === 'HAND'} label="Read mode" onPress={() => chooseTool('HAND')} tool="HAND" />
+          <ToolButton active={tool === 'FOUNTAIN'} label="Fountain pen" onPress={() => chooseTool('FOUNTAIN')} tool="FOUNTAIN" />
+          <ToolButton active={tool === 'PENCIL'} label="Pencil" onPress={() => chooseTool('PENCIL')} tool="PENCIL" />
+          <ToolButton active={tool === 'BALLPOINT'} label="Ballpoint pen" onPress={() => chooseTool('BALLPOINT')} tool="BALLPOINT" />
+          <ToolButton active={tool === 'HIGHLIGHTER'} label="Highlighter" onPress={() => chooseTool('HIGHLIGHTER')} tool="HIGHLIGHTER" />
+          <ToolButton active={tool === 'ERASER'} label="Eraser" onPress={() => chooseTool('ERASER')} tool="ERASER" />
+        </View>
+        <View style={[styles.divider, { backgroundColor: palette.border }]} />
+        <View accessibilityLabel="Stroke size" style={styles.sizeRail}>{[0, 1, 2].map((index) => <Pressable accessibilityLabel={`${index === 0 ? 'Thin' : index === 1 ? 'Medium' : 'Thick'} stroke`} accessibilityRole="button" accessibilityState={{ selected: widthIndex === index }} key={index} onPress={() => setWidthIndex(index)} style={[styles.sizeButton, { backgroundColor: widthIndex === index ? palette.accentSoft : 'transparent' }]}><View style={{ backgroundColor: widthIndex === index ? palette.accentStrong : palette.textMuted, borderRadius: radii.pill, height: 2 + index * 2, width: 20 + index * 5 }} /></Pressable>)}</View>
+        <View style={[styles.divider, { backgroundColor: palette.border }]} />
+        <View style={styles.colorGrid}>
+          {COLOR_SWATCHES.map((option) => <Pressable accessibilityLabel={`Use ${option} ink`} accessibilityRole="button" accessibilityState={{ selected: color === option }} key={option} onPress={() => chooseColor(option)} style={[styles.colorOuter, { borderColor: color === option ? palette.text : 'transparent' }]}><View style={[styles.colorDot, { backgroundColor: option, borderColor: option === '#FFFFFF' ? palette.border : option }]} /></Pressable>)}
+          <Pressable accessibilityLabel="Choose custom ink color" accessibilityRole="button" accessibilityState={{ selected: customColorSelected }} onPress={() => customColorRef.current?.click()} style={[styles.colorOuter, { borderColor: customColorSelected ? palette.text : 'transparent' }]}><div aria-hidden="true" style={{ alignItems: 'center', background: 'conic-gradient(#ff3b30, #ffcc00, #34c759, #00c7ff, #5856d6, #ff2d55, #ff3b30)', borderRadius: 18, display: 'flex', height: 34, justifyContent: 'center', width: 34 }}><div style={{ background: palette.surface, borderRadius: 7, height: 14, width: 14 }} /></div></Pressable>
+          <input aria-label="Custom ink color" onChange={(event) => chooseColor(event.currentTarget.value.toUpperCase())} ref={customColorRef} style={{ display: 'none' }} type="color" value={color} />
+        </View>
       </View>
-      <View style={styles.actionGroup}>
-        <Pressable accessibilityLabel="Undo annotation" disabled={!canUndo} onPress={() => editorRef.current?.undo()} style={[styles.iconButton, { borderColor: palette.border, opacity: canUndo ? 1 : 0.35 }]}><Ionicons color={palette.text} name="arrow-undo-outline" size={20} /></Pressable>
-        <Pressable accessibilityLabel="Redo annotation" disabled={!canRedo} onPress={() => editorRef.current?.redo()} style={[styles.iconButton, { borderColor: palette.border, opacity: canRedo ? 1 : 0.35 }]}><Ionicons color={palette.text} name="arrow-redo-outline" size={20} /></Pressable>
-        <Pressable accessibilityLabel="Clear page annotations" onPress={() => editorRef.current?.clear()} style={[styles.iconButton, { borderColor: palette.border }]}><Ionicons color={palette.danger} name="trash-outline" size={19} /></Pressable>
+    </div>
+    <View style={styles.statusRow}>
+      <Text style={[styles.hint, { color: palette.textMuted }]}>{toolHint}</Text>
+      <View style={styles.statusActions}>
+        <Text style={[styles.saveStatus, { color: saveState === 'ERROR' ? palette.danger : saveState === 'SAVED' ? palette.success : palette.textMuted }]}>{annotations.isLoading ? 'Loading…' : saveState === 'SAVING' ? 'Saving…' : saveState === 'SAVED' ? 'Saved' : saveState === 'ERROR' ? 'Not saved' : 'Ready'}</Text>
+        <Pressable accessibilityLabel="Clear page annotations" onPress={() => editorRef.current?.clear()}><Text style={[styles.clearLabel, { color: palette.danger }]}>Clear page</Text></Pressable>
       </View>
-      {tool === 'PEN' || tool === 'HIGHLIGHTER' ? <View style={[styles.options, { borderTopColor: palette.border }]}>
-        <View style={styles.colors}>{colors.map((option) => <Pressable accessibilityLabel={`Use ${option} ink`} accessibilityRole="button" key={option} onPress={() => setColor(option)} style={[styles.colorOuter, { borderColor: color === option ? palette.accentStrong : 'transparent' }]}><View style={[styles.colorDot, { backgroundColor: option }]} /></Pressable>)}</View>
-        <View style={styles.widths}>{WIDTH_LABELS.map((label, index) => <Pressable accessibilityLabel={`${label} stroke`} key={label} onPress={() => setWidthIndex(index)} style={[styles.widthButton, { backgroundColor: widthIndex === index ? palette.accentSoft : palette.surfaceAlt }]}><Text style={[styles.widthLabel, { color: widthIndex === index ? palette.accentStrong : palette.textMuted }]}>{label}</Text></Pressable>)}</View>
-      </View> : null}
-      <View style={[styles.statusRow, { borderTopColor: palette.border }]}>
-        <Text style={[styles.hint, { color: palette.textMuted }]}>{tool === 'HAND' ? 'Read mode: swipe to scroll. Choose Pen or Highlight to write on the page.' : tool === 'ERASER' ? 'Drag over a mark to erase its whole stroke.' : 'Draw directly on the PDF. Switch to Read when you want to scroll.'}</Text>
-        <Text style={[styles.saveStatus, { color: saveState === 'ERROR' ? palette.danger : saveState === 'SAVED' ? palette.success : palette.textMuted }]}>{annotations.isLoading ? 'Loading ink…' : saveState === 'SAVING' ? 'Saving…' : saveState === 'SAVED' ? 'Saved' : saveState === 'ERROR' ? 'Not saved' : 'Ready'}</Text>
-      </View>
-      {annotations.error ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not load handwritten marks: {getErrorMessage(annotations.error)}</Text><Pressable onPress={() => void annotations.refetch()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Try again</Text></Pressable></View> : null}
-      {saveState === 'ERROR' ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not save: {saveError}</Text><Pressable onPress={() => editorRef.current?.retry()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Retry</Text></Pressable></View> : null}
     </View>
+    {annotations.error ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not load handwritten marks: {getErrorMessage(annotations.error)}</Text><Pressable onPress={() => void annotations.refetch()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Try again</Text></Pressable></View> : null}
+    {saveState === 'ERROR' ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not save: {saveError}</Text><Pressable onPress={() => editorRef.current?.retry()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Retry</Text></Pressable></View> : null}
     <div style={{ height, position: 'relative', width }}>
       {children}
       {editorReady && width > 0 && height > 0 ? <PdfInkCanvas
@@ -348,23 +397,23 @@ export function PdfAnnotationWorkspace({ children, height, materialId, pageNumbe
 }
 
 const styles = StyleSheet.create({
-  workspace: { alignItems: 'flex-start', gap: spacing.sm, width: '100%' },
-  toolbar: { alignSelf: 'center', borderRadius: radii.md, borderWidth: 1, gap: spacing.sm, maxWidth: 760, padding: spacing.sm, width: '100%' },
-  toolGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  actionGroup: { flexDirection: 'row', gap: spacing.xs },
-  toolButton: { alignItems: 'center', borderRadius: radii.sm, borderWidth: 1, flexDirection: 'row', gap: 5, minHeight: 40, paddingHorizontal: spacing.sm },
-  toolLabel: { ...typography.caption, fontSize: 12 },
-  iconButton: { alignItems: 'center', borderRadius: radii.sm, borderWidth: 1, height: 40, justifyContent: 'center', width: 40 },
-  options: { alignItems: 'center', borderTopWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'space-between', paddingTop: spacing.sm },
-  colors: { flexDirection: 'row', gap: spacing.xs },
-  colorOuter: { alignItems: 'center', borderRadius: 18, borderWidth: 2, height: 34, justifyContent: 'center', width: 34 },
-  colorDot: { borderRadius: 12, height: 24, width: 24 },
-  widths: { flexDirection: 'row', gap: spacing.xs },
-  widthButton: { borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: 6 },
-  widthLabel: typography.caption,
-  statusRow: { alignItems: 'center', borderTopWidth: 1, flexDirection: 'row', gap: spacing.md, justifyContent: 'space-between', paddingTop: spacing.sm },
+  workspace: { alignItems: 'flex-start', gap: spacing.xs, width: '100%' },
+  toolbar: { alignItems: 'center', borderRadius: 54, borderWidth: 1, boxShadow: '0 15px 34px rgba(84, 45, 37, 0.18)', flexDirection: 'row', gap: spacing.sm, marginHorizontal: 'auto', minHeight: 104, minWidth: 800, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, width: 800 },
+  toolGroup: { alignItems: 'center', flexDirection: 'row', gap: 2 },
+  actionGroup: { flexDirection: 'row', gap: spacing.sm },
+  toolButton: { alignItems: 'center', borderBottomWidth: 3, borderRadius: radii.md, borderWidth: 1, height: 84, justifyContent: 'center', paddingHorizontal: 5, width: 58 },
+  iconButton: { alignItems: 'center', borderRadius: radii.pill, borderWidth: 1, height: 48, justifyContent: 'center', width: 48 },
+  divider: { height: 70, marginHorizontal: spacing.xs, width: 1 },
+  sizeRail: { gap: 2, justifyContent: 'center', width: 48 },
+  sizeButton: { alignItems: 'center', borderRadius: radii.sm, height: 27, justifyContent: 'center', width: 46 },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 3, width: 126 },
+  colorOuter: { alignItems: 'center', borderRadius: 22, borderWidth: 3, height: 40, justifyContent: 'center', width: 40 },
+  colorDot: { borderRadius: 17, borderWidth: 1, height: 32, width: 32 },
+  statusRow: { alignItems: 'center', alignSelf: 'center', flexDirection: 'row', gap: spacing.md, justifyContent: 'space-between', maxWidth: 800, paddingHorizontal: spacing.sm, width: '100%' },
+  statusActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
   hint: { ...typography.caption, flex: 1 },
   saveStatus: { ...typography.caption, fontWeight: '700' },
+  clearLabel: { ...typography.caption, fontWeight: '700' },
   errorRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, justifyContent: 'space-between' },
   errorText: { ...typography.caption, flex: 1 },
   retry: { ...typography.caption, fontWeight: '700' },
