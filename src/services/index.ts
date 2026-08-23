@@ -1,8 +1,8 @@
 import { requireSupabaseClient } from '@/lib/supabase/client';
+import { createClientUuid } from '@/lib/ids';
 import type { Database, PdfAnnotation, PdfInkStroke } from '@/types/database';
 import { File } from 'expo-file-system';
 import type { DocumentPickerAsset } from 'expo-document-picker';
-import { randomUUID } from 'expo-crypto';
 import { extractStudyLoadLocally, type StudyLoadProgress } from '@/lib/study-load/localExtractor';
 import type { InspectedPdf } from '@/lib/pdf/types';
 import { studyLoadExtractionSchema, type StudyLoadImportSubject } from '@/lib/study-load/schema';
@@ -57,7 +57,7 @@ export async function savePdfMaterial(input: Pick<InsertOf<'study_materials'>, '
   check(userError);
   if (!userData.user) throw new Error('Your session has expired. Please sign in again.');
 
-  const materialId = id ?? randomUUID();
+  const materialId = id ?? createClientUuid();
   const path = `${userData.user.id}/${input.subject_id}/${materialId}/material.pdf`;
   const { error: uploadError } = await supabase.storage.from('study-materials').upload(path, pdf.bytes, { cacheControl: '3600', contentType: 'application/pdf', upsert: Boolean(id && previousPath === path) });
   check(uploadError);

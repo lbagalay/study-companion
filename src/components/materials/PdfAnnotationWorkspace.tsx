@@ -1,12 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { randomUUID } from 'expo-crypto';
 import { forwardRef, type ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { radii, spacing, typography } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { getErrorMessage } from '@/lib/errors';
+import { createClientUuid } from '@/lib/ids';
 import { hasMeaningfulStroke, inkStrokeHitTest, normalizedInkPoint, parsePdfInkStrokes } from '@/lib/pdf/annotations';
 import { getPdfAnnotations, savePdfAnnotations } from '@/services';
 import type { PdfInkPoint, PdfInkStroke, PdfInkTool } from '@/types/database';
@@ -222,7 +222,7 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
       }
       const drawingTool = tool as DrawingTool;
       const inkTool: PdfInkTool = drawingTool === 'HIGHLIGHTER' ? 'HIGHLIGHTER' : 'PEN';
-      const nextDraft: PdfInkStroke = { color, id: randomUUID(), points, tool: inkTool, width: TOOL_WIDTHS[drawingTool][widthIndex] };
+      const nextDraft: PdfInkStroke = { color, id: createClientUuid(), points, tool: inkTool, width: TOOL_WIDTHS[drawingTool][widthIndex] };
       draftRef.current = nextDraft;
       setDraft(nextDraft);
     };
