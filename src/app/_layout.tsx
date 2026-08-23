@@ -1,3 +1,15 @@
+import {
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+  useFonts as useNunitoFonts,
+} from '@expo-google-fonts/nunito';
+
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  useFonts as useInterFonts,
+} from '@expo-google-fonts/inter';
+
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
@@ -6,30 +18,67 @@ import { FeedbackState } from '@/components/ui/FeedbackState';
 import { LaunchAnimation } from '@/components/ui/LaunchAnimation';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { colors } from '@/constants/theme';
+import { configureNotifications } from '@/lib/notifications';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
-import { configureNotifications } from '@/lib/notifications';
 
 configureNotifications();
 
 export default function RootLayout() {
-  return <AuthProvider><AppProviders /></AuthProvider>;
+  const [nunitoLoaded] = useNunitoFonts({
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+  });
+
+  const [interLoaded] = useInterFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+  });
+
+  if (!nunitoLoaded || !interLoaded) {
+    return null;
+  }
+
+  return (
+    <AuthProvider>
+      <AppProviders />
+    </AuthProvider>
+  );
 }
 
 function AppProviders() {
   const { user } = useAuth();
-  return <QueryProvider cacheKey={`study-companion-cache-${user?.id ?? 'guest'}`} key={user?.id ?? 'guest'}><View style={styles.root}><RootNavigator /><LaunchAnimation /></View></QueryProvider>;
-}
 
-const styles = StyleSheet.create({ root: { flex: 1 } });
+  return (
+    <QueryProvider
+      cacheKey={`study-companion-cache-${user?.id ?? 'guest'}`}
+      key={user?.id ?? 'guest'}
+    >
+      <View style={styles.root}>
+        <RootNavigator />
+        <LaunchAnimation />
+      </View>
+    </QueryProvider>
+  );
+}
 
 function RootNavigator() {
   const { loading, session } = useAuth();
-  if (loading) return <FeedbackState loading message="Restoring your secure session." title="Opening Study Companion" />;
+
+  if (loading) {
+    return (
+      <FeedbackState
+        loading
+        message="Restoring your secure session."
+        title="Opening Study Companion"
+      />
+    );
+  }
 
   return (
     <>
       <OfflineBanner />
+
       <Stack
         screenOptions={{
           contentStyle: {
@@ -40,7 +89,11 @@ function RootNavigator() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="reset-password" />
-        <Stack.Protected guard={!session}><Stack.Screen name="(auth)" /></Stack.Protected>
+
+        <Stack.Protected guard={!session}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+
         <Stack.Protected guard={Boolean(session)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="subjects" />
@@ -60,7 +113,14 @@ function RootNavigator() {
           <Stack.Screen name="sessions/[id]" />
         </Stack.Protected>
       </Stack>
+
       <StatusBar style="dark" />
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});

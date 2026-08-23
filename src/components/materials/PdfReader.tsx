@@ -2467,21 +2467,23 @@ const styles =
       fontWeight: '700',
     },
 
-    jump: {
-      alignItems: 'flex-end',
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginTop: spacing.md,
-    },
+   jump: {
+  alignItems: 'flex-start',
+  flexDirection: 'row',
+  gap: 8,
+  marginTop: spacing.md,
+},
 
-    jumpField: {
-      flex: 1,
-    },
+jumpField: {
+  flex: 1,
+},
 
-    goButton: {
-      minWidth: 88,
-    },
-
+goButton: {
+  marginTop: 29,
+  minHeight: 44,
+  minWidth: 64,
+  paddingHorizontal: 16,
+},
     saveError: {
       ...typography.caption,
       marginTop: spacing.md,

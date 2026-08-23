@@ -1,4 +1,4 @@
-import { Platform, type TextStyle } from 'react-native';
+import type { TextStyle } from 'react-native';
 
 export const brand = {
   navy: '#0E1B48',
@@ -18,33 +18,46 @@ const shared = {
 export const colors = {
   light: {
     ...shared,
+
     accent: brand.mauve,
     accentSolid: brand.mauve,
     accentStrong: brand.ink,
     accentSoft: brand.blush,
+
     background: '#FAF7F9',
     border: brand.blush,
+
     lavender: brand.blue,
     lavenderSoft: '#EDF3F9',
+
     peachSoft: '#F6ECF2',
+
     surface: '#FFFCFE',
     surfaceAlt: '#F7EEF3',
+
     text: brand.ink,
     textMuted: brand.slate,
   },
+
   dark: {
     ...shared,
+
     accent: brand.mauve,
     accentSolid: brand.mauve,
     accentStrong: brand.blush,
     accentSoft: brand.slate,
+
     background: brand.ink,
     border: brand.slate,
+
     lavender: brand.blue,
     lavenderSoft: brand.navy,
+
     peachSoft: brand.slate,
+
     surface: '#142A3D',
     surfaceAlt: brand.navy,
+
     text: '#FFF8FC',
     textMuted: brand.blush,
   },
@@ -67,37 +80,43 @@ export const radii = {
   pill: 999,
 } as const;
 
-const editorialFont = Platform.select({ android: 'serif', default: 'Georgia', ios: 'Georgia', web: 'Georgia, Times New Roman, serif' });
-
 export const typography = {
   title: {
-    fontFamily: editorialFont,
+    fontFamily: 'Nunito_800ExtraBold',
     fontSize: 38,
-    fontWeight: '600',
-    letterSpacing: -0.6,
-    lineHeight: 45,
+    fontWeight: '800',
+    letterSpacing: -0.7,
+    lineHeight: 44,
   } satisfies TextStyle,
+
   sectionTitle: {
-    fontFamily: editorialFont,
+    fontFamily: 'Nunito_700Bold',
     fontSize: 22,
-    fontWeight: '600',
-    lineHeight: 29,
+    fontWeight: '700',
+    letterSpacing: -0.25,
+    lineHeight: 28,
   } satisfies TextStyle,
+
   body: {
+    fontFamily: 'Inter_400Regular',
     fontSize: 16,
     fontWeight: '400',
     lineHeight: 24,
   } satisfies TextStyle,
+
   label: {
+    fontFamily: 'Inter_500Medium',
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.15,
+    fontWeight: '500',
+    letterSpacing: 1.1,
     lineHeight: 16,
     textTransform: 'uppercase',
   } satisfies TextStyle,
+
   caption: {
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
-    fontWeight: '500',
-    lineHeight: 14,
+    fontWeight: '400',
+    lineHeight: 15,
   } satisfies TextStyle,
 } as const;
