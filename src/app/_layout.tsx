@@ -39,18 +39,26 @@ function RootNavigator() {
           headerShown: false,
         }}
       >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="reset-password" />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="reset-password" />
         <Stack.Protected guard={!session}><Stack.Screen name="(auth)" /></Stack.Protected>
         <Stack.Protected guard={Boolean(session)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="subjects" />
-          <Stack.Screen name="schedule" />
-          <Stack.Screen name="assignments" />
-          <Stack.Screen name="exams" />
-          <Stack.Screen name="materials" />
-          <Stack.Screen name="notes" />
+          <Stack.Screen name="schedule/create" />
+          <Stack.Screen name="schedule/[id]" />
+          <Stack.Screen name="assignments/create" />
+          <Stack.Screen name="assignments/[id]" />
+          <Stack.Screen name="exams/create" />
+          <Stack.Screen name="exams/[id]" />
+          <Stack.Screen name="materials/create" />
+          <Stack.Screen name="materials/[id]" />
+          <Stack.Screen name="materials/[id]/reader" />
+          <Stack.Screen name="notes/create" />
+          <Stack.Screen name="notes/[id]" />
           <Stack.Screen name="sessions" />
+          <Stack.Screen name="sessions/create-plan" />
+          <Stack.Screen name="sessions/[id]" />
         </Stack.Protected>
       </Stack>
       <StatusBar style={isDark ? 'light' : 'dark'} />

@@ -38,17 +38,17 @@ export function ExamForm({ id }: { id?: string }) {
   if (id && item.error) return <FeedbackState actionLabel="Try again" message={item.error.message} onAction={() => void item.refetch()} title="Could not load exam" />;
   if (id && item.isLoading) return <FeedbackState loading message="Loading exam." title="One moment" />;
   return <ScreenContainer><ScreenHeader back description="Coverage becomes the basis of a study plan." title={id ? 'Exam details' : 'New exam'} /><View style={styles.form}>
-    <Controller control={control} name="subject_id" render={({ field }) => <SubjectField onChange={field.onChange} value={field.value} />} />
+    <Controller control={control} name="subject_id" render={({ field }) => <SubjectField error={errors.subject_id?.message} onChange={field.onChange} value={field.value} />} />
     <Controller control={control} name="title" render={({ field }) => <FormField error={errors.title?.message} label="Title" onChangeText={field.onChange} value={field.value} />} />
     <Controller control={control} name="type" render={({ field }) => <ChoiceField choices={types} label="Type" onChange={field.onChange} value={field.value} />} />
-    <Controller control={control} name="exam_at" render={({ field }) => <DateTimeField label="Date and time" onChange={field.onChange} value={field.value} />} />
+    <Controller control={control} name="exam_at" render={({ field }) => <DateTimeField error={errors.exam_at?.message} label="Exam or quiz date and time" onChange={field.onChange} value={field.value} />} />
     <Controller control={control} name="room" render={({ field }) => <FormField label="Room" onChangeText={field.onChange} value={field.value} />} />
     <Controller control={control} name="coverage" render={({ field }) => <FormField label="Coverage (one topic per line)" multiline onChangeText={field.onChange} value={field.value} />} />
     <Controller control={control} name="notes" render={({ field }) => <FormField label="Notes" multiline onChangeText={field.onChange} value={field.value} />} />
     <Controller control={control} name="status" render={({ field }) => <ChoiceField choices={statuses} label="Status" onChange={field.onChange} value={field.value} />} />
-    <Controller control={control} name="reminder_offsets" render={({ field }) => <MultiChoiceField choices={reminderChoices} label="Remind me" onChange={field.onChange} value={field.value} />} />
-    <AppButton label={id ? 'Save changes' : 'Add exam'} loading={save.isPending} onPress={handleSubmit((v) => save.mutate(v))} />
-    {id ? <AppButton label="Delete exam" loading={remove.isPending} onPress={() => Alert.alert('Delete exam?', 'Related study sessions will remain but lose this exam link.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => remove.mutate() }])} variant="danger" /> : null}
+    <Controller control={control} name="reminder_offsets" render={({ field }) => <MultiChoiceField choices={reminderChoices} error={errors.reminder_offsets?.message} label="Remind me" onChange={field.onChange} value={field.value} />} />
+    <AppButton icon={id ? 'checkmark-circle-outline' : 'add-circle-outline'} label={id ? 'Save changes' : 'Add exam or quiz'} loading={save.isPending} onPress={handleSubmit((v) => save.mutate(v))} />
+    {id ? <AppButton icon="trash-outline" label="Delete exam" loading={remove.isPending} onPress={() => Alert.alert('Delete exam?', 'Related study sessions will remain but lose this exam link.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => remove.mutate() }])} variant="danger" /> : null}
   </View></ScreenContainer>;
 }
-const styles = StyleSheet.create({ form: { gap: spacing.md, paddingBottom: spacing.xxl } });
+const styles = StyleSheet.create({ form: { gap: spacing.lg, paddingBottom: spacing.xxl } });
