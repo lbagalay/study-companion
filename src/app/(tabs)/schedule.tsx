@@ -1,6 +1,14 @@
-import { format, parse } from 'date-fns';
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import {
+  format,
+  parse,
+} from 'date-fns';
+import {
+  useRouter,
+} from 'expo-router';
+import {
+  useMemo,
+  useState,
+} from 'react';
 import {
   Pressable,
   ScrollView,
@@ -9,189 +17,403 @@ import {
   View,
 } from 'react-native';
 
-import { days } from '@/components/schedule/ScheduleForm';
-import { ChoiceField } from '@/components/ui/ChoiceField';
-import { EntityList } from '@/components/ui/EntityList';
-import { FeedbackState } from '@/components/ui/FeedbackState';
-import { radii, spacing, typography } from '@/constants/theme';
-import { useAppTheme } from '@/hooks/useAppTheme';
-import { useSchedules, useSubjects } from '@/hooks/useStudyData';
+import {
+  days,
+} from '@/components/schedule/ScheduleForm';
+import {
+  ChoiceField,
+} from '@/components/ui/ChoiceField';
+import {
+  EntityList,
+} from '@/components/ui/EntityList';
+import {
+  FeedbackState,
+} from '@/components/ui/FeedbackState';
 
-const SLOT_MINUTES = 30;
-const SLOT_HEIGHT = 28;       // was 46
-const TIME_COLUMN_WIDTH = 52; // was 64
-const DAY_COLUMN_WIDTH = 130; // was 150
+import {
+  radii,
+  spacing,
+  typography,
+} from '@/constants/theme';
+
+import {
+  useAppTheme,
+} from '@/hooks/useAppTheme';
+
+import {
+  useSchedules,
+  useSubjects,
+} from '@/hooks/useStudyData';
+
+const SLOT_MINUTES =
+  30;
+
+const SLOT_HEIGHT =
+  28;
+
+const TIME_COLUMN_WIDTH =
+  52;
+
+const DAY_COLUMN_WIDTH =
+  130;
 
 const WEEK_DAYS = [
-  { label: 'MON', value: 1 },
-  { label: 'TUE', value: 2 },
-  { label: 'WED', value: 3 },
-  { label: 'THU', value: 4 },
-  { label: 'FRI', value: 5 },
-  { label: 'SAT', value: 6 },
+  {
+    label:
+      'MON',
+    value:
+      1,
+  },
+
+  {
+    label:
+      'TUE',
+    value:
+      2,
+  },
+
+  {
+    label:
+      'WED',
+    value:
+      3,
+  },
+
+  {
+    label:
+      'THU',
+    value:
+      4,
+  },
+
+  {
+    label:
+      'FRI',
+    value:
+      5,
+  },
+
+  {
+    label:
+      'SAT',
+    value:
+      6,
+  },
 ];
 
-const showTime = (value: string) =>
+const showTime = (
+  value:
+    string,
+) =>
   format(
-    parse(value, 'HH:mm:ss', new Date()),
+    parse(
+      value,
+      'HH:mm:ss',
+      new Date(),
+    ),
+
     'h:mm a',
   );
 
-function timeToMinutes(value: string) {
-  const [hours = 0, minutes = 0] = value
-    .split(':')
-    .map(Number);
+function timeToMinutes(
+  value:
+    string,
+) {
+  const [
+    hours = 0,
+    minutes = 0,
+  ] =
+    value
+      .split(':')
+      .map(
+        Number,
+      );
 
-  return hours * 60 + minutes;
+  return (
+    hours *
+      60 +
+    minutes
+  );
 }
 
-function minutesToLabel(totalMinutes: number) {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
+function minutesToLabel(
+  totalMinutes:
+    number,
+) {
+  const hours =
+    Math.floor(
+      totalMinutes /
+        60,
+    );
 
-  const date = new Date();
+  const minutes =
+    totalMinutes %
+    60;
 
-  date.setHours(hours, minutes, 0, 0);
+  const date =
+    new Date();
 
-  return format(date, 'h:mm');
+  date.setHours(
+    hours,
+    minutes,
+    0,
+    0,
+  );
+
+  return format(
+    date,
+    'h:mm',
+  );
 }
 
-function roundDownToHour(minutes: number) {
-  return Math.floor(minutes / 60) * 60;
+function roundDownToHour(
+  minutes:
+    number,
+) {
+  return (
+    Math.floor(
+      minutes /
+        60,
+    ) *
+    60
+  );
 }
 
-function roundUpToHour(minutes: number) {
-  return Math.ceil(minutes / 60) * 60;
+function roundUpToHour(
+  minutes:
+    number,
+) {
+  return (
+    Math.ceil(
+      minutes /
+        60,
+    ) *
+    60
+  );
 }
 
 export default function ScheduleScreen() {
-  const router = useRouter();
-  const palette = useAppTheme();
+  const router =
+    useRouter();
 
-  const schedules = useSchedules();
-  const subjects = useSubjects();
+  const palette =
+    useAppTheme();
 
-  const [mode, setMode] =
-    useState<'WEEK' | 'TODAY'>('WEEK');
+  const schedules =
+    useSchedules();
 
-  const subjectById = useMemo(
-    () =>
-      new Map(
-        subjects.data?.map((subject) => [
-          subject.id,
-          subject,
-        ]) ?? [],
-      ),
-    [subjects.data],
-  );
+  const subjects =
+    useSubjects();
 
-  const today = new Date().getDay();
+  const [
+    mode,
+    setMode,
+  ] =
+    useState<
+      | 'WEEK'
+      | 'TODAY'
+    >(
+      'WEEK',
+    );
+
+  const subjectById =
+    useMemo(
+      () =>
+        new Map(
+          subjects.data?.map(
+            (
+              subject,
+            ) => [
+              subject.id,
+              subject,
+            ],
+          ) ??
+            [],
+        ),
+
+      [
+        subjects.data,
+      ],
+    );
+
+  const today =
+    new Date().getDay();
 
   const visible =
     schedules.data?.filter(
-      (item) =>
-        mode === 'WEEK' ||
-        item.day_of_week === today,
-    ) ?? [];
+      (
+        item,
+      ) =>
+        mode ===
+          'WEEK' ||
+        item.day_of_week ===
+          today,
+    ) ??
+    [];
 
-  /*
-   * Work out the visible timetable range automatically.
-   *
-   * Example:
-   * earliest class = 8:00
-   * latest class = 17:30
-   *
-   * timetable becomes roughly 7:00–19:00.
-   */
-  const { startMinute, endMinute } =
-    useMemo(() => {
-      if (!visible.length) {
+  const {
+    startMinute,
+    endMinute,
+  } =
+    useMemo(
+      () => {
+        if (
+          !visible.length
+        ) {
+          return {
+            endMinute:
+              18 *
+              60,
+
+            startMinute:
+              7 *
+              60,
+          };
+        }
+
+        const starts =
+          visible.map(
+            (
+              item,
+            ) =>
+              timeToMinutes(
+                item.start_time,
+              ),
+          );
+
+        const ends =
+          visible.map(
+            (
+              item,
+            ) =>
+              timeToMinutes(
+                item.end_time,
+              ),
+          );
+
+        const earliest =
+          Math.min(
+            ...starts,
+          );
+
+        const latest =
+          Math.max(
+            ...ends,
+          );
+
         return {
-          startMinute: 7 * 60,
-          endMinute: 18 * 60,
+          startMinute:
+            Math.max(
+              6 *
+                60,
+
+              roundDownToHour(
+                earliest -
+                  60,
+              ),
+            ),
+
+          endMinute:
+            Math.min(
+              22 *
+                60,
+
+              roundUpToHour(
+                latest +
+                  60,
+              ),
+            ),
         };
-      }
+      },
 
-      const starts = visible.map((item) =>
-        timeToMinutes(item.start_time),
-      );
-
-      const ends = visible.map((item) =>
-        timeToMinutes(item.end_time),
-      );
-
-      const earliest = Math.min(...starts);
-      const latest = Math.max(...ends);
-
-      return {
-        startMinute: Math.max(
-          6 * 60,
-          roundDownToHour(earliest - 60),
-        ),
-
-        endMinute: Math.min(
-          22 * 60,
-          roundUpToHour(latest + 60),
-        ),
-      };
-    }, [visible]);
+      [
+        visible,
+      ],
+    );
 
   const slotCount =
-    (endMinute - startMinute) /
+    (endMinute -
+      startMinute) /
     SLOT_MINUTES;
 
   const timelineHeight =
-    slotCount * SLOT_HEIGHT;
+    slotCount *
+    SLOT_HEIGHT;
 
-  const timeSlots = Array.from(
-    { length: slotCount + 1 },
-    (_, index) =>
-      startMinute +
-      index * SLOT_MINUTES,
-  );
+  const timeSlots =
+    Array.from(
+      {
+        length:
+          slotCount +
+          1,
+      },
 
-  /*
-   * In Today mode we only show today's column.
-   *
-   * In Week mode we show Monday–Saturday.
-   *
-   * Sunday is also included automatically when
-   * there is actually a Sunday class.
-   */
-  const displayedDays = useMemo(() => {
-    if (mode === 'TODAY') {
-      return [
-        {
-          label:
-            days[today]
-              ?.slice(0, 3)
-              .toUpperCase() ?? 'TODAY',
+      (
+        _,
+        index,
+      ) =>
+        startMinute +
+        index *
+          SLOT_MINUTES,
+    );
 
-          value: today,
-        },
-      ];
-    }
+  const displayedDays =
+    useMemo(
+      () => {
+        if (
+          mode ===
+          'TODAY'
+        ) {
+          return [
+            {
+              label:
+                days[
+                  today
+                ]
+                  ?.slice(
+                    0,
+                    3,
+                  )
+                  .toUpperCase() ??
+                'TODAY',
 
-    const hasSunday =
-      schedules.data?.some(
-        (item) =>
-          item.day_of_week === 0,
-      ) ?? false;
+              value:
+                today,
+            },
+          ];
+        }
 
-    return hasSunday
-      ? [
-          {
-            label: 'SUN',
-            value: 0,
-          },
-          ...WEEK_DAYS,
-        ]
-      : WEEK_DAYS;
-  }, [
-    mode,
-    schedules.data,
-    today,
-  ]);
+        const hasSunday =
+          schedules.data?.some(
+            (
+              item,
+            ) =>
+              item.day_of_week ===
+              0,
+          ) ??
+          false;
+
+        return hasSunday
+          ? [
+              {
+                label:
+                  'SUN',
+
+                value:
+                  0,
+              },
+
+              ...WEEK_DAYS,
+            ]
+          : WEEK_DAYS;
+      },
+
+      [
+        mode,
+        schedules.data,
+        today,
+      ],
+    );
 
   const renderClass = (
     item: NonNullable<
@@ -214,19 +436,44 @@ export default function ScheduleScreen() {
       );
 
     const top =
-      ((start - startMinute) /
+      ((start -
+        startMinute) /
         SLOT_MINUTES) *
       SLOT_HEIGHT;
 
     const duration =
       Math.max(
         SLOT_MINUTES,
-        end - start,
+        end -
+          start,
       );
 
-    const height =
-      (duration / SLOT_MINUTES) *
+    /*
+     * This is the natural timetable
+     * height before minimum card sizing.
+     */
+    const rawHeight =
+      (duration /
+        SLOT_MINUTES) *
       SLOT_HEIGHT;
+
+    /*
+     * Every card has enough physical
+     * height to display both:
+     *
+     * subject
+     * time
+     */
+    const cardHeight =
+      Math.max(
+        46,
+        rawHeight -
+          4,
+      );
+
+    const compactCard =
+      rawHeight <
+      72;
 
     const accent =
       subject?.color ??
@@ -235,73 +482,105 @@ export default function ScheduleScreen() {
     return (
       <Pressable
         accessibilityLabel={`${
-          subject?.name ?? 'Class'
+          subject?.name ??
+          'Class'
         }, ${showTime(
           item.start_time,
         )} to ${showTime(
           item.end_time,
         )}`}
         accessibilityRole="button"
-        key={item.id}
+        key={
+          item.id
+        }
         onPress={() =>
           router.push({
             pathname:
               '/schedule/[id]',
+
             params: {
-              id: item.id,
+              id:
+                item.id,
             },
           })
         }
         style={({ pressed }) => [
           styles.classCard,
+
+          compactCard &&
+            styles.classCardCompact,
+
           {
             backgroundColor:
               accent,
-            height: Math.max(
-              42,
-              height - 4,
-            ),
-            opacity: pressed
-              ? 0.8
-              : 1,
-            top: top + 2,
+
+            height:
+              cardHeight,
+
+            opacity:
+              pressed
+                ? 0.8
+                : 1,
+
+            top:
+              top +
+              2,
           },
         ]}
       >
         <Text
           numberOfLines={
-            height < 80 ? 2 : 3
+            compactCard
+              ? 1
+              : 2
           }
-          style={
-            styles.classTitle
-          }
+          style={[
+            styles.classTitle,
+
+            compactCard &&
+              styles.classTitleCompact,
+          ]}
         >
           {subject?.name ??
             'Class'}
         </Text>
 
-        {height >= 72 ? (
-          <Text
-            numberOfLines={1}
-            style={
-              styles.classTime
-            }
-          >
-            {showTime(
-              item.start_time,
-            )}{' '}
-            –{' '}
-            {showTime(
-              item.end_time,
-            )}
-          </Text>
-        ) : null}
+        {/*
+         * FIX:
+         *
+         * Time is ALWAYS rendered now.
+         * We only shrink the typography
+         * for shorter classes.
+         */}
+        <Text
+          numberOfLines={
+            1
+          }
+          style={[
+            styles.classTime,
+
+            compactCard &&
+              styles.classTimeCompact,
+          ]}
+        >
+          {showTime(
+            item.start_time,
+          )}
+          {'–'}
+          {showTime(
+            item.end_time,
+          )}
+        </Text>
 
         {(item.room ||
           subject?.room) &&
-        height >= 100 ? (
+        !compactCard &&
+        rawHeight >=
+          90 ? (
           <Text
-            numberOfLines={1}
+            numberOfLines={
+              1
+            }
             style={
               styles.classRoom
             }
@@ -319,10 +598,13 @@ export default function ScheduleScreen() {
       addLabel="Add class manually"
       description="Your recurring weekly class timetable."
       empty={
-        !schedules.data?.length
+        !schedules.data
+          ?.length
       }
       emptyMessage="Add a class manually or upload your study load so today’s schedule appears on Home."
-      error={schedules.error}
+      error={
+        schedules.error
+      }
       loading={
         schedules.isLoading
       }
@@ -351,17 +633,28 @@ export default function ScheduleScreen() {
       <ChoiceField
         choices={[
           {
-            label: 'Week',
-            value: 'WEEK',
+            label:
+              'Week',
+
+            value:
+              'WEEK',
           },
+
           {
-            label: 'Today',
-            value: 'TODAY',
+            label:
+              'Today',
+
+            value:
+              'TODAY',
           },
         ]}
         label="View"
-        onChange={setMode}
-        value={mode}
+        onChange={
+          setMode
+        }
+        value={
+          mode
+        }
       />
 
       {visible.length ? (
@@ -371,6 +664,7 @@ export default function ScheduleScreen() {
             {
               backgroundColor:
                 palette.surface,
+
               borderColor:
                 palette.border,
             },
@@ -384,7 +678,8 @@ export default function ScheduleScreen() {
             }
           >
             <View>
-              {/* Day headings */}
+              {/* DAY HEADERS */}
+
               <View
                 style={
                   styles.headerRow
@@ -401,19 +696,24 @@ export default function ScheduleScreen() {
                 />
 
                 {displayedDays.map(
-                  (day) => (
+                  (
+                    day,
+                  ) => (
                     <View
-                      key={day.value}
+                      key={
+                        day.value
+                      }
                       style={[
                         styles.dayHeader,
                         {
-                          borderColor:
-                            palette.border,
                           backgroundColor:
                             day.value ===
                             today
                               ? palette.accentSoft
                               : palette.surface,
+
+                          borderColor:
+                            palette.border,
                         },
                       ]}
                     >
@@ -438,13 +738,15 @@ export default function ScheduleScreen() {
                 )}
               </View>
 
-              {/* Main timetable */}
+              {/* TIMELINE */}
+
               <View
                 style={
                   styles.timelineRow
                 }
               >
-                {/* Time column */}
+                {/* TIME COLUMN */}
+
                 <View
                   style={{
                     width:
@@ -473,6 +775,7 @@ export default function ScheduleScreen() {
                                 1
                                 ? 0
                                 : SLOT_HEIGHT,
+
                             position:
                               'relative',
                           }}
@@ -498,12 +801,17 @@ export default function ScheduleScreen() {
                   )}
                 </View>
 
-                {/* Day columns */}
+                {/* DAYS */}
+
                 {displayedDays.map(
-                  (day) => {
+                  (
+                    day,
+                  ) => {
                     const dayClasses =
                       visible.filter(
-                        (item) =>
+                        (
+                          item,
+                        ) =>
                           item.day_of_week ===
                           day.value,
                       );
@@ -518,14 +826,19 @@ export default function ScheduleScreen() {
                           {
                             borderColor:
                               palette.border,
+
                             height:
                               timelineHeight,
                           },
                         ]}
                       >
-                        {/* horizontal time lines */}
+                        {/* GRID LINES */}
+
                         {timeSlots
-                          .slice(0, -1)
+                          .slice(
+                            0,
+                            -1,
+                          )
                           .map(
                             (
                               minutes,
@@ -547,10 +860,12 @@ export default function ScheduleScreen() {
                                     {
                                       borderTopColor:
                                         palette.border,
+
                                       opacity:
                                         isHour
                                           ? 0.8
                                           : 0.35,
+
                                       top:
                                         index *
                                         SLOT_HEIGHT,
@@ -586,107 +901,218 @@ export default function ScheduleScreen() {
 const styles =
   StyleSheet.create({
     scheduleCard: {
-      borderRadius: radii.xl,
-      borderWidth: 1,
-      overflow: 'hidden',
+      borderRadius:
+        radii.xl,
+
+      borderWidth:
+        1,
+
+      overflow:
+        'hidden',
+
       paddingBottom:
         spacing.md,
     },
 
     headerRow: {
-      flexDirection: 'row',
+      flexDirection:
+        'row',
     },
 
     timeHeader: {
-      borderBottomWidth: 1,
-      height: 54,
+      borderBottomWidth:
+        1,
+
+      height:
+        54,
+
       width:
         TIME_COLUMN_WIDTH,
     },
 
     dayHeader: {
-      alignItems: 'center',
-      borderBottomWidth: 1,
-      borderLeftWidth: 1,
-      height: 54,
+      alignItems:
+        'center',
+
+      borderBottomWidth:
+        1,
+
+      borderLeftWidth:
+        1,
+
+      height:
+        54,
+
       justifyContent:
         'center',
+
       width:
         DAY_COLUMN_WIDTH,
     },
 
     dayText: {
       ...typography.label,
-      fontWeight: '800',
-      letterSpacing: 1.2,
+
+      fontSize:
+        9,
+
+      fontWeight:
+        '800',
+
+      letterSpacing:
+        1.1,
     },
 
     timelineRow: {
-      flexDirection: 'row',
+      flexDirection:
+        'row',
     },
 
     timeLabel: {
       ...typography.caption,
-      fontWeight: '700',
-      position: 'absolute',
-      right: 10,
-      top: -8,
+
+      fontSize:
+        9,
+
+      fontWeight:
+        '700',
+
+      position:
+        'absolute',
+
+      right:
+        8,
+
+      top:
+        -7,
     },
 
     dayColumn: {
-      borderLeftWidth: 1,
-      position: 'relative',
+      borderLeftWidth:
+        1,
+
+      position:
+        'relative',
+
       width:
         DAY_COLUMN_WIDTH,
     },
 
     gridLine: {
-      borderTopWidth: 1,
-      left: 0,
-      position: 'absolute',
-      right: 0,
+      borderTopWidth:
+        1,
+
+      left:
+        0,
+
+      position:
+        'absolute',
+
+      right:
+        0,
     },
 
     classCard: {
-      borderRadius: radii.md,
-      left: 4,
-      overflow: 'hidden',
-      padding:
-        spacing.sm,
-      position: 'absolute',
-      right: 4,
+      borderRadius:
+        10,
 
-      /*
-       * Web shadow.
-       * If your project complains
-       * about boxShadow, delete
-       * this line.
-       */
-      boxShadow:
-        '0 5px 14px rgba(14, 27, 72, 0.12)',
+      left:
+        4,
+
+      overflow:
+        'hidden',
+
+      paddingHorizontal:
+        8,
+
+      paddingVertical:
+        6,
+
+      position:
+        'absolute',
+
+      right:
+        4,
+    },
+
+    classCardCompact: {
+      borderRadius:
+        8,
+
+      paddingHorizontal:
+        6,
+
+      paddingVertical:
+        5,
     },
 
     classTitle: {
       ...typography.label,
-      color: '#FFFFFF',
-      fontSize: 12,
-      fontWeight: '800',
-      lineHeight: 15,
+
+      color:
+        '#FFFFFF',
+
+      fontSize:
+        11,
+
+      fontWeight:
+        '800',
+
+      lineHeight:
+        14,
+    },
+
+    classTitleCompact: {
+      fontSize:
+        9,
+
+      lineHeight:
+        11,
     },
 
     classTime: {
       ...typography.caption,
+
       color:
-        'rgba(255,255,255,0.90)',
-      fontSize: 10,
-      marginTop: 4,
+        'rgba(255,255,255,0.94)',
+
+      fontSize:
+        9,
+
+      fontWeight:
+        '700',
+
+      lineHeight:
+        12,
+
+      marginTop:
+        2,
+    },
+
+    classTimeCompact: {
+      fontSize:
+        7,
+
+      lineHeight:
+        9,
+
+      marginTop:
+        1,
     },
 
     classRoom: {
       ...typography.caption,
+
       color:
         'rgba(255,255,255,0.82)',
-      fontSize: 10,
-      marginTop: 2,
+
+      fontSize:
+        8,
+
+      lineHeight:
+        11,
+
+      marginTop:
+        2,
     },
   });
