@@ -26,23 +26,19 @@ import {
   spacing,
   typography,
 } from '@/constants/theme';
-
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { getErrorMessage } from '@/lib/errors';
 import { createClientUuid } from '@/lib/ids';
-
 import {
   hasMeaningfulStroke,
   inkStrokeHitTest,
   normalizedInkPoint,
   parsePdfInkStrokes,
 } from '@/lib/pdf/annotations';
-
 import {
   getPdfAnnotations,
   savePdfAnnotations,
 } from '@/services';
-
 import type {
   PdfInkPoint,
   PdfInkStroke,
@@ -78,10 +74,9 @@ type InkEditorHandle = {
   undo: () => void;
 };
 
-type PageHandle =
-  InkEditorHandle & {
-    reload: () => void;
-  };
+type PageHandle = InkEditorHandle & {
+  reload: () => void;
+};
 
 type PageUiState = {
   canRedo: boolean;
@@ -113,26 +108,10 @@ const TOOL_WIDTHS: Record<
   DrawingTool,
   number[]
 > = {
-  FOUNTAIN: [
-    0.0025,
-    0.004,
-    0.0065,
-  ],
-  PENCIL: [
-    0.0012,
-    0.002,
-    0.0035,
-  ],
-  BALLPOINT: [
-    0.001,
-    0.0016,
-    0.0025,
-  ],
-  HIGHLIGHTER: [
-    0.012,
-    0.022,
-    0.035,
-  ],
+  FOUNTAIN: [0.0025, 0.004, 0.0065],
+  PENCIL: [0.0012, 0.002, 0.0035],
+  BALLPOINT: [0.001, 0.0016, 0.0025],
+  HIGHLIGHTER: [0.012, 0.022, 0.035],
 };
 
 function drawStroke(
@@ -140,60 +119,41 @@ function drawStroke(
   stroke: PdfInkStroke,
   size: PageSize,
 ) {
-  if (
-    !hasMeaningfulStroke(
-      stroke,
-    )
-  ) {
+  if (!hasMeaningfulStroke(stroke)) {
     return;
   }
 
   context.save();
 
-  context.strokeStyle =
-    stroke.color;
-
-  context.fillStyle =
-    stroke.color;
+  context.strokeStyle = stroke.color;
+  context.fillStyle = stroke.color;
 
   context.globalAlpha =
-    stroke.tool ===
-    'HIGHLIGHTER'
+    stroke.tool === 'HIGHLIGHTER'
       ? 0.34
       : 1;
 
-  context.lineCap =
-    'round';
+  context.lineCap = 'round';
+  context.lineJoin = 'round';
 
-  context.lineJoin =
-    'round';
+  context.lineWidth = Math.max(
+    1,
+    stroke.width *
+      Math.min(
+        size.width,
+        size.height,
+      ),
+  );
 
-  context.lineWidth =
-    Math.max(
-      1,
-      stroke.width *
-        Math.min(
-          size.width,
-          size.height,
-        ),
-    );
+  const first = stroke.points[0];
 
-  const first =
-    stroke.points[0];
-
-  if (
-    stroke.points.length ===
-    1
-  ) {
+  if (stroke.points.length === 1) {
     context.beginPath();
 
     context.arc(
-      first.x *
-        size.width,
-      first.y *
-        size.height,
-      context.lineWidth /
-        2,
+      first.x * size.width,
+      first.y * size.height,
+      context.lineWidth / 2,
       0,
       Math.PI * 2,
     );
@@ -207,45 +167,32 @@ function drawStroke(
   context.beginPath();
 
   context.moveTo(
-    first.x *
-      size.width,
-    first.y *
-      size.height,
+    first.x * size.width,
+    first.y * size.height,
   );
 
   for (
     let index = 1;
-    index <
-    stroke.points.length;
+    index < stroke.points.length;
     index += 1
   ) {
     const previous =
-      stroke.points[
-        index - 1
-      ];
+      stroke.points[index - 1];
 
     const point =
-      stroke.points[
-        index
-      ];
+      stroke.points[index];
 
     const middleX =
-      ((previous.x +
-        point.x) /
-        2) *
+      ((previous.x + point.x) / 2) *
       size.width;
 
     const middleY =
-      ((previous.y +
-        point.y) /
-        2) *
+      ((previous.y + point.y) / 2) *
       size.height;
 
     context.quadraticCurveTo(
-      previous.x *
-        size.width,
-      previous.y *
-        size.height,
+      previous.x * size.width,
+      previous.y * size.height,
       middleX,
       middleY,
     );
@@ -253,15 +200,12 @@ function drawStroke(
 
   const last =
     stroke.points[
-      stroke.points.length -
-        1
+      stroke.points.length - 1
     ];
 
   context.lineTo(
-    last.x *
-      size.width,
-    last.y *
-      size.height,
+    last.x * size.width,
+    last.y * size.height,
   );
 
   context.stroke();
@@ -276,142 +220,71 @@ function ToolIllustration({
   const shadow =
     'rgba(15, 23, 42, 0.10)';
 
-  const edge =
-    '#D4D4D8';
+  const edge = '#D4D4D8';
+  const softEdge = '#E5E7EB';
+  const dark = '#111827';
 
-  const dark =
-    '#111827';
-
-  /*
-   * HAND
-   */
-  if (
-    tool === 'HAND'
-  ) {
+  if (tool === 'HAND') {
     return (
       <svg
         aria-hidden="true"
-        height="70"
-        viewBox="0 0 42 70"
-        width="42"
+        width="34"
+        height="64"
+        viewBox="0 0 34 64"
       >
-        <defs>
-          <linearGradient
-            id="handFill"
-            x1="0"
-            x2="1"
-            y1="0"
-            y2="1"
-          >
-            <stop
-              offset="0"
-              stopColor="#FFFFFF"
-            />
-
-            <stop
-              offset="1"
-              stopColor="#F6E9EF"
-            />
-          </linearGradient>
-        </defs>
-
         <ellipse
-          cx="21"
-          cy="66"
-          fill={shadow}
+          cx="17"
+          cy="59"
           rx="10"
           ry="2"
+          fill={shadow}
+        />
+
+        <circle
+          cx="17"
+          cy="31"
+          r="15"
+          fill="#FFFFFF"
+          stroke={softEdge}
+          strokeWidth="1.2"
         />
 
         <path
-          d="M12.5 34V21.2C12.5 18.9 13.9 17.4 15.8 17.4C17.6 17.4 19 18.8 19 21V28.2V14.4C19 12.1 20.4 10.6 22.3 10.6C24.2 10.6 25.6 12.1 25.6 14.4V27.6V17C25.6 14.8 27 13.3 28.9 13.3C30.8 13.3 32.2 14.8 32.2 17V29.2V21C32.2 18.9 33.6 17.5 35.4 17.5C37.2 17.5 38.5 18.9 38.5 21V36.3C38.5 47.7 31.4 56.1 21.7 56.1C12.6 56.1 7.1 50.4 6.3 41.8L5.8 35.6C5.5 32.7 7 30.8 9.1 30.6C10.7 30.4 11.8 31.5 12.5 34Z"
-          fill="url(#handFill)"
+          d="M11.8 35.8v-8.1c0-1.25.8-2.15 1.9-2.15 1.05 0 1.85.84 1.85 2.05v3.6-7c0-1.28.82-2.18 1.95-2.18 1.08 0 1.88.9 1.88 2.18v6.55-5.25c0-1.2.8-2.04 1.84-2.04 1.08 0 1.88.84 1.88 2.04v5.65-3.45c0-1.2.78-2.02 1.82-2.02 1.03 0 1.83.82 1.83 2.02v7.18c0 5.12-3.64 8.9-8.66 8.9-4.64 0-6.19-3.04-6.19-7.97Z"
+          fill="none"
           stroke={dark}
+          strokeWidth="1.75"
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth="1.8"
-        />
-
-        <path
-          d="M19 28.2V35"
-          fill="none"
-          opacity="0.65"
-          stroke={dark}
-          strokeLinecap="round"
-          strokeWidth="1.35"
-        />
-
-        <path
-          d="M25.6 27.6V35"
-          fill="none"
-          opacity="0.65"
-          stroke={dark}
-          strokeLinecap="round"
-          strokeWidth="1.35"
-        />
-
-        <path
-          d="M32.2 29.2V35.5"
-          fill="none"
-          opacity="0.65"
-          stroke={dark}
-          strokeLinecap="round"
-          strokeWidth="1.35"
-        />
-
-        <path
-          d="M12.5 34.2V40.2"
-          fill="none"
-          opacity="0.65"
-          stroke={dark}
-          strokeLinecap="round"
-          strokeWidth="1.35"
-        />
-
-        <path
-          d="M8.2 38.2c2.1 1.1 3.6 2.7 4.7 4.9"
-          fill="none"
-          opacity="0.7"
-          stroke={dark}
-          strokeLinecap="round"
-          strokeWidth="1.35"
         />
       </svg>
     );
   }
 
-  /*
-   * FOUNTAIN PEN
-   */
-  if (
-    tool ===
-    'FOUNTAIN'
-  ) {
+  if (tool === 'FOUNTAIN') {
     return (
       <svg
         aria-hidden="true"
+        width="40"
         height="70"
         viewBox="0 0 40 70"
-        width="40"
       >
         <defs>
           <linearGradient
             id="fountainMetal"
             x1="0"
-            x2="1"
             y1="0"
+            x2="1"
             y2="1"
           >
             <stop
               offset="0"
               stopColor="#FFFFFF"
             />
-
             <stop
               offset="0.55"
               stopColor="#E5E7EB"
             />
-
             <stop
               offset="1"
               stopColor="#BFC3CA"
@@ -421,20 +294,18 @@ function ToolIllustration({
           <linearGradient
             id="fountainGrip"
             x1="0"
-            x2="1"
             y1="0"
+            x2="1"
             y2="0"
           >
             <stop
               offset="0"
               stopColor="#C9CDD3"
             />
-
             <stop
               offset="0.5"
               stopColor="#F4F4F5"
             />
-
             <stop
               offset="1"
               stopColor="#B8BDC5"
@@ -445,9 +316,9 @@ function ToolIllustration({
         <ellipse
           cx="20"
           cy="66"
-          fill={shadow}
           rx="10"
           ry="2"
+          fill={shadow}
         />
 
         <path
@@ -465,15 +336,15 @@ function ToolIllustration({
         <path
           d="M20 11v19"
           stroke={dark}
-          strokeLinecap="round"
           strokeWidth="1.45"
+          strokeLinecap="round"
         />
 
         <circle
           cx="20"
           cy="25"
-          fill={dark}
           r="2.1"
+          fill={dark}
         />
 
         <path
@@ -492,42 +363,34 @@ function ToolIllustration({
     );
   }
 
-  /*
-   * PENCIL
-   */
-  if (
-    tool === 'PENCIL'
-  ) {
+  if (tool === 'PENCIL') {
     return (
       <svg
         aria-hidden="true"
+        width="32"
         height="70"
         viewBox="0 0 32 70"
-        width="32"
       >
         <defs>
           <linearGradient
             id="pencilBody"
             x1="0"
-            x2="1"
             y1="0"
+            x2="1"
             y2="0"
           >
             <stop
               offset="0"
               stopColor="#E4E7EB"
             />
-
             <stop
               offset="0.36"
               stopColor="#FFFFFF"
             />
-
             <stop
               offset="0.72"
               stopColor="#F4F4F5"
             />
-
             <stop
               offset="1"
               stopColor="#D7DAE0"
@@ -538,9 +401,9 @@ function ToolIllustration({
         <ellipse
           cx="16"
           cy="66"
-          fill={shadow}
           rx="7"
           ry="1.8"
+          fill={shadow}
         />
 
         <path
@@ -556,68 +419,60 @@ function ToolIllustration({
         />
 
         <rect
-          fill="url(#pencilBody)"
-          height="46"
-          rx="1.6"
-          stroke={edge}
-          strokeWidth="0.8"
-          width="10.6"
           x="10.7"
           y="15"
+          width="10.6"
+          height="46"
+          rx="1.6"
+          fill="url(#pencilBody)"
+          stroke={edge}
+          strokeWidth="0.8"
         />
 
         <rect
-          fill="#111111"
-          height="3.5"
-          width="10.6"
           x="10.7"
           y="26"
+          width="10.6"
+          height="3.5"
+          fill="#111111"
         />
 
         <rect
-          fill="#F8FAFC"
-          height="30"
-          opacity="0.9"
-          width="1.8"
           x="12"
           y="29.5"
+          width="1.8"
+          height="30"
+          fill="#F8FAFC"
+          opacity="0.9"
         />
       </svg>
     );
   }
 
-  /*
-   * BALLPOINT
-   */
-  if (
-    tool ===
-    'BALLPOINT'
-  ) {
+  if (tool === 'BALLPOINT') {
     return (
       <svg
         aria-hidden="true"
+        width="34"
         height="70"
         viewBox="0 0 34 70"
-        width="34"
       >
         <defs>
           <linearGradient
             id="ballBody"
             x1="0"
-            x2="1"
             y1="0"
+            x2="1"
             y2="0"
           >
             <stop
               offset="0"
               stopColor="#D9DDE3"
             />
-
             <stop
               offset="0.38"
               stopColor="#FFFFFF"
             />
-
             <stop
               offset="1"
               stopColor="#E5E7EB"
@@ -628,9 +483,9 @@ function ToolIllustration({
         <ellipse
           cx="17"
           cy="66"
-          fill={shadow}
           rx="8"
           ry="1.8"
+          fill={shadow}
         />
 
         <path
@@ -639,77 +494,69 @@ function ToolIllustration({
         />
 
         <rect
-          fill="url(#ballBody)"
-          height="47"
-          rx="6.5"
-          stroke={edge}
-          strokeWidth="0.8"
-          width="13"
           x="10.5"
           y="13.5"
+          width="13"
+          height="47"
+          rx="6.5"
+          fill="url(#ballBody)"
+          stroke={edge}
+          strokeWidth="0.8"
         />
 
         <rect
-          fill="#111827"
-          height="5"
-          rx="2.5"
-          width="13"
           x="10.5"
           y="39"
+          width="13"
+          height="5"
+          rx="2.5"
+          fill="#111827"
         />
 
         <rect
-          fill="#D1D5DB"
-          height="6"
-          rx="3"
-          width="10"
           x="12"
           y="55"
+          width="10"
+          height="6"
+          rx="3"
+          fill="#D1D5DB"
         />
 
         <path
           d="M13 17v18"
           stroke="#FFFFFF"
-          strokeLinecap="round"
           strokeOpacity="0.9"
           strokeWidth="1.4"
+          strokeLinecap="round"
         />
       </svg>
     );
   }
 
-  /*
-   * HIGHLIGHTER
-   */
-  if (
-    tool ===
-    'HIGHLIGHTER'
-  ) {
+  if (tool === 'HIGHLIGHTER') {
     return (
       <svg
         aria-hidden="true"
+        width="38"
         height="70"
         viewBox="0 0 38 70"
-        width="38"
       >
         <defs>
           <linearGradient
             id="highlighterBody"
             x1="0"
-            x2="1"
             y1="0"
+            x2="1"
             y2="0"
           >
             <stop
               offset="0"
               stopColor="#E5E7EB"
             />
-
             <stop
               offset="0.35"
               stopColor="#FFFFFF"
             />
-
             <stop
               offset="1"
               stopColor="#ECEFF3"
@@ -720,9 +567,9 @@ function ToolIllustration({
         <ellipse
           cx="19"
           cy="66"
-          fill={shadow}
           rx="9"
           ry="1.8"
+          fill={shadow}
         />
 
         <path
@@ -740,56 +587,49 @@ function ToolIllustration({
         />
 
         <rect
-          fill="#F6CE3D"
-          height="5"
-          rx="2.5"
-          width="20"
           x="9"
           y="31.5"
+          width="20"
+          height="5"
+          rx="2.5"
+          fill="#F6CE3D"
         />
 
         <path
           d="M13 20v30"
           stroke="#FFFFFF"
-          strokeLinecap="round"
           strokeOpacity="0.9"
           strokeWidth="1.5"
+          strokeLinecap="round"
         />
       </svg>
     );
   }
 
-  /*
-   * ERASER
-   */
-  if (
-    tool === 'ERASER'
-  ) {
+  if (tool === 'ERASER') {
     return (
       <svg
         aria-hidden="true"
+        width="38"
         height="70"
         viewBox="0 0 38 70"
-        width="38"
       >
         <defs>
           <linearGradient
             id="eraserBody"
             x1="0"
-            x2="1"
             y1="0"
+            x2="1"
             y2="0"
           >
             <stop
               offset="0"
               stopColor="#E5E7EB"
             />
-
             <stop
               offset="0.4"
               stopColor="#FFFFFF"
             />
-
             <stop
               offset="1"
               stopColor="#EEF0F3"
@@ -799,15 +639,14 @@ function ToolIllustration({
           <linearGradient
             id="eraserTop"
             x1="0"
-            x2="0"
             y1="0"
+            x2="0"
             y2="1"
           >
             <stop
               offset="0"
               stopColor="#E99795"
             />
-
             <stop
               offset="1"
               stopColor="#D98583"
@@ -818,20 +657,20 @@ function ToolIllustration({
         <ellipse
           cx="19"
           cy="66"
-          fill={shadow}
           rx="9"
           ry="1.8"
+          fill={shadow}
         />
 
         <rect
-          fill="url(#eraserTop)"
-          height="18"
-          rx="4.5"
-          stroke="#D68280"
-          strokeWidth="0.7"
-          width="18"
           x="10"
           y="6"
+          width="18"
+          height="18"
+          rx="4.5"
+          fill="url(#eraserTop)"
+          stroke="#D68280"
+          strokeWidth="0.7"
         />
 
         <path
@@ -842,19 +681,19 @@ function ToolIllustration({
         />
 
         <rect
-          fill="#E6E7EA"
-          height="3.5"
-          width="18"
           x="10"
           y="22.5"
+          width="18"
+          height="3.5"
+          fill="#E6E7EA"
         />
 
         <path
           d="M13 27v25"
           stroke="#FFFFFF"
-          strokeLinecap="round"
           strokeOpacity="0.85"
           strokeWidth="1.5"
+          strokeLinecap="round"
         />
       </svg>
     );
@@ -874,32 +713,25 @@ function ToolButton({
   onPress: () => void;
   tool: EditorTool;
 }) {
-  const palette =
-    useAppTheme();
+  const palette = useAppTheme();
 
   return (
     <Pressable
-      accessibilityLabel={
-        label
-      }
+      accessibilityLabel={label}
       accessibilityRole="button"
       accessibilityState={{
         selected: active,
       }}
       onPress={onPress}
-      style={({
-        pressed,
-      }) => [
+      style={({ pressed }) => [
         styles.toolButton,
         {
-          backgroundColor:
-            active
-              ? palette.accentSoft
-              : 'transparent',
-          borderColor:
-            active
-              ? palette.accent
-              : 'transparent',
+          backgroundColor: active
+            ? palette.accentSoft
+            : 'transparent',
+          borderColor: active
+            ? palette.accent
+            : 'transparent',
           opacity: pressed
             ? 0.7
             : 1,
@@ -920,20 +752,25 @@ const PdfInkCanvas =
       color: string;
       height: number;
       initialStrokes: PdfInkStroke[];
+
       onHistoryChange: (
         canUndo: boolean,
         canRedo: boolean,
       ) => void;
+
       onPinchZoom: (
         distanceRatio: number,
       ) => void;
+
       onPersist: (
         strokes: PdfInkStroke[],
       ) => Promise<void>;
+
       onSaveStateChange: (
         state: SaveState,
         error?: string,
       ) => void;
+
       tool: EditorTool;
       width: number;
       widthIndex: number;
@@ -944,6 +781,7 @@ const PdfInkCanvas =
       height,
       initialStrokes,
       onHistoryChange,
+      onPinchZoom,
       onPersist,
       onSaveStateChange,
       tool,
@@ -953,30 +791,21 @@ const PdfInkCanvas =
     ref,
   ) {
     const canvasRef =
-      useRef<HTMLCanvasElement | null>(
-        null,
-      );
+      useRef<
+        HTMLCanvasElement | null
+      >(null);
 
-    const [
-      history,
-      setHistory,
-    ] =
-      useState<
-        PdfInkStroke[][]
-      >([
+    const [history, setHistory] =
+      useState<PdfInkStroke[][]>([
         initialStrokes,
       ]);
 
     const [
       historyIndex,
       setHistoryIndex,
-    ] =
-      useState(0);
+    ] = useState(0);
 
-    const [
-      draft,
-      setDraft,
-    ] =
+    const [draft, setDraft] =
       useState<
         PdfInkStroke | null
       >(null);
@@ -993,9 +822,7 @@ const PdfInkCanvas =
       useRef(history);
 
     const historyIndexRef =
-      useRef(
-        historyIndex,
-      );
+      useRef(historyIndex);
 
     const draftRef =
       useRef<
@@ -1013,14 +840,12 @@ const PdfInkCanvas =
       );
 
     const activePointerRef =
-      useRef<
-        number | null
-      >(null);
+      useRef<number | null>(
+        null,
+      );
 
     const saveQueueRef =
-      useRef<
-        Promise<void>
-      >(
+      useRef<Promise<void>>(
         Promise.resolve(),
       );
 
@@ -1078,8 +903,7 @@ const PdfInkCanvas =
       onHistoryChange(
         historyIndex > 0,
         historyIndex <
-          history.length -
-            1,
+          history.length - 1,
       );
     }, [
       history.length,
@@ -1090,7 +914,8 @@ const PdfInkCanvas =
     const persist =
       useCallback(
         (
-          strokes: PdfInkStroke[],
+          strokes:
+            PdfInkStroke[],
         ) => {
           onSaveStateChange(
             'SAVING',
@@ -1146,7 +971,8 @@ const PdfInkCanvas =
     const commit =
       useCallback(
         (
-          nextStrokes: PdfInkStroke[],
+          nextStrokes:
+            PdfInkStroke[],
         ) => {
           const currentHistory =
             historyRef.current;
@@ -1237,8 +1063,7 @@ const PdfInkCanvas =
 
         if (
           !current ||
-          current.length ===
-            0
+          current.length === 0
         ) {
           return;
         }
@@ -1279,7 +1104,8 @@ const PdfInkCanvas =
     );
 
     /*
-     * DRAW EXISTING STROKES
+     * Paint all saved and
+     * in-progress strokes.
      */
     useEffect(() => {
       const canvas =
@@ -1377,14 +1203,23 @@ const PdfInkCanvas =
     ]);
 
     /*
-     * POINTER INPUT
+     * Input behavior:
      *
-     * IMPORTANT:
+     * Apple Pencil / stylus
+     * -> Pointer Events
+     * -> draw
      *
-     * finger = scroll / navigate
-     * Apple Pencil = draw
-     * stylus = draw
-     * mouse = draw
+     * Mouse
+     * -> Pointer Events
+     * -> draw
+     *
+     * Finger
+     * -> Touch Events
+     * -> scroll
+     *
+     * Two fingers
+     * -> Touch Events
+     * -> zoom
      */
     useEffect(() => {
       const canvas =
@@ -1397,35 +1232,33 @@ const PdfInkCanvas =
         return;
       }
 
-      const eventPoints =
-        (
-          event: PointerEvent,
-        ) => {
-          const coalesced =
-            typeof event.getCoalescedEvents ===
-            'function'
-              ? event.getCoalescedEvents()
-              : [event];
+      const eventPoints = (
+        event: PointerEvent,
+      ) => {
+        const coalesced =
+          typeof event.getCoalescedEvents ===
+          'function'
+            ? event.getCoalescedEvents()
+            : [event];
 
-          const rect =
-            canvas.getBoundingClientRect();
+        const rect =
+          canvas.getBoundingClientRect();
 
-          const samples =
-            coalesced.length >
-            0
-              ? coalesced
-              : [event];
+        const samples =
+          coalesced.length > 0
+            ? coalesced
+            : [event];
 
-          return samples.map(
-            (sample) =>
-              normalizedInkPoint(
-                sample.clientX,
-                sample.clientY,
-                sample.pressure,
-                rect,
-              ),
-          );
-        };
+        return samples.map(
+          (sample) =>
+            normalizedInkPoint(
+              sample.clientX,
+              sample.clientY,
+              sample.pressure,
+              rect,
+            ),
+        );
+      };
 
       const eraseAt = (
         point: PdfInkPoint,
@@ -1469,260 +1302,632 @@ const PdfInkCanvas =
         );
       };
 
-      const onPointerDown =
+      /*
+       * Safari exposes
+       * Touch.touchType:
+       *
+       * direct = finger
+       * stylus = Apple Pencil
+       */
+      const isStylusTouch = (
+        touch: Touch,
+      ) =>
         (
-          event: PointerEvent,
-        ) => {
-          /*
-           * Finger should NEVER start drawing.
-           *
-           * Returning here means we don't
-           * prevent the browser/iPad from
-           * scrolling the PDF.
-           */
-          if (
-            event.pointerType ===
-            'touch'
-          ) {
-            return;
+          touch as Touch & {
+            touchType?: string;
           }
+        ).touchType ===
+        'stylus';
 
-          /*
-           * Allow:
-           * - left mouse button
-           * - Apple Pencil / stylus
-           */
-          if (
-            event.button !==
-              0 &&
-            event.pointerType !==
-              'pen'
+      const directTouches = (
+        list: TouchList,
+      ) =>
+        Array.from(
+          list,
+        ).filter(
+          (touch) =>
+            !isStylusTouch(
+              touch,
+            ),
+        );
+
+      const touchDistance = (
+        touches: Touch[],
+      ) => {
+        if (
+          touches.length < 2
+        ) {
+          return null;
+        }
+
+        return Math.hypot(
+          touches[0]
+            .clientX -
+            touches[1]
+              .clientX,
+          touches[0]
+            .clientY -
+            touches[1]
+              .clientY,
+        );
+      };
+
+      /*
+       * Find the actual
+       * scrolling element.
+       *
+       * Works with:
+       * - RN Web ScrollView
+       * - full-screen reader
+       * - browser document
+       */
+      const findScrollContainer =
+        () => {
+          let element:
+            | HTMLElement
+            | null =
+            canvas.parentElement;
+
+          while (
+            element
           ) {
-            return;
-          }
+            const style =
+              window.getComputedStyle(
+                element,
+              );
 
-          event.preventDefault();
-
-          activePointerRef.current =
-            event.pointerId;
-
-          if (
-            !canvas.hasPointerCapture(
-              event.pointerId,
-            )
-          ) {
-            canvas.setPointerCapture(
-              event.pointerId,
-            );
-          }
-
-          const points =
-            eventPoints(
-              event,
-            );
-
-          if (
-            tool === 'ERASER'
-          ) {
-            erasedIdsRef.current =
-              new Set();
-
-            eraseAt(
-              points[
-                points.length -
-                  1
-              ],
-            );
-
-            return;
-          }
-
-          const drawingTool =
-            tool as DrawingTool;
-
-          const inkTool: PdfInkTool =
-            drawingTool ===
-            'HIGHLIGHTER'
-              ? 'HIGHLIGHTER'
-              : 'PEN';
-
-          const nextDraft: PdfInkStroke =
-            {
-              color,
-              id: createClientUuid(),
-              points,
-              tool: inkTool,
-              width:
-                TOOL_WIDTHS[
-                  drawingTool
-                ][widthIndex],
-            };
-
-          draftRef.current =
-            nextDraft;
-
-          setDraft(
-            nextDraft,
-          );
-        };
-
-      const onPointerMove =
-        (
-          event: PointerEvent,
-        ) => {
-          /*
-           * Finger movement belongs to
-           * scrolling, not drawing.
-           */
-          if (
-            event.pointerType ===
-            'touch'
-          ) {
-            return;
-          }
-
-          if (
-            activePointerRef.current !==
-            event.pointerId
-          ) {
-            return;
-          }
-
-          event.preventDefault();
-
-          const points =
-            eventPoints(
-              event,
-            );
-
-          if (
-            tool === 'ERASER'
-          ) {
-            points.forEach(
-              eraseAt,
-            );
-
-            return;
-          }
-
-          const activeDraft =
-            draftRef.current;
-
-          if (
-            !activeDraft ||
-            activeDraft.points
-              .length >=
-              20000
-          ) {
-            return;
-          }
-
-          const nextDraft =
-            {
-              ...activeDraft,
-              points: [
-                ...activeDraft.points,
-                ...points,
-              ].slice(
-                0,
-                20000,
-              ),
-            };
-
-          draftRef.current =
-            nextDraft;
-
-          setDraft(
-            nextDraft,
-          );
-        };
-
-      const finishPointer =
-        (
-          event: PointerEvent,
-        ) => {
-          /*
-           * Finger never owns the drawing
-           * pointer, so let the browser
-           * finish its scroll naturally.
-           */
-          if (
-            event.pointerType ===
-            'touch'
-          ) {
-            return;
-          }
-
-          if (
-            activePointerRef.current !==
-            event.pointerId
-          ) {
-            return;
-          }
-
-          event.preventDefault();
-
-          activePointerRef.current =
-            null;
-
-          if (
-            canvas.hasPointerCapture(
-              event.pointerId,
-            )
-          ) {
-            canvas.releasePointerCapture(
-              event.pointerId,
-            );
-          }
-
-          if (
-            tool === 'ERASER'
-          ) {
-            const next =
-              erasingPreviewRef.current;
+            const canScrollY =
+              (
+                style.overflowY ===
+                  'auto' ||
+                style.overflowY ===
+                  'scroll'
+              ) &&
+              element.scrollHeight >
+                element.clientHeight;
 
             if (
-              next &&
-              next.length !==
-                historyRef.current[
-                  historyIndexRef.current
-                ].length
+              canScrollY
             ) {
-              commit(next);
+              return element;
             }
 
-            erasingPreviewRef.current =
-              null;
-
-            setErasingPreview(
-              null,
-            );
-
-            return;
+            element =
+              element.parentElement;
           }
 
-          const activeDraft =
-            draftRef.current;
+          return (
+            document.scrollingElement as
+              | HTMLElement
+              | null
+          );
+        };
 
-          if (
-            activeDraft &&
-            hasMeaningfulStroke(
-              activeDraft,
-            )
-          ) {
-            commit([
-              ...historyRef.current[
-                historyIndexRef.current
-              ],
-              activeDraft,
-            ]);
-          }
+      const scrollTargetRef =
+        {
+          current:
+            null as
+              | HTMLElement
+              | null,
+        };
 
-          draftRef.current =
+      const fingerLastRef =
+        {
+          current:
+            null as
+              | {
+                  x: number;
+                  y: number;
+                }
+              | null,
+        };
+
+      const touchPinchDistanceRef =
+        {
+          current:
+            null as
+              | number
+              | null,
+        };
+
+      const onTouchStart = (
+        event: TouchEvent,
+      ) => {
+        const fingers =
+          directTouches(
+            event.touches,
+          );
+
+        /*
+         * A stylus-only
+         * TouchEvent must not
+         * become scrolling.
+         */
+        if (
+          fingers.length ===
+          0
+        ) {
+          return;
+        }
+
+        /*
+         * touchAction remains
+         * `none` on the canvas
+         * so Safari cannot steal
+         * the Pencil gesture.
+         *
+         * Finger scrolling is
+         * performed manually.
+         */
+        event.preventDefault();
+
+        if (
+          fingers.length >=
+          2
+        ) {
+          fingerLastRef.current =
             null;
 
-          setDraft(null);
+          touchPinchDistanceRef.current =
+            touchDistance(
+              fingers,
+            );
+
+          return;
+        }
+
+        const finger =
+          fingers[0];
+
+        scrollTargetRef.current =
+          findScrollContainer();
+
+        fingerLastRef.current =
+          {
+            x: finger.clientX,
+            y: finger.clientY,
+          };
+
+        touchPinchDistanceRef.current =
+          null;
+      };
+
+      const onTouchMove = (
+        event: TouchEvent,
+      ) => {
+        const fingers =
+          directTouches(
+            event.touches,
+          );
+
+        if (
+          fingers.length ===
+          0
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        /*
+         * Two fingers:
+         * zoom.
+         */
+        if (
+          fingers.length >=
+          2
+        ) {
+          const previousDistance =
+            touchPinchDistanceRef.current;
+
+          const nextDistance =
+            touchDistance(
+              fingers,
+            );
+
+          if (
+            previousDistance !==
+              null &&
+            nextDistance !==
+              null &&
+            previousDistance >
+              0 &&
+            Math.abs(
+              nextDistance -
+                previousDistance,
+            ) >= 2
+          ) {
+            onPinchZoom(
+              Math.min(
+                1.15,
+                Math.max(
+                  0.85,
+                  nextDistance /
+                    previousDistance,
+                ),
+              ),
+            );
+          }
+
+          touchPinchDistanceRef.current =
+            nextDistance;
+
+          fingerLastRef.current =
+            null;
+
+          return;
+        }
+
+        /*
+         * One finger:
+         * scroll.
+         */
+        touchPinchDistanceRef.current =
+          null;
+
+        const finger =
+          fingers[0];
+
+        const previous =
+          fingerLastRef.current;
+
+        if (
+          !previous
+        ) {
+          fingerLastRef.current =
+            {
+              x: finger.clientX,
+              y: finger.clientY,
+            };
+
+          scrollTargetRef.current =
+            findScrollContainer();
+
+          return;
+        }
+
+        const deltaX =
+          previous.x -
+          finger.clientX;
+
+        const deltaY =
+          previous.y -
+          finger.clientY;
+
+        const scrollTarget =
+          scrollTargetRef.current ??
+          findScrollContainer();
+
+        if (
+          scrollTarget
+        ) {
+          scrollTarget.scrollLeft +=
+            deltaX;
+
+          scrollTarget.scrollTop +=
+            deltaY;
+        } else {
+          window.scrollBy(
+            deltaX,
+            deltaY,
+          );
+        }
+
+        fingerLastRef.current =
+          {
+            x: finger.clientX,
+            y: finger.clientY,
+          };
+      };
+
+      const finishTouch = (
+        event: TouchEvent,
+      ) => {
+        const fingers =
+          directTouches(
+            event.touches,
+          );
+
+        if (
+          fingers.length >=
+          2
+        ) {
+          touchPinchDistanceRef.current =
+            touchDistance(
+              fingers,
+            );
+
+          fingerLastRef.current =
+            null;
+
+          return;
+        }
+
+        if (
+          fingers.length ===
+          1
+        ) {
+          const finger =
+            fingers[0];
+
+          fingerLastRef.current =
+            {
+              x: finger.clientX,
+              y: finger.clientY,
+            };
+
+          touchPinchDistanceRef.current =
+            null;
+
+          return;
+        }
+
+        fingerLastRef.current =
+          null;
+
+        touchPinchDistanceRef.current =
+          null;
+
+        scrollTargetRef.current =
+          null;
+      };
+
+      /*
+       * Pencil / stylus / mouse
+       * begins drawing here.
+       */
+      const onPointerDown = (
+        event: PointerEvent,
+      ) => {
+        /*
+         * Finger is deliberately
+         * ignored by Pointer Events.
+         *
+         * It will be handled by the
+         * Touch Events above.
+         */
+        if (
+          event.pointerType ===
+          'touch'
+        ) {
+          return;
+        }
+
+        /*
+         * Ignore non-left mouse
+         * buttons.
+         *
+         * Stylus is always allowed.
+         */
+        if (
+          event.button !== 0 &&
+          event.pointerType !==
+            'pen'
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        activePointerRef.current =
+          event.pointerId;
+
+        if (
+          !canvas.hasPointerCapture(
+            event.pointerId,
+          )
+        ) {
+          canvas.setPointerCapture(
+            event.pointerId,
+          );
+        }
+
+        const points =
+          eventPoints(event);
+
+        if (
+          points.length ===
+          0
+        ) {
+          return;
+        }
+
+        if (
+          tool === 'ERASER'
+        ) {
+          erasedIdsRef.current =
+            new Set();
+
+          eraseAt(
+            points[
+              points.length -
+                1
+            ],
+          );
+
+          return;
+        }
+
+        const drawingTool =
+          tool as DrawingTool;
+
+        const inkTool:
+          PdfInkTool =
+          drawingTool ===
+          'HIGHLIGHTER'
+            ? 'HIGHLIGHTER'
+            : 'PEN';
+
+        const nextDraft:
+          PdfInkStroke = {
+          color,
+          id:
+            createClientUuid(),
+          points,
+          tool: inkTool,
+          width:
+            TOOL_WIDTHS[
+              drawingTool
+            ][widthIndex],
         };
+
+        draftRef.current =
+          nextDraft;
+
+        setDraft(
+          nextDraft,
+        );
+      };
+
+      const onPointerMove = (
+        event: PointerEvent,
+      ) => {
+        /*
+         * Never draw from
+         * finger pointer events.
+         */
+        if (
+          event.pointerType ===
+          'touch'
+        ) {
+          return;
+        }
+
+        if (
+          activePointerRef.current !==
+          event.pointerId
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const points =
+          eventPoints(event);
+
+        if (
+          tool === 'ERASER'
+        ) {
+          points.forEach(
+            eraseAt,
+          );
+
+          return;
+        }
+
+        const activeDraft =
+          draftRef.current;
+
+        if (
+          !activeDraft ||
+          activeDraft.points
+            .length >= 20000
+        ) {
+          return;
+        }
+
+        const nextDraft = {
+          ...activeDraft,
+          points: [
+            ...activeDraft.points,
+            ...points,
+          ].slice(
+            0,
+            20000,
+          ),
+        };
+
+        draftRef.current =
+          nextDraft;
+
+        setDraft(
+          nextDraft,
+        );
+      };
+
+      const finishPointer = (
+        event: PointerEvent,
+      ) => {
+        if (
+          event.pointerType ===
+          'touch'
+        ) {
+          return;
+        }
+
+        if (
+          activePointerRef.current !==
+          event.pointerId
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        activePointerRef.current =
+          null;
+
+        if (
+          canvas.hasPointerCapture(
+            event.pointerId,
+          )
+        ) {
+          canvas.releasePointerCapture(
+            event.pointerId,
+          );
+        }
+
+        if (
+          tool === 'ERASER'
+        ) {
+          const next =
+            erasingPreviewRef.current;
+
+          if (
+            next &&
+            next.length !==
+              historyRef.current[
+                historyIndexRef.current
+              ].length
+          ) {
+            commit(next);
+          }
+
+          erasingPreviewRef.current =
+            null;
+
+          setErasingPreview(
+            null,
+          );
+
+          return;
+        }
+
+        const activeDraft =
+          draftRef.current;
+
+        if (
+          activeDraft &&
+          hasMeaningfulStroke(
+            activeDraft,
+          )
+        ) {
+          commit([
+            ...historyRef.current[
+              historyIndexRef.current
+            ],
+            activeDraft,
+          ]);
+        }
+
+        draftRef.current =
+          null;
+
+        setDraft(null);
+      };
 
       canvas.addEventListener(
         'pointerdown',
@@ -1742,6 +1947,38 @@ const PdfInkCanvas =
       canvas.addEventListener(
         'pointercancel',
         finishPointer,
+      );
+
+      canvas.addEventListener(
+        'touchstart',
+        onTouchStart,
+        {
+          passive: false,
+        },
+      );
+
+      canvas.addEventListener(
+        'touchmove',
+        onTouchMove,
+        {
+          passive: false,
+        },
+      );
+
+      canvas.addEventListener(
+        'touchend',
+        finishTouch,
+        {
+          passive: false,
+        },
+      );
+
+      canvas.addEventListener(
+        'touchcancel',
+        finishTouch,
+        {
+          passive: false,
+        },
       );
 
       return () => {
@@ -1764,45 +2001,65 @@ const PdfInkCanvas =
           'pointercancel',
           finishPointer,
         );
+
+        canvas.removeEventListener(
+          'touchstart',
+          onTouchStart,
+        );
+
+        canvas.removeEventListener(
+          'touchmove',
+          onTouchMove,
+        );
+
+        canvas.removeEventListener(
+          'touchend',
+          finishTouch,
+        );
+
+        canvas.removeEventListener(
+          'touchcancel',
+          finishTouch,
+        );
       };
     }, [
       color,
       commit,
       height,
+      onPinchZoom,
       tool,
       width,
       widthIndex,
     ]);
 
     /*
-     * KEYBOARD UNDO / REDO
+     * Desktop undo / redo.
      */
     useEffect(() => {
-      const onKeyDown =
-        (
-          event: KeyboardEvent,
-        ) => {
-          if (
-            !(
-              event.metaKey ||
-              event.ctrlKey
-            ) ||
-            event.key.toLowerCase() !==
-              'z'
-          ) {
-            return;
-          }
+      const onKeyDown = (
+        event: KeyboardEvent,
+      ) => {
+        if (
+          !(
+            event.metaKey ||
+            event.ctrlKey
+          ) ||
+          event.key.toLowerCase() !==
+            'z'
+        ) {
+          return;
+        }
 
-          event.preventDefault();
+        event.preventDefault();
 
-          if (
-            event.shiftKey
-          ) {
-            redo();
-          } else {
-            undo();
-          }
-        };
+        if (
+          event.shiftKey
+        ) {
+          redo();
+        } else {
+          undo();
+        }
+      };
 
       window.addEventListener(
         'keydown',
@@ -1823,13 +2080,11 @@ const PdfInkCanvas =
         ref={canvasRef}
         style={{
           cursor:
-            tool ===
-            'ERASER'
+            tool === 'ERASER'
               ? 'cell'
               : 'crosshair',
 
           height,
-
           inset: 0,
 
           mixBlendMode:
@@ -1844,14 +2099,22 @@ const PdfInkCanvas =
             'absolute',
 
           /*
-           * Allows finger scrolling even
-           * while a drawing tool is active.
+           * IMPORTANT:
+           *
+           * Keep this NONE.
+           *
+           * If this becomes
+           * `pan-y`, Safari can
+           * steal Apple Pencil
+           * movement and cancel
+           * the drawing pointer.
+           *
+           * Finger scrolling is
+           * manually handled above.
            */
-          touchAction:
-            'pan-y pinch-zoom',
+          touchAction: 'none',
 
           width,
-
           zIndex: 2,
         }}
       />
@@ -1872,7 +2135,6 @@ type AnnotationContextValue = {
   clearActive: () => void;
 
   color: string;
-
   currentPage: number;
 
   exportError?:
@@ -1902,7 +2164,9 @@ type AnnotationContextValue = {
 
   registerPageHandle: (
     pageNumber: number,
-    handle: PageHandle | null,
+    handle:
+      | PageHandle
+      | null,
   ) => void;
 
   reloadActive: () => void;
@@ -1919,7 +2183,8 @@ type AnnotationContextValue = {
 
   updatePageState: (
     pageNumber: number,
-    patch: Partial<PageUiState>,
+    patch:
+      Partial<PageUiState>,
   ) => void;
 
   widthIndex: number;
@@ -1957,16 +2222,23 @@ export function PdfAnnotationProvider({
   onPinchZoom,
 }: {
   children: ReactNode;
+
   currentPage: number;
+
   exportError?:
     | string
     | null;
+
   exporting?: boolean;
+
   exportSuccess?:
     | string
     | null;
+
   materialId: string;
+
   onExport: () => void;
+
   onPinchZoom: (
     distanceRatio: number,
   ) => void;
@@ -2046,7 +2318,8 @@ export function PdfAnnotationProvider({
     useCallback(
       (
         pageNumber: number,
-        patch: Partial<PageUiState>,
+        patch:
+          Partial<PageUiState>,
       ) => {
         setPageStates(
           (current) => ({
@@ -2068,7 +2341,8 @@ export function PdfAnnotationProvider({
   const chooseTool =
     useCallback(
       (
-        nextTool: EditorTool,
+        nextTool:
+          EditorTool,
       ) => {
         setTool(
           nextTool,
@@ -2095,9 +2369,7 @@ export function PdfAnnotationProvider({
           [
             brand.ink,
             '#FFFFFF',
-          ].includes(
-            color,
-          )
+          ].includes(color)
         ) {
           setColor(
             brand.mauve,
@@ -2110,7 +2382,8 @@ export function PdfAnnotationProvider({
   const chooseColor =
     useCallback(
       (
-        nextColor: string,
+        nextColor:
+          string,
       ) => {
         setColor(
           nextColor,
@@ -2118,8 +2391,7 @@ export function PdfAnnotationProvider({
 
         if (
           tool === 'HAND' ||
-          tool ===
-            'ERASER'
+          tool === 'ERASER'
         ) {
           setTool(
             lastDrawingTool,
@@ -2135,45 +2407,35 @@ export function PdfAnnotationProvider({
   const undoActive =
     useCallback(() => {
       pageHandlesRef.current
-        .get(
-          currentPage,
-        )
+        .get(currentPage)
         ?.undo();
     }, [currentPage]);
 
   const redoActive =
     useCallback(() => {
       pageHandlesRef.current
-        .get(
-          currentPage,
-        )
+        .get(currentPage)
         ?.redo();
     }, [currentPage]);
 
   const clearActive =
     useCallback(() => {
       pageHandlesRef.current
-        .get(
-          currentPage,
-        )
+        .get(currentPage)
         ?.clear();
     }, [currentPage]);
 
   const retryActive =
     useCallback(() => {
       pageHandlesRef.current
-        .get(
-          currentPage,
-        )
+        .get(currentPage)
         ?.retry();
     }, [currentPage]);
 
   const reloadActive =
     useCallback(() => {
       pageHandlesRef.current
-        .get(
-          currentPage,
-        )
+        .get(currentPage)
         ?.reload();
     }, [currentPage]);
 
@@ -2276,9 +2538,9 @@ export function PdfAnnotationToolbar({
     useAnnotationContext();
 
   const customColorRef =
-    useRef<HTMLInputElement | null>(
-      null,
-    );
+    useRef<
+      HTMLInputElement | null
+    >(null);
 
   const customColorSelected =
     !COLOR_SWATCHES.includes(
@@ -2303,21 +2565,18 @@ export function PdfAnnotationToolbar({
   const toolHint =
     tool === 'HAND'
       ? 'Read mode · finger scrolls through pages'
-      : tool ===
-          'ERASER'
-        ? 'Eraser · Pencil or stylus erases · finger scrolls'
+      : tool === 'ERASER'
+        ? 'Apple Pencil erases · finger scrolls'
         : `${
-            tool ===
-            'FOUNTAIN'
+            tool === 'FOUNTAIN'
               ? 'Fountain pen'
-              : tool ===
-                  'PENCIL'
+              : tool === 'PENCIL'
                 ? 'Pencil'
                 : tool ===
                     'BALLPOINT'
                   ? 'Ballpoint pen'
                   : 'Highlighter'
-          } · Pencil, stylus, or mouse draws · finger scrolls`;
+          } · Apple Pencil writes · finger scrolls`;
 
   const saveStatus =
     activeState.loading
@@ -2340,10 +2599,14 @@ export function PdfAnnotationToolbar({
       style={{
         background:
           palette.surfaceAlt,
+
         position:
           'sticky',
+
         top: 0,
+
         width: '100%',
+
         zIndex:
           focusMode
             ? 50
@@ -2354,11 +2617,15 @@ export function PdfAnnotationToolbar({
         style={{
           maxWidth:
             '100%',
+
           overflowX:
             'auto',
+
           padding:
             '8px 4px 14px',
-          width: '100%',
+
+          width:
+            '100%',
         }}
       >
         <View
@@ -2367,6 +2634,7 @@ export function PdfAnnotationToolbar({
             {
               backgroundColor:
                 palette.surface,
+
               borderColor:
                 palette.border,
             },
@@ -2390,6 +2658,7 @@ export function PdfAnnotationToolbar({
                 {
                   borderColor:
                     palette.border,
+
                   opacity:
                     activeState.canUndo
                       ? 1
@@ -2419,6 +2688,7 @@ export function PdfAnnotationToolbar({
                 {
                   borderColor:
                     palette.border,
+
                   opacity:
                     activeState.canRedo
                       ? 1
@@ -2556,8 +2826,7 @@ export function PdfAnnotationToolbar({
               (index) => (
                 <Pressable
                   accessibilityLabel={`${
-                    index ===
-                    0
+                    index === 0
                       ? 'Thin'
                       : index ===
                           1
@@ -2570,9 +2839,7 @@ export function PdfAnnotationToolbar({
                       widthIndex ===
                       index,
                   }}
-                  key={
-                    index
-                  }
+                  key={index}
                   onPress={() =>
                     setWidthIndex(
                       index,
@@ -2805,8 +3072,7 @@ export function PdfAnnotationToolbar({
           >
             Page{' '}
             {currentPage}{' '}
-            ·{' '}
-            {saveStatus}
+            · {saveStatus}
           </Text>
 
           <Pressable
@@ -2907,9 +3173,8 @@ export function PdfAnnotationToolbar({
             ]}
           >
             Could not load
-            handwritten marks
-            on page{' '}
-            {currentPage}:{' '}
+            handwritten marks on
+            page {currentPage}:{' '}
             {
               activeState.loadError
             }
@@ -2951,8 +3216,7 @@ export function PdfAnnotationToolbar({
               },
             ]}
           >
-            Could not save
-            page{' '}
+            Could not save page{' '}
             {currentPage}:{' '}
             {
               activeState.saveError
@@ -3113,7 +3377,8 @@ export function PdfAnnotationPage({
   const persist =
     useCallback(
       async (
-        strokes: PdfInkStroke[],
+        strokes:
+          PdfInkStroke[],
       ) => {
         const saved =
           await savePdfAnnotations(
@@ -3141,8 +3406,10 @@ export function PdfAnnotationPage({
   const onSaveStateChange =
     useCallback(
       (
-        state: SaveState,
-        error?: string,
+        state:
+          SaveState,
+        error?:
+          string,
       ) => {
         updatePageState(
           pageNumber,
@@ -3165,8 +3432,11 @@ export function PdfAnnotationPage({
   const onHistoryChange =
     useCallback(
       (
-        canUndo: boolean,
-        canRedo: boolean,
+        canUndo:
+          boolean,
+
+        canRedo:
+          boolean,
       ) => {
         updatePageState(
           pageNumber,
@@ -3183,9 +3453,7 @@ export function PdfAnnotationPage({
     );
 
   const pageHandle =
-    useMemo<
-      PageHandle
-    >(
+    useMemo<PageHandle>(
       () => ({
         clear: () =>
           editorRef.current?.clear(),
@@ -3203,7 +3471,9 @@ export function PdfAnnotationPage({
         undo: () =>
           editorRef.current?.undo(),
       }),
-      [annotations],
+      [
+        annotations,
+      ],
     );
 
   useEffect(() => {
@@ -3232,8 +3502,10 @@ export function PdfAnnotationPage({
     <div
       style={{
         height,
+
         position:
           'relative',
+
         width,
       }}
     >
@@ -3274,9 +3546,18 @@ export function PdfAnnotationPage({
   );
 }
 
-/*
+/**
  * Backwards-compatible
  * single-page wrapper.
+ *
+ * Continuous PdfReader
+ * uses:
+ *
+ * PdfAnnotationProvider
+ * +
+ * PdfAnnotationToolbar
+ * +
+ * PdfAnnotationPage
  */
 export function PdfAnnotationWorkspace({
   children,
@@ -3292,21 +3573,31 @@ export function PdfAnnotationWorkspace({
   width,
 }: {
   children: ReactNode;
+
   exportError?:
     | string
     | null;
+
   exporting?: boolean;
+
   exportSuccess?:
     | string
     | null;
+
   focusMode?: boolean;
+
   height: number;
+
   materialId: string;
+
   onExport: () => void;
+
   onPinchZoom: (
     distanceRatio: number,
   ) => void;
+
   pageNumber: number;
+
   width: number;
 }) {
   return (
@@ -3336,6 +3627,7 @@ export function PdfAnnotationWorkspace({
       <View
         style={[
           styles.workspace,
+
           focusMode
             ? styles.focusWorkspace
             : null,
@@ -3348,11 +3640,15 @@ export function PdfAnnotationWorkspace({
         />
 
         <PdfAnnotationPage
-          height={height}
+          height={
+            height
+          }
           pageNumber={
             pageNumber
           }
-          width={width}
+          width={
+            width
+          }
         >
           {children}
         </PdfAnnotationPage>
@@ -3366,8 +3662,12 @@ const styles =
     workspace: {
       alignItems:
         'flex-start',
-      gap: spacing.xs,
-      width: '100%',
+
+      gap:
+        spacing.xs,
+
+      width:
+        '100%',
     },
 
     focusWorkspace: {
@@ -3416,15 +3716,20 @@ const styles =
     toolGroup: {
       alignItems:
         'center',
+
       flexDirection:
         'row',
-      gap: 2,
+
+      gap:
+        2,
     },
 
     actionGroup: {
       flexDirection:
         'row',
-      gap: spacing.sm,
+
+      gap:
+        spacing.sm,
     },
 
     toolButton: {
@@ -3485,10 +3790,14 @@ const styles =
     },
 
     sizeRail: {
-      gap: 2,
+      gap:
+        2,
+
       justifyContent:
         'center',
-      width: 48,
+
+      width:
+        48,
     },
 
     sizeButton: {
@@ -3601,11 +3910,14 @@ const styles =
 
     hint: {
       ...typography.caption,
-      flex: 1,
+
+      flex:
+        1,
     },
 
     saveStatus: {
       ...typography.caption,
+
       fontWeight:
         '700',
     },
@@ -3702,7 +4014,9 @@ const styles =
 
     errorText: {
       ...typography.caption,
-      flex: 1,
+
+      flex:
+        1,
     },
 
     retry: {

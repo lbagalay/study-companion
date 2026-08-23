@@ -137,11 +137,6 @@ function ContinuousPdfPage({
   ] = useState(false);
 
   const [
-    rendering,
-    setRendering,
-  ] = useState(false);
-
-  const [
     renderError,
     setRenderError,
   ] = useState<string | null>(
@@ -285,7 +280,7 @@ function ContinuousPdfPage({
         },
         {
           rootMargin:
-            '1200px 0px',
+            '2200px 0px',
           threshold: 0,
         },
       );
@@ -428,7 +423,6 @@ function ContinuousPdfPage({
       return;
     }
 
-    setRendering(true);
     setRenderError(null);
 
     renderTaskRef.current?.cancel();
@@ -451,13 +445,8 @@ function ContinuousPdfPage({
         viewport,
       });
 
-    void renderTaskRef.current.promise
-      .then(() => {
-        if (active) {
-          setRendering(false);
-        }
-      })
-      .catch((error) => {
+    void renderTaskRef.current.promise.catch(
+      (error) => {
         if (
           !active ||
           (
@@ -470,12 +459,11 @@ function ContinuousPdfPage({
           return;
         }
 
-        setRendering(false);
-
         setRenderError(
           getErrorMessage(error),
         );
-      });
+      },
+    );
 
     return () => {
       active = false;
@@ -589,38 +577,6 @@ function ContinuousPdfPage({
             </Text>
           </View>
         )}
-
-        {rendering ? (
-          <div
-            style={{
-              alignItems:
-                'center',
-              background:
-                'rgba(255,255,255,0.72)',
-              display: 'flex',
-              inset: 0,
-              justifyContent:
-                'center',
-              pointerEvents:
-                'none',
-              position:
-                'absolute',
-              zIndex: 5,
-            }}
-          >
-            <Text
-              style={[
-                styles.rendering,
-                {
-                  color:
-                    palette.textMuted,
-                },
-              ]}
-            >
-              Rendering page…
-            </Text>
-          </div>
-        ) : null}
 
         {renderError ? (
           <div
@@ -2443,12 +2399,6 @@ const styles =
       minHeight: 420,
       overflow: 'visible',
       padding: spacing.sm,
-    },
-
-    rendering: {
-      ...typography.caption,
-      padding: spacing.sm,
-      textAlign: 'center',
     },
 
     renderError: {
