@@ -7,6 +7,7 @@ export default function Root({ children }: PropsWithChildren) {
       <head>
         <meta charSet="utf-8" />
         <meta content="IE=edge" httpEquiv="X-UA-Compatible" />
+        <meta content="light" name="color-scheme" />
         <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport" />
         <meta content="#C18DB4" name="theme-color" />
         <meta content="Study Companion" name="application-name" />

@@ -1,53 +1,52 @@
 import { Tabs } from 'expo-router';
-import { useColorScheme, useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { brand, colors, typography } from '@/constants/theme';
 
 export default function TabLayout() {
-  const isDark = useColorScheme() === 'dark';
-  const palette = isDark ? colors.dark : colors.light;
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const tabBarWidth = Math.min(width - 28, 720);
-  const tabBarBottom = Math.max(12, insets.bottom);
+  const tabBarWidth = Math.min(width - 32, 720);
+  const tabBarBottom = Math.max(10, insets.bottom);
 
   return (
     <Tabs
       initialRouteName="home"
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: palette.background },
+        sceneStyle: { backgroundColor: colors.light.background },
         tabBarActiveBackgroundColor: 'transparent',
         tabBarActiveTintColor: brand.ink,
         tabBarAllowFontScaling: false,
         tabBarHideOnKeyboard: true,
-        tabBarIconStyle: { height: 34, marginTop: 1 },
-        tabBarInactiveTintColor: brand.ink,
+        tabBarIconStyle: { height: 30, marginTop: 1 },
+        tabBarInactiveTintColor: brand.slate,
         tabBarLabelPosition: 'below-icon',
         tabBarStyle: {
           backgroundColor: brand.blush,
-          borderColor: brand.blue,
-          borderRadius: 26,
-          borderTopWidth: 1,
+          borderColor: 'rgba(193, 141, 180, 0.65)',
+          borderRadius: 24,
           borderWidth: 1,
           bottom: tabBarBottom,
-          boxShadow: '0 16px 38px rgba(193, 141, 180, 0.34)',
-          height: 80,
+          boxShadow: '0 12px 30px rgba(39, 66, 93, 0.16)',
+          height: 72,
           left: (width - tabBarWidth) / 2,
-          paddingBottom: 7,
-          paddingTop: 7,
+          paddingBottom: 5,
+          paddingTop: 5,
           position: 'absolute',
           width: tabBarWidth,
         },
-        tabBarItemStyle: { borderRadius: 20, marginHorizontal: 2, marginVertical: 3, paddingVertical: 2 },
+        tabBarItemStyle: { borderRadius: 18, marginHorizontal: 2 },
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: typography.label.fontWeight,
-          lineHeight: 14,
-          marginBottom: 1,
-          marginTop: 0,
+          letterSpacing: 0.15,
+          lineHeight: 13,
+          marginBottom: 2,
+          marginTop: 1,
+          textTransform: 'none',
         },
       }}
     >

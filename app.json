@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/study-companion-icon.png",
     "scheme": "studycompanion",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/images/study-companion-icon.png",
       "bundleIdentifier": "com.lbagalay.studycompanion",

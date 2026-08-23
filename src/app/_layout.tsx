@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, useColorScheme, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { FeedbackState } from '@/components/ui/FeedbackState';
 import { LaunchAnimation } from '@/components/ui/LaunchAnimation';
@@ -24,7 +24,6 @@ function AppProviders() {
 const styles = StyleSheet.create({ root: { flex: 1 } });
 
 function RootNavigator() {
-  const isDark = useColorScheme() === 'dark';
   const { loading, session } = useAuth();
   if (loading) return <FeedbackState loading message="Restoring your secure session." title="Opening Study Companion" />;
 
@@ -34,7 +33,7 @@ function RootNavigator() {
       <Stack
         screenOptions={{
           contentStyle: {
-            backgroundColor: isDark ? colors.dark.background : colors.light.background,
+            backgroundColor: colors.light.background,
           },
           headerShown: false,
         }}
@@ -61,7 +60,7 @@ function RootNavigator() {
           <Stack.Screen name="sessions/[id]" />
         </Stack.Protected>
       </Stack>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style="dark" />
     </>
   );
 }
