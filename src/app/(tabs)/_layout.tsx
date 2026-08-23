@@ -16,7 +16,9 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: palette.background },
+        tabBarActiveBackgroundColor: brand.slate,
         tabBarActiveTintColor: brand.blush,
+        tabBarHideOnKeyboard: true,
         tabBarInactiveTintColor: brand.blue,
         tabBarStyle: {
           backgroundColor: brand.navy,
@@ -33,7 +35,7 @@ export default function TabLayout() {
           position: 'absolute',
           width: tabBarWidth,
         },
-        tabBarItemStyle: { borderRadius: 18 },
+        tabBarItemStyle: { borderRadius: 18, marginHorizontal: 3, marginVertical: 4 },
         tabBarLabelStyle: {
           fontSize: typography.caption.fontSize,
           fontWeight: typography.label.fontWeight,
