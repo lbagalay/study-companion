@@ -2,10 +2,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PdfNotesPanel } from '@/components/materials/PdfNotesPanel';
+import { PdfAnnotationWorkspace } from '@/components/materials/PdfAnnotationWorkspace';
 import { AppButton } from '@/components/ui/AppButton';
 import { FeedbackState } from '@/components/ui/FeedbackState';
 import { FormField } from '@/components/ui/FormField';
@@ -37,6 +38,8 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
   const [rendering, setRendering] = useState(false);
   const [readerError, setReaderError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState({ height: 0, width: 0 });
+  const [zoom, setZoom] = useState(1);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
   const renderTask = useRef<RenderTask | null>(null);
@@ -104,7 +107,8 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
       const page = await document.getPage(currentPage);
       const unscaled = page.getViewport({ scale: 1 });
       const availableWidth = Math.min(Math.max(width - 32, 280), 980);
-      const scale = Math.min(availableWidth / unscaled.width, 2);
+      const fitScale = Math.min(availableWidth / unscaled.width, 2);
+      const scale = fitScale * zoom;
       const viewport = page.getViewport({ scale });
       const canvas = canvasRef.current!;
       const outputScale = window.devicePixelRatio || 1;
@@ -112,6 +116,7 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
       canvas.height = Math.floor(viewport.height * outputScale);
       canvas.style.width = `${Math.floor(viewport.width)}px`;
       canvas.style.height = `${Math.floor(viewport.height)}px`;
+      setPageSize({ height: Math.floor(viewport.height), width: Math.floor(viewport.width) });
       const context = canvas.getContext('2d');
       if (!context) throw new Error('The browser could not create the PDF canvas.');
       renderTask.current?.cancel();
@@ -125,7 +130,7 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
       }
     });
     return () => { active = false; renderTask.current?.cancel(); };
-  }, [currentPage, document, width]);
+  }, [currentPage, document, width, zoom]);
 
   const goToPage = (page: number) => {
     if (!document) return;
@@ -148,9 +153,19 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
       {resumedFromPage ? <View style={[styles.resume, { backgroundColor: palette.accentSoft, borderColor: palette.border }]}><View style={styles.resumeCopy}><Text style={[styles.resumeTitle, { color: palette.text }]}>Resumed from page {resumedFromPage}</Text><Text style={[styles.caption, { color: palette.textMuted }]}>Your reading position saves as you move through pages.</Text></View><AppButton label="Start over" onPress={() => { setResumedFromPage(null); goToPage(1); }} variant="ghost" /></View> : null}
       <View style={styles.progressHeader}><Text style={[styles.pageLabel, { color: palette.text }]}>Page {currentPage} of {document.numPages}</Text><Text style={[styles.progressLabel, { color: palette.accentStrong }]}>{progress}% read</Text></View>
       <View style={[styles.progressTrack, { backgroundColor: palette.border }]}><View style={[styles.progressFill, { backgroundColor: palette.accentSolid, width: `${progress}%` }]} /></View>
+      <View style={styles.zoomControls}>
+        <Text style={[styles.zoomTitle, { color: palette.text }]}>Page tools</Text>
+        <View style={styles.zoomActions}>
+          <AppButton accessibilityLabel="Zoom out" disabled={zoom <= 0.75} label="−" onPress={() => setZoom((value) => Math.max(0.75, Number((value - 0.25).toFixed(2))))} style={styles.zoomButton} variant="secondary" />
+          <Pressable accessibilityLabel="Reset zoom" accessibilityRole="button" onPress={() => setZoom(1)} style={[styles.zoomValue, { backgroundColor: palette.surface, borderColor: palette.border }]}><Text style={[styles.zoomText, { color: palette.text }]}>{Math.round(zoom * 100)}%</Text></Pressable>
+          <AppButton accessibilityLabel="Zoom in" disabled={zoom >= 2.5} label="+" onPress={() => setZoom((value) => Math.min(2.5, Number((value + 0.25).toFixed(2))))} style={styles.zoomButton} variant="secondary" />
+        </View>
+      </View>
       <View style={[styles.viewer, { backgroundColor: palette.surfaceAlt, borderColor: palette.border }]}>
         {rendering ? <Text style={[styles.rendering, { color: palette.textMuted }]}>Rendering page…</Text> : null}
-        <canvas aria-label={`Page ${currentPage} of ${document.numPages}`} ref={canvasRef} style={{ display: 'block', maxWidth: '100%' }} />
+        <PdfAnnotationWorkspace height={pageSize.height} materialId={materialId} pageNumber={currentPage} width={pageSize.width}>
+          <canvas aria-label={`Page ${currentPage} of ${document.numPages}`} ref={canvasRef} style={{ display: 'block' }} />
+        </PdfAnnotationWorkspace>
       </View>
       <View style={styles.navigation}><AppButton disabled={currentPage <= 1} label="Previous" onPress={() => goToPage(currentPage - 1)} style={styles.navButton} variant="secondary" /><AppButton disabled={currentPage >= document.numPages} label="Next" onPress={() => goToPage(currentPage + 1)} style={styles.navButton} /></View>
       <View style={styles.jump}><View style={styles.jumpField}><FormField keyboardType="number-pad" label="Jump to page" onChangeText={setJumpPage} onSubmitEditing={() => goToPage(Number(jumpPage))} returnKeyType="go" value={jumpPage} /></View><AppButton label="Go" onPress={() => goToPage(Number(jumpPage))} style={styles.goButton} variant="secondary" /></View>
@@ -172,7 +187,13 @@ const styles = StyleSheet.create({
   progressLabel: typography.label,
   progressTrack: { borderRadius: radii.pill, height: 8, marginBottom: spacing.md, overflow: 'hidden' },
   progressFill: { borderRadius: radii.pill, height: '100%' },
-  viewer: { alignItems: 'center', borderRadius: radii.lg, borderWidth: 1, minHeight: 420, overflow: 'scroll', padding: spacing.sm },
+  zoomControls: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
+  zoomTitle: typography.label,
+  zoomActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  zoomButton: { minHeight: 40, minWidth: 44, paddingHorizontal: spacing.sm },
+  zoomValue: { alignItems: 'center', borderRadius: radii.sm, borderWidth: 1, height: 40, justifyContent: 'center', minWidth: 66, paddingHorizontal: spacing.sm },
+  zoomText: typography.label,
+  viewer: { alignItems: 'stretch', borderRadius: radii.lg, borderWidth: 1, minHeight: 420, overflow: 'scroll', padding: spacing.sm },
   rendering: { ...typography.caption, padding: spacing.sm },
   navigation: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   navButton: { flex: 1 },

@@ -1,5 +1,5 @@
 import { requireSupabaseClient } from '@/lib/supabase/client';
-import type { Database } from '@/types/database';
+import type { Database, PdfAnnotation, PdfInkStroke } from '@/types/database';
 import { File } from 'expo-file-system';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 import { randomUUID } from 'expo-crypto';
@@ -104,6 +104,30 @@ export async function listNotes() { const { data, error } = await requireSupabas
 export async function listPdfNotes(materialId: string) { const { data, error } = await requireSupabaseClient().from('notes').select('*').eq('material_id', materialId).order('page_number').order('updated_at', { ascending: false }); check(error); return data ?? []; }
 export async function getNote(id: string) { const { data, error } = await requireSupabaseClient().from('notes').select('*').eq('id', id).single(); check(error); return data; }
 export async function saveNote(input: InsertOf<'notes'>, id?: string) { const query = id ? requireSupabaseClient().from('notes').update(input).eq('id', id).select().single() : requireSupabaseClient().from('notes').insert(input).select().single(); const { data, error } = await query; check(error); return data; }
+
+export async function getPdfAnnotations(materialId: string, pageNumber: number) {
+  const { data, error } = await requireSupabaseClient()
+    .from('pdf_annotations')
+    .select('*')
+    .eq('material_id', materialId)
+    .eq('page_number', pageNumber)
+    .maybeSingle();
+  check(error);
+  return data as PdfAnnotation | null;
+}
+
+export async function savePdfAnnotations(materialId: string, pageNumber: number, strokes: PdfInkStroke[]) {
+  const { data, error } = await requireSupabaseClient()
+    .from('pdf_annotations')
+    .upsert(
+      { material_id: materialId, page_number: pageNumber, strokes: strokes as unknown as Database['public']['Tables']['pdf_annotations']['Insert']['strokes'] },
+      { onConflict: 'user_id,material_id,page_number' },
+    )
+    .select()
+    .single();
+  check(error);
+  return data as PdfAnnotation;
+}
 
 export async function listSessions() { const { data, error } = await requireSupabaseClient().from('study_sessions').select('*').order('planned_at'); check(error); return data ?? []; }
 export async function getSession(id: string) { const { data, error } = await requireSupabaseClient().from('study_sessions').select('*').eq('id', id).single(); check(error); return data; }

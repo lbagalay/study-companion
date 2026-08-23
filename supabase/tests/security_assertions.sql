@@ -10,7 +10,7 @@ begin
   from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
   where n.nspname = 'public'
-    and c.relname = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries'])
+    and c.relname = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'pdf_annotations', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries'])
     and not c.relrowsecurity;
 
   if missing_rls is not null then
@@ -20,10 +20,10 @@ begin
   select count(*) into policy_count
   from pg_policies
   where schemaname = 'public'
-    and tablename = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries']);
+    and tablename = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'pdf_annotations', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries']);
 
-  if policy_count <> 35 then
-    raise exception 'Expected 35 public-table policies, found %', policy_count;
+  if policy_count <> 39 then
+    raise exception 'Expected 39 public-table policies, found %', policy_count;
   end if;
 
   select public into bucket_is_public from storage.buckets where id = 'study-materials';
@@ -70,6 +70,12 @@ begin
     where table_schema = 'public' and table_name = 'notes' and column_name = 'page_number'
   ) then
     raise exception 'PDF page-note linkage columns are missing';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'pdf_annotations' and column_name = 'strokes' and data_type = 'jsonb'
+  ) then
+    raise exception 'Private per-page PDF annotation storage is missing';
   end if;
 end;
 $$;

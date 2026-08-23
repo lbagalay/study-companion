@@ -110,6 +110,30 @@ export type Note = Timestamps & {
   favorite: boolean;
 };
 
+export type PdfInkTool = 'PEN' | 'HIGHLIGHTER';
+
+export type PdfInkPoint = {
+  x: number;
+  y: number;
+  pressure: number;
+};
+
+export type PdfInkStroke = {
+  id: string;
+  tool: PdfInkTool;
+  color: string;
+  width: number;
+  points: PdfInkPoint[];
+};
+
+export type PdfAnnotation = Timestamps & {
+  id: string;
+  user_id: string;
+  material_id: string;
+  page_number: number;
+  strokes: PdfInkStroke[];
+};
+
 export type StudySessionStatus = 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED';
 
 export type StudySession = Timestamps & {
@@ -173,6 +197,7 @@ export type Database = {
       exams: TableDefinition<Exam, CreateFields & Pick<Exam, 'subject_id' | 'title' | 'exam_at'> & Partial<Omit<Exam, keyof CreateFields | 'subject_id' | 'title' | 'exam_at'>>, Partial<Exam>>;
       study_materials: TableDefinition<StudyMaterial, CreateFields & Pick<StudyMaterial, 'subject_id' | 'title' | 'type'> & Partial<Omit<StudyMaterial, keyof CreateFields | 'subject_id' | 'title' | 'type'>>, Partial<StudyMaterial>>;
       notes: TableDefinition<Note, CreateFields & Pick<Note, 'subject_id' | 'title'> & Partial<Omit<Note, keyof CreateFields | 'subject_id' | 'title'>>, Partial<Note>>;
+      pdf_annotations: TableDefinition<PdfAnnotation, CreateFields & Pick<PdfAnnotation, 'material_id' | 'page_number'> & { strokes?: Json }, Partial<Omit<PdfAnnotation, 'strokes'>> & { strokes?: Json }>;
       study_sessions: TableDefinition<StudySession, CreateFields & Pick<StudySession, 'subject_id' | 'topic' | 'planned_at'> & Partial<Omit<StudySession, keyof CreateFields | 'subject_id' | 'topic' | 'planned_at'>>, Partial<StudySession>>;
       web_push_subscriptions: TableDefinition<WebPushSubscription, Pick<WebPushSubscription, 'endpoint' | 'p256dh' | 'auth'> & Partial<WebPushSubscription>, Partial<WebPushSubscription>>;
       notification_deliveries: TableDefinition<NotificationDelivery, Pick<NotificationDelivery, 'user_id' | 'source_type' | 'source_id' | 'reminder_offset' | 'scheduled_for' | 'title' | 'body' | 'target_path'> & Partial<NotificationDelivery>, Partial<NotificationDelivery>>;
