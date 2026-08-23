@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
@@ -28,14 +28,17 @@ export default function ImportStudyLoadScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [asset, setAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [progress, setProgress] = useState<StudyLoadProgress>({ progress: 0, status: 'Preparing your study load' });
   const [subjects, setSubjects] = useState<ReviewSubject[]>([]);
 
   const analyze = useMutation({
     mutationFn: (selected: DocumentPicker.DocumentPickerAsset) => extractStudyLoad(selected, setProgress),
+    onMutate: () => setFileError(null),
     onSuccess: (data) => setSubjects(data.subjects.map((subject, index) => ({ ...subject, color: subjectColors[index % subjectColors.length], selected: true, units: String(subject.units) }))),
   });
   const save = useMutation({
+    onMutate: () => setFileError(null),
     mutationFn: async () => {
       const chosen = subjects.filter((subject) => subject.selected).map(({ selected: _selected, units, ...subject }) => ({ ...subject, units: Number(units) }));
       if (!chosen.length) throw new Error('Select at least one subject to import.');
@@ -48,23 +51,28 @@ export default function ImportStudyLoadScreen() {
         queryClient.invalidateQueries({ queryKey: keys.subjects }),
         queryClient.invalidateQueries({ queryKey: keys.schedules }),
       ]);
-      Alert.alert('Study load imported', 'Your selected subjects and class meetings are ready.', [{ text: 'Done', onPress: () => router.replace('/subjects') }]);
+      router.replace('/subjects');
     },
-    onError: (error) => Alert.alert('Could not import study load', getErrorMessage(error)),
+    onError: (error) => setFileError(getErrorMessage(error)),
   });
 
   const chooseFile = async () => {
-    const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: 'image/*' });
-    if (result.canceled) return;
-    const selected = result.assets[0];
-    if (selected.size && selected.size > 12 * 1024 * 1024) {
-      Alert.alert('File is too large', 'Choose a screenshot or photo smaller than 12 MB.');
-      return;
+    try {
+      setFileError(null);
+      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: 'image/*' });
+      if (result.canceled) return;
+      const selected = result.assets[0];
+      if (selected.size && selected.size > 12 * 1024 * 1024) {
+        setFileError('Choose a screenshot or photo smaller than 12 MB.');
+        return;
+      }
+      setAsset(selected);
+      setProgress({ progress: 0, status: 'Preparing your study load' });
+      setSubjects([]);
+      analyze.mutate(selected);
+    } catch (error) {
+      setFileError(getErrorMessage(error, 'The image picker could not be opened.'));
     }
-    setAsset(selected);
-    setProgress({ progress: 0, status: 'Preparing your study load' });
-    setSubjects([]);
-    analyze.mutate(selected);
   };
 
   const updateSubject = (index: number, patch: Partial<ReviewSubject>) => setSubjects((current) => current.map((subject, subjectIndex) => subjectIndex === index ? { ...subject, ...patch } : subject));
@@ -83,6 +91,7 @@ export default function ImportStudyLoadScreen() {
         </View>
         <AppButton label={asset ? 'Choose another image' : 'Choose screenshot or photo'} onPress={() => void chooseFile()} variant={asset ? 'secondary' : 'primary'} />
       </View>
+      {fileError ? <Text accessibilityRole="alert" style={[styles.error, { backgroundColor: palette.accentSoft, borderColor: palette.border, color: palette.danger }]}>{fileError}</Text> : null}
 
       {analyze.isPending ? <View style={styles.progressGroup}>
         <FeedbackState loading message={`${progress.status} · ${progress.progress}%`} title="Reading privately on this device" />
@@ -149,4 +158,5 @@ const styles = StyleSheet.create({
   progressGroup: { gap: spacing.sm },
   progressTrack: { borderRadius: radii.pill, height: 8, overflow: 'hidden' },
   progressFill: { borderRadius: radii.pill, height: '100%' },
+  error: { ...typography.caption, borderRadius: radii.md, borderWidth: 1, padding: spacing.md },
 });
