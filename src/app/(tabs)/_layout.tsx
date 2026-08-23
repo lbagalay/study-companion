@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
-import { Platform, useColorScheme, useWindowDimensions } from 'react-native';
+import { useColorScheme, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { brand, colors, typography } from '@/constants/theme';
@@ -8,7 +9,9 @@ export default function TabLayout() {
   const isDark = useColorScheme() === 'dark';
   const palette = isDark ? colors.dark : colors.light;
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const tabBarWidth = Math.min(width - 28, 720);
+  const tabBarBottom = Math.max(12, insets.bottom);
 
   return (
     <Tabs
@@ -18,27 +21,33 @@ export default function TabLayout() {
         sceneStyle: { backgroundColor: palette.background },
         tabBarActiveBackgroundColor: brand.mauve,
         tabBarActiveTintColor: brand.ink,
+        tabBarAllowFontScaling: false,
         tabBarHideOnKeyboard: true,
+        tabBarIconStyle: { height: 28, marginTop: 2 },
         tabBarInactiveTintColor: brand.ink,
+        tabBarLabelPosition: 'below-icon',
         tabBarStyle: {
           backgroundColor: brand.blush,
           borderColor: brand.blue,
           borderRadius: 26,
           borderTopWidth: 1,
           borderWidth: 1,
-          bottom: 12,
+          bottom: tabBarBottom,
           boxShadow: '0 16px 38px rgba(193, 141, 180, 0.34)',
-          height: 72,
+          height: 80,
           left: (width - tabBarWidth) / 2,
-          paddingBottom: Platform.OS === 'ios' ? 12 : 8,
-          paddingTop: 8,
+          paddingBottom: 7,
+          paddingTop: 7,
           position: 'absolute',
           width: tabBarWidth,
         },
-        tabBarItemStyle: { borderRadius: 18, marginHorizontal: 3, marginVertical: 4 },
+        tabBarItemStyle: { borderRadius: 20, marginHorizontal: 2, marginVertical: 3, paddingVertical: 2 },
         tabBarLabelStyle: {
-          fontSize: typography.caption.fontSize,
+          fontSize: 10,
           fontWeight: typography.label.fontWeight,
+          lineHeight: 14,
+          marginBottom: 1,
+          marginTop: 1,
         },
       }}
     >
