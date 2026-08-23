@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { forwardRef, type ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { brand, radii, spacing, typography } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -352,7 +352,7 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
   />;
 });
 
-export function PdfAnnotationWorkspace({ children, focusMode = false, height, materialId, onPinchZoom, pageNumber, width }: { children: ReactNode; focusMode?: boolean; height: number; materialId: string; onPinchZoom: (distanceRatio: number) => void; pageNumber: number; width: number }) {
+export function PdfAnnotationWorkspace({ children, exportError, exporting = false, exportSuccess, focusMode = false, height, materialId, onExport, onPinchZoom, pageNumber, width }: { children: ReactNode; exportError?: string | null; exporting?: boolean; exportSuccess?: string | null; focusMode?: boolean; height: number; materialId: string; onExport: () => void; onPinchZoom: (distanceRatio: number) => void; pageNumber: number; width: number }) {
   const palette = useAppTheme();
   const queryClient = useQueryClient();
   const editorRef = useRef<InkEditorHandle | null>(null);
@@ -392,6 +392,7 @@ export function PdfAnnotationWorkspace({ children, focusMode = false, height, ma
   }, []);
   const onHistoryChange = useCallback((undo: boolean, redo: boolean) => { setCanUndo(undo); setCanRedo(redo); }, []);
   const editorReady = annotations.isFetched && !annotations.error;
+  const exportDisabled = exporting || !editorReady || saveState === 'SAVING' || saveState === 'ERROR';
   const customColorSelected = !COLOR_SWATCHES.includes(color);
   const toolHint = tool === 'HAND' ? 'Read mode · swipe the page' : tool === 'ERASER' ? 'Stroke eraser · one finger erases · two fingers zoom' : `${tool === 'FOUNTAIN' ? 'Fountain pen' : tool === 'PENCIL' ? 'Pencil' : tool === 'BALLPOINT' ? 'Ballpoint pen' : 'Highlighter'} · one finger or Pencil draws · two fingers zoom`;
 
@@ -426,11 +427,17 @@ export function PdfAnnotationWorkspace({ children, focusMode = false, height, ma
         <Text style={[styles.hint, { color: palette.textMuted }]}>{toolHint}</Text>
         <View style={styles.statusActions}>
           <Text style={[styles.saveStatus, { color: saveState === 'ERROR' ? palette.danger : saveState === 'SAVED' ? palette.success : palette.textMuted }]}>{annotations.isLoading ? 'Loading…' : saveState === 'SAVING' ? 'Saving…' : saveState === 'SAVED' ? 'Saved' : saveState === 'ERROR' ? 'Not saved' : 'Ready'}</Text>
+          <Pressable accessibilityLabel="Download annotated PDF" accessibilityRole="button" disabled={exportDisabled} onPress={onExport} style={({ pressed }) => [styles.exportButton, { backgroundColor: palette.accentSoft, borderColor: palette.border, opacity: exportDisabled ? 0.45 : pressed ? 0.72 : 1 }]}>
+            {exporting ? <ActivityIndicator color={palette.accentStrong} size="small" /> : <Ionicons color={palette.accentStrong} name="download-outline" size={17} />}
+            <Text style={[styles.exportLabel, { color: palette.accentStrong }]}>{exporting ? 'Preparing…' : 'Download PDF'}</Text>
+          </Pressable>
           <Pressable accessibilityLabel="Clear page annotations" onPress={() => editorRef.current?.clear()}><Text style={[styles.clearLabel, { color: palette.danger }]}>Clear page</Text></Pressable>
         </View>
       </View>
       {annotations.error ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not load handwritten marks: {getErrorMessage(annotations.error)}</Text><Pressable onPress={() => void annotations.refetch()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Try again</Text></Pressable></View> : null}
       {saveState === 'ERROR' ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not save: {saveError}</Text><Pressable onPress={() => editorRef.current?.retry()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Retry</Text></Pressable></View> : null}
+      {exportError ? <View style={styles.errorRow}><Ionicons color={palette.danger} name="alert-circle-outline" size={17} /><Text style={[styles.errorText, { color: palette.danger }]}>Could not download the PDF: {exportError}</Text></View> : null}
+      {exportSuccess ? <View style={styles.exportResult}><Ionicons color={palette.success} name="checkmark-circle-outline" size={17} /><Text style={[styles.exportResultText, { color: palette.success }]}>{exportSuccess}</Text></View> : null}
     </div>
     <div style={{ height, position: 'relative', width }}>
       {children}
@@ -466,10 +473,14 @@ const styles = StyleSheet.create({
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 3, width: 126 },
   colorOuter: { alignItems: 'center', borderRadius: 22, borderWidth: 3, height: 40, justifyContent: 'center', width: 40 },
   colorDot: { borderRadius: 17, borderWidth: 1, height: 32, width: 32 },
-  statusRow: { alignItems: 'center', alignSelf: 'center', flexDirection: 'row', gap: spacing.md, justifyContent: 'space-between', maxWidth: 800, paddingHorizontal: spacing.sm, width: '100%' },
-  statusActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  statusRow: { alignItems: 'center', alignSelf: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'space-between', maxWidth: 800, paddingHorizontal: spacing.sm, width: '100%' },
+  statusActions: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   hint: { ...typography.caption, flex: 1 },
   saveStatus: { ...typography.caption, fontWeight: '700' },
+  exportButton: { alignItems: 'center', borderRadius: radii.pill, borderWidth: 1, flexDirection: 'row', gap: spacing.xs, minHeight: 36, paddingHorizontal: spacing.md },
+  exportLabel: { ...typography.caption, fontWeight: '700' },
+  exportResult: { alignItems: 'center', alignSelf: 'center', flexDirection: 'row', gap: spacing.xs, maxWidth: 800, paddingHorizontal: spacing.sm, width: '100%' },
+  exportResultText: { ...typography.caption, flex: 1, fontWeight: '700' },
   clearLabel: { ...typography.caption, fontWeight: '700' },
   errorRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm, justifyContent: 'space-between' },
   errorText: { ...typography.caption, flex: 1 },

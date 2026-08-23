@@ -116,6 +116,16 @@ export async function getPdfAnnotations(materialId: string, pageNumber: number) 
   return data as PdfAnnotation | null;
 }
 
+export async function listPdfAnnotations(materialId: string) {
+  const { data, error } = await requireSupabaseClient()
+    .from('pdf_annotations')
+    .select('*')
+    .eq('material_id', materialId)
+    .order('page_number');
+  check(error);
+  return (data ?? []) as PdfAnnotation[];
+}
+
 export async function savePdfAnnotations(materialId: string, pageNumber: number, strokes: PdfInkStroke[]) {
   const { data, error } = await requireSupabaseClient()
     .from('pdf_annotations')

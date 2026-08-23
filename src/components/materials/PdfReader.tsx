@@ -16,8 +16,9 @@ import { radii, spacing, typography } from '@/constants/theme';
 import { keys } from '@/hooks/useStudyData';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { getErrorMessage } from '@/lib/errors';
+import { annotatedPdfFileName, createAnnotatedPdf, downloadPdf } from '@/lib/pdf/export';
 import { clampPdfPage, pdfReadingProgress, scalePdfZoom } from '@/lib/pdf/progress';
-import { getMaterial, getMaterialUrl, updatePdfReadingProgress } from '@/services';
+import { getMaterial, getMaterialUrl, listPdfAnnotations, updatePdfReadingProgress } from '@/services';
 import type { StudyMaterial } from '@/types/database';
 
 export function PdfReader({ initialPage, materialId }: { initialPage?: number; materialId: string }) {
@@ -42,6 +43,9 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
   const [pageSize, setPageSize] = useState({ height: 0, width: 0 });
   const [zoom, setZoom] = useState(1);
   const [focusMode, setFocusMode] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
   const renderTask = useRef<RenderTask | null>(null);
@@ -179,6 +183,30 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
     setZoom((currentZoom) => scalePdfZoom(currentZoom, distanceRatio));
   }, []);
 
+  const exportAnnotatedPdf = useCallback(async () => {
+    if (exporting || !signedUrl.data || !material.data) return;
+    setExporting(true);
+    setExportError(null);
+    setExportSuccess(null);
+    try {
+      const [sourceResponse, annotations] = await Promise.all([
+        fetch(signedUrl.data, { cache: 'no-store' }),
+        listPdfAnnotations(materialId),
+      ]);
+      if (!sourceResponse.ok) throw new Error('The private source file could not be opened. Refresh the reader and try again.');
+      const exported = await createAnnotatedPdf(await sourceResponse.arrayBuffer(), annotations);
+      const fileName = annotatedPdfFileName(material.data.file_name, material.data.title);
+      downloadPdf(exported.bytes, fileName);
+      setExportSuccess(exported.strokeCount > 0
+        ? `Downloaded ${fileName} with ${exported.strokeCount} saved mark${exported.strokeCount === 1 ? '' : 's'} across ${exported.annotatedPageCount} page${exported.annotatedPageCount === 1 ? '' : 's'}.`
+        : `Downloaded ${fileName}. No saved handwritten marks were found.`);
+    } catch (error) {
+      setExportError(getErrorMessage(error));
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting, material.data, materialId, signedUrl.data]);
+
   if (material.isLoading) return <FeedbackState loading message="Checking your private material." title="Opening PDF reader" />;
   if (material.error) return <FeedbackState actionLabel="Try again" message={getErrorMessage(material.error)} onAction={() => void material.refetch()} title="Could not load this PDF" />;
   if (!material.data || material.data.type !== 'PDF' || !material.data.file_url) return <FeedbackState message="This material is not a stored PDF." title="PDF unavailable" />;
@@ -186,7 +214,7 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
   if (signedUrl.error || readerError || !document) return <FeedbackState actionLabel="Try again" message={readerError ?? getErrorMessage(signedUrl.error)} onAction={() => void signedUrl.refetch()} title="Could not open this PDF" />;
 
   const progress = pdfReadingProgress(currentPage, document.numPages);
-  const workspace = <PdfAnnotationWorkspace focusMode={focusMode} height={pageSize.height} materialId={materialId} onPinchZoom={pinchZoom} pageNumber={currentPage} width={pageSize.width}>
+  const workspace = <PdfAnnotationWorkspace exportError={exportError} exporting={exporting} exportSuccess={exportSuccess} focusMode={focusMode} height={pageSize.height} materialId={materialId} onExport={() => void exportAnnotatedPdf()} onPinchZoom={pinchZoom} pageNumber={currentPage} width={pageSize.width}>
     <canvas aria-label={`Page ${currentPage} of ${document.numPages}`} ref={canvasRef} style={{ display: 'block' }} />
   </PdfAnnotationWorkspace>;
 
