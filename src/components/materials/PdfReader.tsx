@@ -16,7 +16,7 @@ import { radii, spacing, typography } from '@/constants/theme';
 import { keys } from '@/hooks/useStudyData';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { getErrorMessage } from '@/lib/errors';
-import { clampPdfPage, pdfReadingProgress } from '@/lib/pdf/progress';
+import { clampPdfPage, pdfReadingProgress, scalePdfZoom } from '@/lib/pdf/progress';
 import { getMaterial, getMaterialUrl, updatePdfReadingProgress } from '@/services';
 import type { StudyMaterial } from '@/types/database';
 
@@ -175,6 +175,10 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
     persistPosition(nextPage, document.numPages);
   };
 
+  const pinchZoom = useCallback((distanceRatio: number) => {
+    setZoom((currentZoom) => scalePdfZoom(currentZoom, distanceRatio));
+  }, []);
+
   if (material.isLoading) return <FeedbackState loading message="Checking your private material." title="Opening PDF reader" />;
   if (material.error) return <FeedbackState actionLabel="Try again" message={getErrorMessage(material.error)} onAction={() => void material.refetch()} title="Could not load this PDF" />;
   if (!material.data || material.data.type !== 'PDF' || !material.data.file_url) return <FeedbackState message="This material is not a stored PDF." title="PDF unavailable" />;
@@ -182,7 +186,7 @@ export function PdfReader({ initialPage, materialId }: { initialPage?: number; m
   if (signedUrl.error || readerError || !document) return <FeedbackState actionLabel="Try again" message={readerError ?? getErrorMessage(signedUrl.error)} onAction={() => void signedUrl.refetch()} title="Could not open this PDF" />;
 
   const progress = pdfReadingProgress(currentPage, document.numPages);
-  const workspace = <PdfAnnotationWorkspace focusMode={focusMode} height={pageSize.height} materialId={materialId} pageNumber={currentPage} width={pageSize.width}>
+  const workspace = <PdfAnnotationWorkspace focusMode={focusMode} height={pageSize.height} materialId={materialId} onPinchZoom={pinchZoom} pageNumber={currentPage} width={pageSize.width}>
     <canvas aria-label={`Page ${currentPage} of ${document.numPages}`} ref={canvasRef} style={{ display: 'block' }} />
   </PdfAnnotationWorkspace>;
 

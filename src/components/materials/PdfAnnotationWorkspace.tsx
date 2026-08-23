@@ -15,6 +15,7 @@ type DrawingTool = 'FOUNTAIN' | 'PENCIL' | 'BALLPOINT' | 'HIGHLIGHTER';
 type EditorTool = 'HAND' | DrawingTool | 'ERASER';
 type SaveState = 'IDLE' | 'SAVING' | 'SAVED' | 'ERROR';
 type PageSize = { height: number; width: number };
+type PointerPosition = { x: number; y: number };
 type InkEditorHandle = { clear: () => void; redo: () => void; retry: () => void; undo: () => void };
 
 const COLOR_SWATCHES = ['#171F26', '#FF6B55', '#FFFFFF', '#6658F5', '#B8F711'];
@@ -92,12 +93,13 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
   height: number;
   initialStrokes: PdfInkStroke[];
   onHistoryChange: (canUndo: boolean, canRedo: boolean) => void;
+  onPinchZoom: (distanceRatio: number) => void;
   onPersist: (strokes: PdfInkStroke[]) => Promise<void>;
   onSaveStateChange: (state: SaveState, error?: string) => void;
   tool: EditorTool;
   width: number;
   widthIndex: number;
-}>(function PdfInkCanvas({ color, height, initialStrokes, onHistoryChange, onPersist, onSaveStateChange, tool, width, widthIndex }, ref) {
+}>(function PdfInkCanvas({ color, height, initialStrokes, onHistoryChange, onPinchZoom, onPersist, onSaveStateChange, tool, width, widthIndex }, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [history, setHistory] = useState<PdfInkStroke[][]>([initialStrokes]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -109,6 +111,8 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
   const erasingPreviewRef = useRef<PdfInkStroke[] | null>(null);
   const erasedIdsRef = useRef(new Set<string>());
   const activePointerRef = useRef<number | null>(null);
+  const touchPointersRef = useRef(new Map<number, PointerPosition>());
+  const pinchDistanceRef = useRef<number | null>(null);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const mountedRef = useRef(true);
   const lastFailedRef = useRef<PdfInkStroke[] | null>(null);
@@ -209,11 +213,36 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
       setErasingPreview(next);
     };
 
+    const currentPinchDistance = () => {
+      const points = Array.from(touchPointersRef.current.values());
+      if (points.length < 2) return null;
+      return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    };
+
+    const cancelDrawingForPinch = () => {
+      activePointerRef.current = null;
+      draftRef.current = null;
+      erasingPreviewRef.current = null;
+      erasedIdsRef.current = new Set();
+      setDraft(null);
+      setErasingPreview(null);
+    };
+
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0 && event.pointerType !== 'pen') return;
+      if (event.pointerType === 'touch') {
+        touchPointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        canvas.setPointerCapture(event.pointerId);
+        if (touchPointersRef.current.size >= 2) {
+          event.preventDefault();
+          cancelDrawingForPinch();
+          pinchDistanceRef.current = currentPinchDistance();
+          return;
+        }
+      }
       event.preventDefault();
       activePointerRef.current = event.pointerId;
-      canvas.setPointerCapture(event.pointerId);
+      if (!canvas.hasPointerCapture(event.pointerId)) canvas.setPointerCapture(event.pointerId);
       const points = eventPoints(event);
       if (tool === 'ERASER') {
         erasedIdsRef.current = new Set();
@@ -228,6 +257,19 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
     };
 
     const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'touch' && touchPointersRef.current.has(event.pointerId)) {
+        touchPointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        const previousDistance = pinchDistanceRef.current;
+        const nextDistance = currentPinchDistance();
+        if (previousDistance !== null && nextDistance !== null) {
+          event.preventDefault();
+          if (previousDistance > 0 && Math.abs(nextDistance - previousDistance) >= 2) {
+            onPinchZoom(Math.min(1.15, Math.max(0.85, nextDistance / previousDistance)));
+            pinchDistanceRef.current = nextDistance;
+          }
+          return;
+        }
+      }
       if (activePointerRef.current !== event.pointerId) return;
       event.preventDefault();
       const points = eventPoints(event);
@@ -243,6 +285,17 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
     };
 
     const finishPointer = (event: PointerEvent) => {
+      const wasPinching = pinchDistanceRef.current !== null;
+      if (event.pointerType === 'touch') {
+        touchPointersRef.current.delete(event.pointerId);
+        if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+        if (wasPinching) {
+          event.preventDefault();
+          activePointerRef.current = null;
+          if (touchPointersRef.current.size < 2) pinchDistanceRef.current = null;
+          return;
+        }
+      }
       if (activePointerRef.current !== event.pointerId) return;
       event.preventDefault();
       activePointerRef.current = null;
@@ -270,7 +323,7 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
       canvas.removeEventListener('pointerup', finishPointer);
       canvas.removeEventListener('pointercancel', finishPointer);
     };
-  }, [color, commit, height, tool, width, widthIndex]);
+  }, [color, commit, height, onPinchZoom, tool, width, widthIndex]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -299,7 +352,7 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
   />;
 });
 
-export function PdfAnnotationWorkspace({ children, focusMode = false, height, materialId, pageNumber, width }: { children: ReactNode; focusMode?: boolean; height: number; materialId: string; pageNumber: number; width: number }) {
+export function PdfAnnotationWorkspace({ children, focusMode = false, height, materialId, onPinchZoom, pageNumber, width }: { children: ReactNode; focusMode?: boolean; height: number; materialId: string; onPinchZoom: (distanceRatio: number) => void; pageNumber: number; width: number }) {
   const palette = useAppTheme();
   const queryClient = useQueryClient();
   const editorRef = useRef<InkEditorHandle | null>(null);
@@ -340,7 +393,7 @@ export function PdfAnnotationWorkspace({ children, focusMode = false, height, ma
   const onHistoryChange = useCallback((undo: boolean, redo: boolean) => { setCanUndo(undo); setCanRedo(redo); }, []);
   const editorReady = annotations.isFetched && !annotations.error;
   const customColorSelected = !COLOR_SWATCHES.includes(color);
-  const toolHint = tool === 'HAND' ? 'Read mode · swipe the page' : tool === 'ERASER' ? 'Stroke eraser · drag over a mark' : `${tool === 'FOUNTAIN' ? 'Fountain pen' : tool === 'PENCIL' ? 'Pencil' : tool === 'BALLPOINT' ? 'Ballpoint pen' : 'Highlighter'} · draw on the page`;
+  const toolHint = tool === 'HAND' ? 'Read mode · swipe the page' : tool === 'ERASER' ? 'Stroke eraser · one finger erases · two fingers zoom' : `${tool === 'FOUNTAIN' ? 'Fountain pen' : tool === 'PENCIL' ? 'Pencil' : tool === 'BALLPOINT' ? 'Ballpoint pen' : 'Highlighter'} · one finger or Pencil draws · two fingers zoom`;
 
   return <View style={[styles.workspace, focusMode ? styles.focusWorkspace : null]}>
     <div style={{ position: focusMode ? 'sticky' : 'relative', top: 0, width: '100%', zIndex: focusMode ? 5 : 1 }}>
@@ -387,6 +440,7 @@ export function PdfAnnotationWorkspace({ children, focusMode = false, height, ma
         initialStrokes={parsePdfInkStrokes(annotations.data?.strokes)}
         key={`${materialId}:${pageNumber}`}
         onHistoryChange={onHistoryChange}
+        onPinchZoom={onPinchZoom}
         onPersist={persist}
         onSaveStateChange={onSaveStateChange}
         ref={editorRef}
