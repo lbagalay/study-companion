@@ -299,7 +299,7 @@ const PdfInkCanvas = forwardRef<InkEditorHandle, {
   />;
 });
 
-export function PdfAnnotationWorkspace({ children, height, materialId, pageNumber, width }: { children: ReactNode; height: number; materialId: string; pageNumber: number; width: number }) {
+export function PdfAnnotationWorkspace({ children, focusMode = false, height, materialId, pageNumber, width }: { children: ReactNode; focusMode?: boolean; height: number; materialId: string; pageNumber: number; width: number }) {
   const palette = useAppTheme();
   const queryClient = useQueryClient();
   const editorRef = useRef<InkEditorHandle | null>(null);
@@ -342,41 +342,43 @@ export function PdfAnnotationWorkspace({ children, height, materialId, pageNumbe
   const customColorSelected = !COLOR_SWATCHES.includes(color);
   const toolHint = tool === 'HAND' ? 'Read mode · swipe the page' : tool === 'ERASER' ? 'Stroke eraser · drag over a mark' : `${tool === 'FOUNTAIN' ? 'Fountain pen' : tool === 'PENCIL' ? 'Pencil' : tool === 'BALLPOINT' ? 'Ballpoint pen' : 'Highlighter'} · draw on the page`;
 
-  return <View style={styles.workspace}>
-    <div style={{ maxWidth: '100%', overflowX: 'auto', padding: '8px 4px 14px', width: '100%' }}>
-      <View style={[styles.toolbar, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-        <View style={styles.actionGroup}>
-          <Pressable accessibilityLabel="Undo annotation" disabled={!canUndo} onPress={() => editorRef.current?.undo()} style={[styles.iconButton, { borderColor: palette.border, opacity: canUndo ? 1 : 0.3 }]}><Ionicons color={palette.text} name="arrow-undo-outline" size={25} /></Pressable>
-          <Pressable accessibilityLabel="Redo annotation" disabled={!canRedo} onPress={() => editorRef.current?.redo()} style={[styles.iconButton, { borderColor: palette.border, opacity: canRedo ? 1 : 0.3 }]}><Ionicons color={palette.text} name="arrow-redo-outline" size={25} /></Pressable>
+  return <View style={[styles.workspace, focusMode ? styles.focusWorkspace : null]}>
+    <div style={{ position: focusMode ? 'sticky' : 'relative', top: 0, width: '100%', zIndex: focusMode ? 5 : 1 }}>
+      <div style={{ maxWidth: '100%', overflowX: 'auto', padding: '8px 4px 14px', width: '100%' }}>
+        <View style={[styles.toolbar, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+          <View style={styles.actionGroup}>
+            <Pressable accessibilityLabel="Undo annotation" disabled={!canUndo} onPress={() => editorRef.current?.undo()} style={[styles.iconButton, { borderColor: palette.border, opacity: canUndo ? 1 : 0.3 }]}><Ionicons color={palette.text} name="arrow-undo-outline" size={25} /></Pressable>
+            <Pressable accessibilityLabel="Redo annotation" disabled={!canRedo} onPress={() => editorRef.current?.redo()} style={[styles.iconButton, { borderColor: palette.border, opacity: canRedo ? 1 : 0.3 }]}><Ionicons color={palette.text} name="arrow-redo-outline" size={25} /></Pressable>
+          </View>
+          <View style={[styles.divider, { backgroundColor: palette.border }]} />
+          <View style={styles.toolGroup}>
+            <ToolButton active={tool === 'HAND'} label="Read mode" onPress={() => chooseTool('HAND')} tool="HAND" />
+            <ToolButton active={tool === 'FOUNTAIN'} label="Fountain pen" onPress={() => chooseTool('FOUNTAIN')} tool="FOUNTAIN" />
+            <ToolButton active={tool === 'PENCIL'} label="Pencil" onPress={() => chooseTool('PENCIL')} tool="PENCIL" />
+            <ToolButton active={tool === 'BALLPOINT'} label="Ballpoint pen" onPress={() => chooseTool('BALLPOINT')} tool="BALLPOINT" />
+            <ToolButton active={tool === 'HIGHLIGHTER'} label="Highlighter" onPress={() => chooseTool('HIGHLIGHTER')} tool="HIGHLIGHTER" />
+            <ToolButton active={tool === 'ERASER'} label="Eraser" onPress={() => chooseTool('ERASER')} tool="ERASER" />
+          </View>
+          <View style={[styles.divider, { backgroundColor: palette.border }]} />
+          <View accessibilityLabel="Stroke size" style={styles.sizeRail}>{[0, 1, 2].map((index) => <Pressable accessibilityLabel={`${index === 0 ? 'Thin' : index === 1 ? 'Medium' : 'Thick'} stroke`} accessibilityRole="button" accessibilityState={{ selected: widthIndex === index }} key={index} onPress={() => setWidthIndex(index)} style={[styles.sizeButton, { backgroundColor: widthIndex === index ? palette.accentSoft : 'transparent' }]}><View style={{ backgroundColor: widthIndex === index ? palette.accentStrong : palette.textMuted, borderRadius: radii.pill, height: 2 + index * 2, width: 20 + index * 5 }} /></Pressable>)}</View>
+          <View style={[styles.divider, { backgroundColor: palette.border }]} />
+          <View style={styles.colorGrid}>
+            {COLOR_SWATCHES.map((option) => <Pressable accessibilityLabel={`Use ${option} ink`} accessibilityRole="button" accessibilityState={{ selected: color === option }} key={option} onPress={() => chooseColor(option)} style={[styles.colorOuter, { borderColor: color === option ? palette.text : 'transparent' }]}><View style={[styles.colorDot, { backgroundColor: option, borderColor: option === '#FFFFFF' ? palette.border : option }]} /></Pressable>)}
+            <Pressable accessibilityLabel="Choose custom ink color" accessibilityRole="button" accessibilityState={{ selected: customColorSelected }} onPress={() => customColorRef.current?.click()} style={[styles.colorOuter, { borderColor: customColorSelected ? palette.text : 'transparent' }]}><div aria-hidden="true" style={{ alignItems: 'center', background: 'conic-gradient(#ff3b30, #ffcc00, #34c759, #00c7ff, #5856d6, #ff2d55, #ff3b30)', borderRadius: 18, display: 'flex', height: 34, justifyContent: 'center', width: 34 }}><div style={{ background: palette.surface, borderRadius: 7, height: 14, width: 14 }} /></div></Pressable>
+            <input aria-label="Custom ink color" onChange={(event) => chooseColor(event.currentTarget.value.toUpperCase())} ref={customColorRef} style={{ display: 'none' }} type="color" value={color} />
+          </View>
         </View>
-        <View style={[styles.divider, { backgroundColor: palette.border }]} />
-        <View style={styles.toolGroup}>
-          <ToolButton active={tool === 'HAND'} label="Read mode" onPress={() => chooseTool('HAND')} tool="HAND" />
-          <ToolButton active={tool === 'FOUNTAIN'} label="Fountain pen" onPress={() => chooseTool('FOUNTAIN')} tool="FOUNTAIN" />
-          <ToolButton active={tool === 'PENCIL'} label="Pencil" onPress={() => chooseTool('PENCIL')} tool="PENCIL" />
-          <ToolButton active={tool === 'BALLPOINT'} label="Ballpoint pen" onPress={() => chooseTool('BALLPOINT')} tool="BALLPOINT" />
-          <ToolButton active={tool === 'HIGHLIGHTER'} label="Highlighter" onPress={() => chooseTool('HIGHLIGHTER')} tool="HIGHLIGHTER" />
-          <ToolButton active={tool === 'ERASER'} label="Eraser" onPress={() => chooseTool('ERASER')} tool="ERASER" />
-        </View>
-        <View style={[styles.divider, { backgroundColor: palette.border }]} />
-        <View accessibilityLabel="Stroke size" style={styles.sizeRail}>{[0, 1, 2].map((index) => <Pressable accessibilityLabel={`${index === 0 ? 'Thin' : index === 1 ? 'Medium' : 'Thick'} stroke`} accessibilityRole="button" accessibilityState={{ selected: widthIndex === index }} key={index} onPress={() => setWidthIndex(index)} style={[styles.sizeButton, { backgroundColor: widthIndex === index ? palette.accentSoft : 'transparent' }]}><View style={{ backgroundColor: widthIndex === index ? palette.accentStrong : palette.textMuted, borderRadius: radii.pill, height: 2 + index * 2, width: 20 + index * 5 }} /></Pressable>)}</View>
-        <View style={[styles.divider, { backgroundColor: palette.border }]} />
-        <View style={styles.colorGrid}>
-          {COLOR_SWATCHES.map((option) => <Pressable accessibilityLabel={`Use ${option} ink`} accessibilityRole="button" accessibilityState={{ selected: color === option }} key={option} onPress={() => chooseColor(option)} style={[styles.colorOuter, { borderColor: color === option ? palette.text : 'transparent' }]}><View style={[styles.colorDot, { backgroundColor: option, borderColor: option === '#FFFFFF' ? palette.border : option }]} /></Pressable>)}
-          <Pressable accessibilityLabel="Choose custom ink color" accessibilityRole="button" accessibilityState={{ selected: customColorSelected }} onPress={() => customColorRef.current?.click()} style={[styles.colorOuter, { borderColor: customColorSelected ? palette.text : 'transparent' }]}><div aria-hidden="true" style={{ alignItems: 'center', background: 'conic-gradient(#ff3b30, #ffcc00, #34c759, #00c7ff, #5856d6, #ff2d55, #ff3b30)', borderRadius: 18, display: 'flex', height: 34, justifyContent: 'center', width: 34 }}><div style={{ background: palette.surface, borderRadius: 7, height: 14, width: 14 }} /></div></Pressable>
-          <input aria-label="Custom ink color" onChange={(event) => chooseColor(event.currentTarget.value.toUpperCase())} ref={customColorRef} style={{ display: 'none' }} type="color" value={color} />
+      </div>
+      <View style={styles.statusRow}>
+        <Text style={[styles.hint, { color: palette.textMuted }]}>{toolHint}</Text>
+        <View style={styles.statusActions}>
+          <Text style={[styles.saveStatus, { color: saveState === 'ERROR' ? palette.danger : saveState === 'SAVED' ? palette.success : palette.textMuted }]}>{annotations.isLoading ? 'Loading…' : saveState === 'SAVING' ? 'Saving…' : saveState === 'SAVED' ? 'Saved' : saveState === 'ERROR' ? 'Not saved' : 'Ready'}</Text>
+          <Pressable accessibilityLabel="Clear page annotations" onPress={() => editorRef.current?.clear()}><Text style={[styles.clearLabel, { color: palette.danger }]}>Clear page</Text></Pressable>
         </View>
       </View>
+      {annotations.error ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not load handwritten marks: {getErrorMessage(annotations.error)}</Text><Pressable onPress={() => void annotations.refetch()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Try again</Text></Pressable></View> : null}
+      {saveState === 'ERROR' ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not save: {saveError}</Text><Pressable onPress={() => editorRef.current?.retry()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Retry</Text></Pressable></View> : null}
     </div>
-    <View style={styles.statusRow}>
-      <Text style={[styles.hint, { color: palette.textMuted }]}>{toolHint}</Text>
-      <View style={styles.statusActions}>
-        <Text style={[styles.saveStatus, { color: saveState === 'ERROR' ? palette.danger : saveState === 'SAVED' ? palette.success : palette.textMuted }]}>{annotations.isLoading ? 'Loading…' : saveState === 'SAVING' ? 'Saving…' : saveState === 'SAVED' ? 'Saved' : saveState === 'ERROR' ? 'Not saved' : 'Ready'}</Text>
-        <Pressable accessibilityLabel="Clear page annotations" onPress={() => editorRef.current?.clear()}><Text style={[styles.clearLabel, { color: palette.danger }]}>Clear page</Text></Pressable>
-      </View>
-    </View>
-    {annotations.error ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not load handwritten marks: {getErrorMessage(annotations.error)}</Text><Pressable onPress={() => void annotations.refetch()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Try again</Text></Pressable></View> : null}
-    {saveState === 'ERROR' ? <View style={styles.errorRow}><Text style={[styles.errorText, { color: palette.danger }]}>Could not save: {saveError}</Text><Pressable onPress={() => editorRef.current?.retry()}><Text style={[styles.retry, { color: palette.accentStrong }]}>Retry</Text></Pressable></View> : null}
     <div style={{ height, position: 'relative', width }}>
       {children}
       {editorReady && width > 0 && height > 0 ? <PdfInkCanvas
@@ -398,6 +400,7 @@ export function PdfAnnotationWorkspace({ children, height, materialId, pageNumbe
 
 const styles = StyleSheet.create({
   workspace: { alignItems: 'flex-start', gap: spacing.xs, width: '100%' },
+  focusWorkspace: { alignItems: 'center' },
   toolbar: { alignItems: 'center', borderRadius: 54, borderWidth: 1, boxShadow: '0 15px 34px rgba(84, 45, 37, 0.18)', flexDirection: 'row', gap: spacing.sm, marginHorizontal: 'auto', minHeight: 104, minWidth: 800, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, width: 800 },
   toolGroup: { alignItems: 'center', flexDirection: 'row', gap: 2 },
   actionGroup: { flexDirection: 'row', gap: spacing.sm },
