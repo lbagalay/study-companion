@@ -49,8 +49,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) throw new Error('Connect Supabase in .env before signing in.');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    setSession(data.session);
+    setLoading(false);
   }, [supabase]);
 
   const signUp = useCallback(async ({ email, password, fullName, preferredName }: RegisterInput) => {
