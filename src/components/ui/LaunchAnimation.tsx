@@ -62,10 +62,11 @@ export function LaunchAnimation() {
       style={[styles.backdrop, { backgroundColor: palette.background, opacity: backdropOpacity }]}
     >
       <View style={[styles.glow, { backgroundColor: palette.accentSoft }]} />
+      <View style={[styles.blueGlow, { backgroundColor: palette.lavenderSoft }]} />
       <Animated.View style={[styles.logoWrap, { opacity: logoOpacity, transform: [{ translateY: logoY }, { scale: logoScale }] }]}>
         <Image accessibilityIgnoresInvertColors source={require('../../../assets/images/study-companion-icon.png')} style={styles.logo} />
         <Animated.View style={[styles.sparkle, { backgroundColor: palette.surface, transform: [{ scale: sparkleScale }] }]}>
-          <Ionicons color={palette.accentSolid} name="sparkles" size={19} />
+          <Ionicons color={palette.accentStrong} name="heart" size={18} />
         </Animated.View>
       </Animated.View>
       <Animated.View style={[styles.copy, { opacity: copyOpacity, transform: [{ translateY: copyY }] }]}>
@@ -79,9 +80,10 @@ export function LaunchAnimation() {
 const styles = StyleSheet.create({
   backdrop: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 0, overflow: 'hidden', pointerEvents: 'auto', position: 'absolute', right: 0, top: 0, zIndex: 1000 },
   glow: { borderRadius: radii.pill, height: 330, opacity: 0.78, pointerEvents: 'none', position: 'absolute', width: 330 },
+  blueGlow: { borderRadius: radii.pill, height: 220, opacity: 0.48, pointerEvents: 'none', position: 'absolute', transform: [{ translateX: 120 }, { translateY: 90 }], width: 220 },
   logoWrap: { marginBottom: spacing.lg },
   logo: { borderRadius: radii.xl, height: 128, width: 128 },
-  sparkle: { alignItems: 'center', borderRadius: radii.pill, bottom: -6, boxShadow: '0 6px 18px rgba(180, 72, 78, 0.18)', height: 40, justifyContent: 'center', position: 'absolute', right: -8, width: 40 },
+  sparkle: { alignItems: 'center', borderRadius: radii.pill, bottom: -6, boxShadow: '0 8px 22px rgba(14, 27, 72, 0.18)', height: 40, justifyContent: 'center', position: 'absolute', right: -8, width: 40 },
   copy: { alignItems: 'center', gap: spacing.xs },
   title: { ...typography.title, fontSize: 30, lineHeight: 36 },
   subtitle: typography.body,

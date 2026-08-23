@@ -20,7 +20,7 @@ import { studyLoadExtractionSchema, type ExtractedSchedule, type ExtractedSubjec
 import { extractStudyLoad, importStudyLoad } from '@/services';
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
-const subjectColors = ['#F26167', '#7770C9', '#E09A3E', '#5F9B82', '#D06C9B', '#5F86C9'] as const;
+const subjectColors = ['#0E1B48', '#C18DB4', '#E2CAD8', '#87A7D0', '#27425D', '#0E1F2F'] as const;
 type ReviewSubject = Omit<ExtractedSubject, 'units'> & { color: string; selected: boolean; units: string };
 
 export default function ImportStudyLoadScreen() {
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   reviewHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
   sectionTitle: typography.sectionTitle,
   count: { ...typography.label, borderRadius: radii.pill, overflow: 'hidden', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  subjectCard: { borderRadius: radii.xl, borderWidth: 1.5, boxShadow: '0 8px 22px rgba(180, 72, 78, 0.07)', gap: spacing.md, padding: spacing.lg },
+  subjectCard: { borderRadius: radii.xl, borderWidth: 1.5, boxShadow: '0 10px 26px rgba(14, 27, 72, 0.08)', gap: spacing.md, padding: spacing.lg },
   subjectHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
   subjectTitle: typography.sectionTitle,
   caption: typography.caption,

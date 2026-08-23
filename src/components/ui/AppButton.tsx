@@ -18,7 +18,7 @@ export function AppButton({ disabled, label, loading = false, onPress, style, va
 }
 
 const styles = StyleSheet.create({
-  button: { alignItems: 'center', borderRadius: radii.md, borderWidth: 1, minHeight: 52, justifyContent: 'center', paddingHorizontal: spacing.lg },
-  primaryShadow: { boxShadow: '0 8px 18px rgba(207, 67, 80, 0.20)' },
-  label: { ...typography.sectionTitle, fontSize: 17 },
+  button: { alignItems: 'center', borderRadius: radii.sm, borderWidth: 1, justifyContent: 'center', minHeight: 50, paddingHorizontal: spacing.lg },
+  primaryShadow: { boxShadow: '0 10px 24px rgba(14, 27, 72, 0.18)' },
+  label: { ...typography.label, fontSize: 12 },
 });

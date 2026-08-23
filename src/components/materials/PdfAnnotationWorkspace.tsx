@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { forwardRef, type ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { radii, spacing, typography } from '@/constants/theme';
+import { brand, radii, spacing, typography } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { getErrorMessage } from '@/lib/errors';
 import { createClientUuid } from '@/lib/ids';
@@ -18,7 +18,7 @@ type PageSize = { height: number; width: number };
 type PointerPosition = { x: number; y: number };
 type InkEditorHandle = { clear: () => void; redo: () => void; retry: () => void; undo: () => void };
 
-const COLOR_SWATCHES = ['#171F26', '#FF6B55', '#FFFFFF', '#6658F5', '#B8F711'];
+const COLOR_SWATCHES = [brand.ink, brand.mauve, '#FFFFFF', brand.blue, brand.navy];
 const TOOL_WIDTHS: Record<DrawingTool, number[]> = {
   FOUNTAIN: [0.0025, 0.004, 0.0065],
   PENCIL: [0.0012, 0.002, 0.0035],
@@ -59,25 +59,25 @@ function drawStroke(context: CanvasRenderingContext2D, stroke: PdfInkStroke, siz
 }
 
 function ToolIllustration({ tool }: { tool: EditorTool }) {
-  if (tool === 'HAND') return <Ionicons color="#3A3537" name="hand-left-outline" size={27} />;
+  if (tool === 'HAND') return <Ionicons color={brand.ink} name="hand-left-outline" size={27} />;
   if (tool === 'FOUNTAIN') return <svg aria-hidden="true" height="58" viewBox="0 0 32 70" width="30">
-    <path d="M16 2 28 26 23 66H9L4 26Z" fill="#F5F4F2" stroke="#918C89" strokeWidth="1.4" />
-    <path d="M16 2v31" stroke="#5D5755" strokeWidth="1.5" /><circle cx="16" cy="27" fill="#242124" r="2.5" />
+    <path d="M16 2 28 26 23 66H9L4 26Z" fill={brand.blush} stroke={brand.slate} strokeWidth="1.4" />
+    <path d="M16 2v31" stroke={brand.slate} strokeWidth="1.5" /><circle cx="16" cy="27" fill={brand.ink} r="2.5" />
   </svg>;
   if (tool === 'PENCIL') return <svg aria-hidden="true" height="58" viewBox="0 0 30 70" width="28">
-    <path d="m15 2 8 17H7Z" fill="#E7CC9D" /><path d="m15 2 3 7h-6Z" fill="#292628" />
-    <path d="M7 19h16v48H7Z" fill="#D9B47B" /><path d="M7 19h5v48H7Z" fill="#EACB97" /><path d="M18 19h5v48h-5Z" fill="#B98F57" />
+    <path d="m15 2 8 17H7Z" fill={brand.blush} /><path d="m15 2 3 7h-6Z" fill={brand.ink} />
+    <path d="M7 19h16v48H7Z" fill={brand.blue} /><path d="M7 19h5v48H7Z" fill={brand.blush} /><path d="M18 19h5v48h-5Z" fill={brand.slate} />
   </svg>;
   if (tool === 'BALLPOINT') return <svg aria-hidden="true" height="58" viewBox="0 0 30 70" width="28">
-    <path d="m15 2 6 16H9Z" fill="#373335" /><rect fill="#FAF9F7" height="46" rx="7" width="16" x="7" y="17" />
-    <rect fill="#3D393B" height="5" rx="2" width="18" x="6" y="43" /><rect fill="#E7E4E1" height="7" rx="3" width="14" x="8" y="61" />
+    <path d="m15 2 6 16H9Z" fill={brand.ink} /><rect fill={brand.blush} height="46" rx="7" width="16" x="7" y="17" />
+    <rect fill={brand.navy} height="5" rx="2" width="18" x="6" y="43" /><rect fill={brand.blue} height="7" rx="3" width="14" x="8" y="61" />
   </svg>;
   if (tool === 'HIGHLIGHTER') return <svg aria-hidden="true" height="58" viewBox="0 0 32 70" width="30">
-    <path d="m8 2 18 6-6 13H6Z" fill="#B060FF" /><path d="M6 20h20v44a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5Z" fill="#F8F7F5" />
-    <rect fill="#8E8A87" height="5" rx="2" width="22" x="5" y="29" /><circle cx="16" cy="52" fill="#B060FF" r="4" />
+    <path d="m8 2 18 6-6 13H6Z" fill={brand.mauve} /><path d="M6 20h20v44a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5Z" fill={brand.blush} />
+    <rect fill={brand.slate} height="5" rx="2" width="22" x="5" y="29" /><circle cx="16" cy="52" fill={brand.mauve} r="4" />
   </svg>;
   return <svg aria-hidden="true" height="58" viewBox="0 0 32 70" width="30">
-    <rect fill="#F6F4F2" height="52" rx="8" stroke="#D8D3CF" width="22" x="5" y="8" /><rect fill="#FF9B92" height="17" rx="6" width="22" x="5" y="45" />
+    <rect fill={brand.blush} height="52" rx="8" stroke={brand.slate} width="22" x="5" y="8" /><rect fill={brand.blue} height="17" rx="6" width="22" x="5" y="45" />
   </svg>;
 }
 
@@ -373,7 +373,7 @@ export function PdfAnnotationWorkspace({ children, focusMode = false, height, ma
     if (['FOUNTAIN', 'PENCIL', 'BALLPOINT', 'HIGHLIGHTER'].includes(nextTool)) {
       setLastDrawingTool(nextTool as DrawingTool);
     }
-    if (nextTool === 'HIGHLIGHTER' && ['#171F26', '#FFFFFF'].includes(color)) setColor('#FF6B55');
+    if (nextTool === 'HIGHLIGHTER' && [brand.ink, '#FFFFFF'].includes(color)) setColor(brand.mauve);
   };
 
   const chooseColor = (nextColor: string) => {
@@ -455,7 +455,7 @@ export function PdfAnnotationWorkspace({ children, focusMode = false, height, ma
 const styles = StyleSheet.create({
   workspace: { alignItems: 'flex-start', gap: spacing.xs, width: '100%' },
   focusWorkspace: { alignItems: 'center' },
-  toolbar: { alignItems: 'center', borderRadius: 54, borderWidth: 1, boxShadow: '0 15px 34px rgba(84, 45, 37, 0.18)', flexDirection: 'row', gap: spacing.sm, marginHorizontal: 'auto', minHeight: 104, minWidth: 800, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, width: 800 },
+  toolbar: { alignItems: 'center', borderRadius: 54, borderWidth: 1, boxShadow: '0 15px 34px rgba(14, 27, 72, 0.18)', flexDirection: 'row', gap: spacing.sm, marginHorizontal: 'auto', minHeight: 104, minWidth: 800, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, width: 800 },
   toolGroup: { alignItems: 'center', flexDirection: 'row', gap: 2 },
   actionGroup: { flexDirection: 'row', gap: spacing.sm },
   toolButton: { alignItems: 'center', borderBottomWidth: 3, borderRadius: radii.md, borderWidth: 1, height: 84, justifyContent: 'center', paddingHorizontal: 5, width: 58 },

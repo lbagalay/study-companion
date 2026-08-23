@@ -11,8 +11,9 @@ export function AuthScreen({ children, description, title }: PropsWithChildren<{
     <View style={[styles.glowLarge, { backgroundColor: palette.accentSoft }]} />
     <View style={[styles.glowSmall, { backgroundColor: palette.lavenderSoft }]} />
     <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+      <View style={[styles.ribbon, { backgroundColor: palette.accentSoft }]} />
       <View style={styles.header}>
-        <View style={[styles.mark, { backgroundColor: palette.accentSoft }]}><Ionicons color={palette.accent} name="sparkles" size={23} /></View>
+        <View style={[styles.mark, { backgroundColor: palette.accentSoft }]}><Ionicons color={palette.accentStrong} name="heart-outline" size={23} /></View>
         <Text style={[styles.brand, { color: palette.accentStrong }]}>STUDY COMPANION</Text>
         <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
         <Text style={[styles.description, { color: palette.textMuted }]}>{description}</Text>
@@ -24,14 +25,15 @@ export function AuthScreen({ children, description, title }: PropsWithChildren<{
 }
 const styles = StyleSheet.create({
   container: { alignSelf: 'center', flex: 1, justifyContent: 'center', maxWidth: 540, paddingVertical: spacing.xxl, width: '100%' },
-  card: { borderRadius: radii.xl, borderWidth: 1, boxShadow: '0 24px 70px rgba(180, 72, 78, 0.12)', padding: spacing.xl },
+  card: { borderRadius: radii.xl, borderWidth: 1, boxShadow: '0 26px 70px rgba(14, 27, 72, 0.14)', overflow: 'hidden', padding: spacing.xl },
+  ribbon: { height: 7, left: 0, opacity: 0.9, position: 'absolute', right: 0, top: 0 },
   header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xl },
-  mark: { alignItems: 'center', borderRadius: radii.pill, height: 48, justifyContent: 'center', marginBottom: spacing.xs, width: 48 },
+  mark: { alignItems: 'center', borderRadius: radii.pill, height: 52, justifyContent: 'center', marginBottom: spacing.xs, width: 52 },
   brand: typography.label,
   title: { ...typography.title, textAlign: 'center' },
   description: { ...typography.body, maxWidth: 390, textAlign: 'center' },
   form: { gap: spacing.md },
   footer: { ...typography.caption, marginTop: spacing.lg, textAlign: 'center' },
-  glowLarge: { borderRadius: radii.pill, height: 260, opacity: 0.72, pointerEvents: 'none', position: 'absolute', right: -110, top: 40, width: 260 },
-  glowSmall: { borderRadius: radii.pill, bottom: 48, height: 170, left: -78, opacity: 0.7, pointerEvents: 'none', position: 'absolute', width: 170 },
+  glowLarge: { borderRadius: radii.pill, height: 260, opacity: 0.5, pointerEvents: 'none', position: 'absolute', right: -110, top: 40, width: 260 },
+  glowSmall: { borderRadius: radii.pill, bottom: 48, height: 170, left: -78, opacity: 0.45, pointerEvents: 'none', position: 'absolute', width: 170 },
 });

@@ -18,8 +18,8 @@ export function FormField({ accessibilityLabel, error, label, multiline, style, 
 
 const styles = StyleSheet.create({
   wrapper: { gap: spacing.sm },
-  label: { ...typography.label, fontSize: 13 },
-  input: { borderRadius: radii.md, borderWidth: 1, boxShadow: '0 3px 10px rgba(180, 72, 78, 0.05)', fontSize: typography.body.fontSize, minHeight: 52, outlineColor: '#F26167', paddingHorizontal: spacing.md },
+  label: typography.label,
+  input: { borderRadius: radii.md, borderWidth: 1, boxShadow: '0 5px 16px rgba(14, 27, 72, 0.05)', fontSize: typography.body.fontSize, minHeight: 54, outlineColor: '#87A7D0', paddingHorizontal: spacing.md },
   multiline: { minHeight: 112, paddingTop: spacing.md },
   error: { ...typography.caption, marginLeft: spacing.xs },
 });

@@ -8,9 +8,9 @@ export function ScreenHeader({ back = false, description, title }: { back?: bool
   const palette = useAppTheme();
   const router = useRouter();
   return <View style={styles.header}>
-    {back ? <Pressable accessibilityLabel="Go back" onPress={() => router.back()} style={styles.back}><Ionicons color={palette.text} name="arrow-back" size={24} /></Pressable> : null}
-    <View style={styles.copy}><Text style={[styles.title, { color: palette.text }]}>{title}</Text>{description ? <Text style={[styles.description, { color: palette.textMuted }]}>{description}</Text> : null}</View>
+    {back ? <Pressable accessibilityLabel="Go back" onPress={() => router.back()} style={[styles.back, { backgroundColor: palette.surface, borderColor: palette.border }]}><Ionicons color={palette.text} name="arrow-back" size={21} /></Pressable> : null}
+    <View style={styles.copy}><Text style={[styles.eyebrow, { color: palette.accentStrong }]}>Study companion</Text><Text style={[styles.title, { color: palette.text }]}>{title}</Text>{description ? <Text style={[styles.description, { color: palette.textMuted }]}>{description}</Text> : null}<View style={[styles.rule, { backgroundColor: palette.accent }]} /></View>
   </View>;
 }
 
-const styles = StyleSheet.create({ header: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.md, paddingBottom: spacing.lg, paddingTop: spacing.md }, back: { paddingVertical: spacing.sm }, copy: { flex: 1, gap: spacing.xs }, title: typography.title, description: typography.body });
+const styles = StyleSheet.create({ header: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.md, paddingBottom: spacing.xl, paddingTop: spacing.lg }, back: { alignItems: 'center', borderRadius: 999, borderWidth: 1, height: 42, justifyContent: 'center', marginTop: 20, width: 42 }, copy: { flex: 1, gap: spacing.xs }, eyebrow: typography.label, title: typography.title, description: { ...typography.body, maxWidth: 620 }, rule: { borderRadius: 999, height: 2, marginTop: spacing.sm, opacity: 0.75, width: 52 } });

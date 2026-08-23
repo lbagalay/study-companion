@@ -8,7 +8,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta content="IE=edge" httpEquiv="X-UA-Compatible" />
         <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport" />
-        <meta content="#F26167" name="theme-color" />
+        <meta content="#0E1B48" name="theme-color" />
         <meta content="Study Companion" name="application-name" />
         <meta content="yes" name="apple-mobile-web-app-capable" />
         <meta content="default" name="apple-mobile-web-app-status-bar-style" />

@@ -16,4 +16,4 @@ export function ChoiceField<T extends string | number | boolean>({ choices, labe
   </View>;
 }
 
-const styles = StyleSheet.create({ wrapper: { gap: spacing.sm }, label: typography.label, choices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }, choice: { borderRadius: radii.pill, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }, choiceText: typography.caption });
+const styles = StyleSheet.create({ wrapper: { gap: spacing.sm }, label: typography.label, choices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }, choice: { borderRadius: radii.sm, borderWidth: 1, minHeight: 40, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }, choiceText: typography.label });

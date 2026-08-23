@@ -16,7 +16,7 @@ import { keys } from '@/hooks/useStudyData';
 import { getErrorMessage } from '@/lib/errors';
 import { deleteRecord, getSubject, saveSubject } from '@/services';
 
-const colors = ['#4F6F52', '#4779A8', '#8B5E83', '#B56B45', '#6B65A8', '#A28534'] as const;
+const colors = ['#0E1B48', '#C18DB4', '#E2CAD8', '#87A7D0', '#27425D', '#0E1F2F'] as const;
 const schema = z.object({ name: z.string().trim().min(1, 'Enter a subject name.').max(100, 'Keep the name under 100 characters.'), code: z.string().trim().max(30, 'Keep the code under 30 characters.'), description: z.string().trim().max(1000, 'Keep the description under 1,000 characters.'), teacher: z.string().trim().max(100, 'Keep the teacher name under 100 characters.'), room: z.string().trim().max(50, 'Keep the room under 50 characters.'), color: z.string(), semester: z.string().trim().max(50, 'Keep the semester under 50 characters.'), academic_year: z.string().trim().max(20, 'Keep the academic year under 20 characters.'), units: z.string().refine((value) => value.trim() !== '' && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 20, 'Enter units from 0 to 20.') });
 type Values = z.infer<typeof schema>;
 const defaults: Values = { name: '', code: '', description: '', teacher: '', room: '', color: colors[0], semester: '', academic_year: '', units: '0' };

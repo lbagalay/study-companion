@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import { Platform, useColorScheme, useWindowDimensions } from 'react-native';
 
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-import { colors, typography } from '@/constants/theme';
+import { brand, colors, typography } from '@/constants/theme';
 
 export default function TabLayout() {
   const isDark = useColorScheme() === 'dark';
@@ -16,16 +16,16 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: palette.background },
-        tabBarActiveTintColor: palette.accent,
-        tabBarInactiveTintColor: palette.textMuted,
+        tabBarActiveTintColor: brand.blush,
+        tabBarInactiveTintColor: brand.blue,
         tabBarStyle: {
-          backgroundColor: palette.surface,
-          borderColor: palette.border,
-          borderRadius: 24,
+          backgroundColor: brand.navy,
+          borderColor: brand.slate,
+          borderRadius: 26,
           borderTopWidth: 1,
           borderWidth: 1,
           bottom: 12,
-          boxShadow: '0 12px 32px rgba(180, 72, 78, 0.14)',
+          boxShadow: '0 16px 38px rgba(14, 27, 72, 0.24)',
           height: 72,
           left: (width - tabBarWidth) / 2,
           paddingBottom: Platform.OS === 'ios' ? 12 : 8,
