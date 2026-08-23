@@ -12,7 +12,7 @@ export function EntityList({ addLabel, children, description, empty, emptyMessag
   const palette = useAppTheme();
   return <View style={[styles.screen, { backgroundColor: palette.background }]}><EditorialBackdrop /><ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.accent} />}>
       <ScreenHeader description={description} title={title} />
-      {onAdd && addLabel ? <View style={styles.actions}><AppButton label={addLabel} onPress={onAdd} />{onSecondaryAdd && secondaryAddLabel ? <AppButton label={secondaryAddLabel} onPress={onSecondaryAdd} variant="secondary" /> : null}</View> : null}
+      {onAdd && addLabel ? <View style={styles.actions}><AppButton icon="add-circle-outline" label={addLabel} onPress={onAdd} />{onSecondaryAdd && secondaryAddLabel ? <AppButton icon="sparkles-outline" label={secondaryAddLabel} onPress={onSecondaryAdd} variant="secondary" /> : null}</View> : null}
       <View style={styles.list}>{loading ? <FeedbackState loading message="Fetching the latest information." title="Loading" /> : error ? <FeedbackState actionLabel="Try again" message={error.message} onAction={onRefresh} title="Could not load" /> : empty ? <FeedbackState message={emptyMessage} title="Nothing here yet" /> : children}</View>
     </ScrollView></View>;
 }

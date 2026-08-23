@@ -7,8 +7,8 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
-  "background_color": "#FFF8F7",
-  "theme_color": "#F26167",
+  "background_color": "#E2CAD8",
+  "theme_color": "#C18DB4",
   "orientation": "portrait-primary",
   "categories": ["education", "productivity"],
   "icons": [

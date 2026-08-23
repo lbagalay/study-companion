@@ -7,4 +7,4 @@ export function OfflineBanner() {
   if (network.isConnected !== false && network.isInternetReachable !== false) return null;
   return <View accessibilityRole="alert" style={styles.banner}><Text style={styles.text}>You’re offline. Recent information may still be visible.</Text></View>;
 }
-const styles = StyleSheet.create({ banner: { backgroundColor: brand.navy, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }, text: { ...typography.caption, color: '#FFFFFF', textAlign: 'center' } });
+const styles = StyleSheet.create({ banner: { backgroundColor: brand.blue, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }, text: { ...typography.caption, color: brand.ink, textAlign: 'center' } });

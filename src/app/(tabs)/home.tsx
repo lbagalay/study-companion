@@ -6,6 +6,7 @@ import { AppButton } from '@/components/ui/AppButton';
 import { EditorialBackdrop } from '@/components/ui/EditorialBackdrop';
 import { EntityCard } from '@/components/ui/EntityCard';
 import { FeedbackState } from '@/components/ui/FeedbackState';
+import { MotionIcon } from '@/components/ui/MotionIcon';
 import { radii, spacing, typography } from '@/constants/theme';
 import { useAssignments, useExams, useProfile, useSchedules, useSessions, useSubjects } from '@/hooks/useStudyData';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -31,13 +32,15 @@ export default function HomeScreen() {
       <View style={[styles.heroGlow, { backgroundColor: palette.lavenderSoft }]} />
       <View style={[styles.heroBody, compact && styles.heroBodyCompact]}>
         <View style={styles.heroText}>
-          <View style={styles.heroTop}><View style={[styles.heroIcon, { backgroundColor: palette.surface }]}><Ionicons color={palette.accent} name="sparkles" size={22} /></View><Text style={[styles.date, { color: palette.accentStrong }]}>{format(now, 'EEEE, MMMM d')}</Text></View>
+          <View style={styles.heroTop}><MotionIcon backgroundColor={palette.surface} color={palette.accent} iconSize={22} loop name="sparkles" size={40} /><Text style={[styles.date, { color: palette.accentStrong }]}>{format(now, 'EEEE, MMMM d')}</Text></View>
           <Text style={[styles.greeting, { color: palette.text }]}>{greeting}, {name}</Text>
           <Text style={[styles.heroCopy, { color: palette.textMuted }]}>{upcoming[0] ? `${upcoming[0].title} is ${formatDistanceToNow(upcoming[0].date, { addSuffix: true })}. You’ve got this.` : 'Your study space is calm and clear today.'}</Text>
         </View>
         <View style={[styles.artStage, compact && styles.artStageCompact, { backgroundColor: palette.surface, borderColor: palette.border }]}>
           <View style={[styles.artStripe, { backgroundColor: palette.lavenderSoft }]} />
           <Image accessibilityLabel="Study desk with notebook, pen, books, flowers and a pink bow" resizeMode="contain" source={require('../../../assets/images/editorial-study-hero.png')} style={styles.heroArt} />
+          <Ionicons color={palette.lavender} name="sparkles" size={15} style={styles.artSparkle} />
+          <Ionicons color={palette.accent} name="heart" size={10} style={styles.artHeart} />
           <View style={[styles.seal, { backgroundColor: palette.accentSoft, borderColor: palette.surface }]}><Ionicons color={palette.accentStrong} name="ribbon-outline" size={15} /><Text style={[styles.sealText, { color: palette.accentStrong }]}>{'STUDY\nSWEETLY'}</Text></View>
         </View>
       </View>
@@ -51,11 +54,11 @@ export default function HomeScreen() {
     <Section color={palette.text} index="02" tint={palette.peachSoft} title="Coming up">{upcoming.map((item) => <EntityCard accent={item.accent} badge={item.badge} key={`${item.href}-${item.id}`} onPress={() => router.push({ pathname: item.href, params: { id: item.id } })} subtitle={item.subtitle} title={item.title} />)}{!upcoming.length ? <FeedbackState message="Everything currently recorded is complete." title="You’re caught up" /> : null}</Section>
     <Section color={palette.text} index="03" tint={palette.accentSoft} title="Continue studying">{nextSession ? <EntityCard accent={bySubject.get(nextSession.subject_id)?.color} badge={`${nextSession.planned_duration} MIN`} metadata={format(new Date(nextSession.planned_at), 'MMM d · h:mm a')} onPress={() => router.push({ pathname: '/sessions/[id]', params: { id: nextSession.id } })} subtitle={bySubject.get(nextSession.subject_id)?.name} title={nextSession.topic} /> : <FeedbackState message="Generate a study plan from an upcoming exam." title="No active session" />}</Section>
     <Section color={palette.text} index="04" tint={palette.lavenderSoft} title="This week"><View style={styles.stats}><Stat color={palette.text} icon="checkmark" label="Tasks done" surface={palette.surface} value={assignments.data?.filter((a) => a.completed_at && isThisWeek(new Date(a.completed_at), { weekStartsOn: 1 })).length ?? 0} /><Stat color={palette.text} icon="hourglass-outline" label="Remaining" surface={palette.surface} value={assignments.data?.filter((a) => a.status !== 'COMPLETED').length ?? 0} /><Stat color={palette.text} icon="book-outline" label="Study sessions" surface={palette.surface} value={sessions.data?.filter((s) => s.status === 'COMPLETED' && isThisWeek(new Date(s.updated_at), { weekStartsOn: 1 })).length ?? 0} /><Stat color={palette.text} icon="school-outline" label="Upcoming exams" surface={palette.surface} value={exams.data?.filter((e) => e.status === 'UPCOMING').length ?? 0} /></View></Section>
-    <AppButton label="Manage subjects" onPress={() => router.push('/subjects')} variant="secondary" />
+    <AppButton icon="color-palette-outline" label="Manage subjects" onPress={() => router.push('/subjects')} variant="secondary" />
   </ScrollView></View>;
 }
 function Section({ children, color, index, tint, title }: React.PropsWithChildren<{ color: string; index: string; tint: string; title: string }>) { return <View style={[styles.section, { backgroundColor: tint }]}><View style={styles.sectionHeader}><Text style={[styles.sectionIndex, { color }]}>{index}</Text><Text style={[styles.sectionTitle, { color }]}>{title}</Text><Ionicons color={color} name="heart-outline" size={15} style={styles.sectionHeart} /></View>{children}</View>; }
-function QuickAction({ color, icon, index, label, onPress, surface, textColor }: { color: string; icon: React.ComponentProps<typeof Ionicons>['name']; index: string; label: string; onPress: () => void; surface: string; textColor: string }) { return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, { backgroundColor: surface, opacity: pressed ? 0.76 : 1, transform: [{ translateY: pressed ? 2 : 0 }] }]}><Text style={[styles.quickIndex, { color }]}>{index}</Text><View style={[styles.quickIcon, { backgroundColor: 'rgba(255,255,255,0.62)' }]}><Ionicons color={color} name={icon} size={21} /></View><Text numberOfLines={2} style={[styles.quickLabel, { color: textColor }]}>{label}</Text></Pressable>; }
+function QuickAction({ color, icon, index, label, onPress, surface, textColor }: { color: string; icon: React.ComponentProps<typeof Ionicons>['name']; index: string; label: string; onPress: () => void; surface: string; textColor: string }) { return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, { backgroundColor: surface, opacity: pressed ? 0.76 : 1, transform: [{ translateY: pressed ? 3 : 0 }, { scale: pressed ? 0.97 : 1 }] }]}><Text style={[styles.quickIndex, { color }]}>{index}</Text><MotionIcon backgroundColor="rgba(255,255,255,0.68)" color={color} iconSize={21} name={icon} size={42} /><Text numberOfLines={2} style={[styles.quickLabel, { color: textColor }]}>{label}</Text></Pressable>; }
 function Stat({ color, icon, label, surface, value }: { color: string; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; surface: string; value: number }) { return <View style={[styles.stat, { backgroundColor: surface }]}><View style={styles.statTop}><Text style={[styles.statValue, { color }]}>{value}</Text><Ionicons color={color} name={icon} size={17} /></View><Text style={[styles.statLabel, { color }]}>{label}</Text></View>; }
 const styles = StyleSheet.create({
   screen: { flex: 1 },
@@ -66,7 +69,6 @@ const styles = StyleSheet.create({
   heroBodyCompact: { alignItems: 'stretch', flexDirection: 'column' },
   heroText: { flex: 1, gap: spacing.sm, zIndex: 2 },
   heroTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  heroIcon: { alignItems: 'center', borderRadius: radii.pill, height: 40, justifyContent: 'center', width: 40 },
   greeting: typography.title,
   date: { ...typography.label, flex: 1 },
   heroCopy: { ...typography.body, maxWidth: 620 },
@@ -74,12 +76,13 @@ const styles = StyleSheet.create({
   artStageCompact: { height: 154, width: '100%' },
   artStripe: { bottom: 0, height: 34, left: 0, opacity: 0.75, position: 'absolute', right: 0 },
   heroArt: { height: '100%', position: 'absolute', right: -8, top: 0, width: '100%' },
+  artSparkle: { position: 'absolute', right: 14, top: 12, transform: [{ rotate: '12deg' }] },
+  artHeart: { opacity: 0.75, position: 'absolute', right: 39, top: 30, transform: [{ rotate: '-14deg' }] },
   seal: { alignItems: 'center', borderRadius: radii.pill, borderWidth: 3, bottom: 9, height: 70, justifyContent: 'center', left: 9, position: 'absolute', transform: [{ rotate: '-8deg' }], width: 70 },
   sealText: { ...typography.label, fontSize: 7, letterSpacing: 0.8, lineHeight: 9, marginTop: 2, textAlign: 'center' },
   quickActions: { flexDirection: 'row', gap: spacing.sm },
   quickAction: { alignItems: 'center', borderRadius: radii.lg, boxShadow: '0 8px 20px rgba(14, 27, 72, 0.06)', flex: 1, gap: 6, justifyContent: 'center', minHeight: 116, overflow: 'hidden', paddingHorizontal: spacing.sm, paddingVertical: spacing.md },
   quickIndex: { ...typography.label, fontSize: 8, left: spacing.sm, opacity: 0.65, position: 'absolute', top: spacing.sm },
-  quickIcon: { alignItems: 'center', borderRadius: radii.pill, height: 42, justifyContent: 'center', width: 42 },
   quickLabel: { ...typography.caption, fontWeight: '700', lineHeight: 15, textAlign: 'center' },
   section: { borderRadius: radii.xl, gap: spacing.md, overflow: 'hidden', padding: spacing.lg },
   sectionHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
