@@ -134,7 +134,11 @@ function ContinuousPdfPage({
   const [
     shouldRender,
     setShouldRender,
-  ] = useState(false);
+  ] = useState(
+    () =>
+      typeof IntersectionObserver ===
+      'undefined',
+  );
 
   const [
     renderError,
@@ -260,7 +264,6 @@ function ContinuousPdfPage({
       typeof IntersectionObserver ===
       'undefined'
     ) {
-      setShouldRender(true);
       return;
     }
 

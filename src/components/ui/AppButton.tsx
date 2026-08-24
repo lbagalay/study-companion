@@ -8,7 +8,7 @@ import { useAppTheme } from '@/hooks/useAppTheme';
 
 type Props = Omit<ComponentProps<typeof Pressable>, 'children' | 'style'> & { icon?: ComponentProps<typeof Ionicons>['name']; label: string; loading?: boolean; style?: StyleProp<ViewStyle>; variant?: 'primary' | 'secondary' | 'danger' | 'ghost' };
 
-export function AppButton({ disabled, icon, label, loading = false, onPress, onPressIn, onPressOut, style, variant = 'primary', ...props }: Props) {
+export function AppButton({ accessibilityLabel, accessibilityState, disabled, icon, label, loading = false, onPress, onPressIn, onPressOut, style, variant = 'primary', ...props }: Props) {
   const palette = useAppTheme();
   const [scale] = useState(() => new Animated.Value(1));
   const backgroundColor = variant === 'primary' ? palette.accentSolid : variant === 'danger' ? palette.danger : variant === 'ghost' ? 'transparent' : palette.accentSoft;
@@ -16,7 +16,7 @@ export function AppButton({ disabled, icon, label, loading = false, onPress, onP
   const animateScale = (toValue: number) => Animated.spring(scale, { damping: 12, mass: 0.45, stiffness: 220, toValue, useNativeDriver: Platform.OS !== 'web' }).start();
   return (
     <Animated.View style={[styles.motion, style, { transform: [{ scale }] }]}>
-      <Pressable accessibilityRole="button" disabled={disabled || loading} onPress={(event) => { if (Platform.OS !== 'web') void Haptics.selectionAsync(); onPress?.(event); }} onPressIn={(event) => { animateScale(0.96); onPressIn?.(event); }} onPressOut={(event) => { animateScale(1); onPressOut?.(event); }} style={({ pressed }) => [styles.button, variant === 'primary' && styles.primaryShadow, { backgroundColor, borderColor: variant === 'secondary' ? palette.border : backgroundColor, opacity: disabled || loading ? 0.5 : pressed ? 0.86 : 1 }]} {...props}>
+      <Pressable accessibilityLabel={accessibilityLabel ?? label} accessibilityRole="button" accessibilityState={{ ...accessibilityState, busy: loading, disabled: Boolean(disabled || loading) }} disabled={disabled || loading} onPress={(event) => { if (Platform.OS !== 'web') void Haptics.selectionAsync(); onPress?.(event); }} onPressIn={(event) => { animateScale(0.96); onPressIn?.(event); }} onPressOut={(event) => { animateScale(1); onPressOut?.(event); }} style={({ pressed }) => [styles.button, variant === 'primary' && styles.primaryShadow, { backgroundColor, borderColor: variant === 'secondary' ? palette.border : backgroundColor, opacity: disabled || loading ? 0.5 : pressed ? 0.86 : 1 }]} {...props}>
         {loading ? <ActivityIndicator color={textColor} /> : <>{icon ? <Ionicons color={textColor} name={icon} size={17} /> : null}<Text style={[styles.label, { color: textColor }]}>{label}</Text></>}
       </Pressable>
     </Animated.View>

@@ -235,6 +235,7 @@ export default function TasksScreen() {
       <View style={styles.monthNavigation}>
         <Pressable
           accessibilityLabel="Previous month"
+          accessibilityRole="button"
           onPress={() =>
             setMonth((current) =>
               subMonths(current, 1),
@@ -262,6 +263,9 @@ export default function TasksScreen() {
         </Pressable>
 
         <Pressable
+          accessibilityHint="Returns the calendar to the current month"
+          accessibilityLabel={`${format(month, 'MMMM yyyy')}. Return to current month`}
+          accessibilityRole="button"
           onPress={() =>
             setMonth(
               startOfMonth(new Date()),
@@ -294,6 +298,7 @@ export default function TasksScreen() {
 
         <Pressable
           accessibilityLabel="Next month"
+          accessibilityRole="button"
           onPress={() =>
             setMonth((current) =>
               addMonths(current, 1),
@@ -530,6 +535,8 @@ export default function TasksScreen() {
                           {visibleEvents.map(
                             (event) => (
                               <Pressable
+                                accessibilityLabel={`${event.kind === 'QUIZ' ? 'Quiz' : event.kind === 'EXAM' ? 'Exam' : 'Assignment'}: ${event.title}${event.completed ? ', completed' : event.overdue ? ', overdue' : ''}`}
+                                accessibilityRole="button"
                                 key={event.id}
                                 onPress={
                                   event.onPress

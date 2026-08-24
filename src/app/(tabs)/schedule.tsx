@@ -192,6 +192,49 @@ function roundUpToHour(
   );
 }
 
+function readableTextColor(
+  background:
+    string,
+) {
+  const match =
+    /^#([\dA-F]{6})$/i.exec(
+      background,
+    );
+
+  if (!match) {
+    return '#FFFFFF';
+  }
+
+  const value =
+    Number.parseInt(
+      match[1],
+      16,
+    );
+
+  const red =
+    (value >> 16) &
+    255;
+
+  const green =
+    (value >> 8) &
+    255;
+
+  const blue =
+    value &
+    255;
+
+  const luminance =
+    (red * 299 +
+      green * 587 +
+      blue * 114) /
+    1000;
+
+  return luminance >
+    156
+    ? '#0E1F2F'
+    : '#FFFFFF';
+}
+
 export default function ScheduleScreen() {
   const router =
     useRouter();
@@ -240,16 +283,25 @@ export default function ScheduleScreen() {
     new Date().getDay();
 
   const visible =
-    schedules.data?.filter(
-      (
-        item,
-      ) =>
-        mode ===
-          'WEEK' ||
-        item.day_of_week ===
-          today,
-    ) ??
-    [];
+    useMemo(
+      () =>
+        schedules.data?.filter(
+          (
+            item,
+          ) =>
+            mode ===
+              'WEEK' ||
+            item.day_of_week ===
+              today,
+        ) ??
+        [],
+
+      [
+        mode,
+        schedules.data,
+        today,
+      ],
+    );
 
   const {
     startMinute,
@@ -304,8 +356,7 @@ export default function ScheduleScreen() {
         return {
           startMinute:
             Math.max(
-              6 *
-                60,
+              0,
 
               roundDownToHour(
                 earliest -
@@ -315,7 +366,7 @@ export default function ScheduleScreen() {
 
           endMinute:
             Math.min(
-              22 *
+              24 *
                 60,
 
               roundUpToHour(
@@ -479,6 +530,11 @@ export default function ScheduleScreen() {
       subject?.color ??
       palette.accentSolid;
 
+    const cardTextColor =
+      readableTextColor(
+        accent,
+      );
+
     return (
       <Pressable
         accessibilityLabel={`${
@@ -539,6 +595,11 @@ export default function ScheduleScreen() {
 
             compactCard &&
               styles.classTitleCompact,
+
+            {
+              color:
+                cardTextColor,
+            },
           ]}
         >
           {subject?.name ??
@@ -561,6 +622,17 @@ export default function ScheduleScreen() {
 
             compactCard &&
               styles.classTimeCompact,
+
+            {
+              backgroundColor:
+                cardTextColor ===
+                '#FFFFFF'
+                  ? 'rgba(14,31,47,0.20)'
+                  : 'rgba(255,255,255,0.48)',
+
+              color:
+                cardTextColor,
+            },
           ]}
         >
           {showTime(
@@ -582,7 +654,14 @@ export default function ScheduleScreen() {
               1
             }
             style={
-              styles.classRoom
+              [
+                styles.classRoom,
+
+                {
+                  color:
+                    cardTextColor,
+                },
+              ]
             }
           >
             {item.room ||
@@ -1073,8 +1152,11 @@ const styles =
     classTime: {
       ...typography.caption,
 
-      color:
-        'rgba(255,255,255,0.94)',
+      alignSelf:
+        'flex-start',
+
+      borderRadius:
+        radii.pill,
 
       fontSize:
         9,
@@ -1087,6 +1169,15 @@ const styles =
 
       marginTop:
         2,
+
+      overflow:
+        'hidden',
+
+      paddingHorizontal:
+        4,
+
+      paddingVertical:
+        1,
     },
 
     classTimeCompact: {

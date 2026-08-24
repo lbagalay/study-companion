@@ -12,6 +12,10 @@ export function normalizedInkPoint(clientX: number, clientY: number, pressure: n
   };
 }
 
+export function straightInkPoint(start: PdfInkPoint, end: PdfInkPoint, horizontal = false): PdfInkPoint {
+  return horizontal ? { ...end, y: start.y } : end;
+}
+
 function pointToSegmentDistance(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
   const dx = bx - ax;
   const dy = by - ay;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasMeaningfulStroke, inkStrokeHitTest, normalizedInkPoint, parsePdfInkStrokes } from '@/lib/pdf/annotations';
+import { hasMeaningfulStroke, inkStrokeHitTest, normalizedInkPoint, parsePdfInkStrokes, straightInkPoint } from '@/lib/pdf/annotations';
 import type { PdfInkStroke } from '@/types/database';
 
 const stroke: PdfInkStroke = {
@@ -20,6 +20,14 @@ describe('PDF ink annotation geometry', () => {
   it('finds strokes close to the eraser at different page sizes', () => {
     expect(inkStrokeHitTest(stroke, { x: 0.5, y: 0.51, pressure: 0.5 }, 1000, 1400)).toBe(true);
     expect(inkStrokeHitTest(stroke, { x: 0.5, y: 0.8, pressure: 0.5 }, 1000, 1400)).toBe(false);
+  });
+
+  it('locks straight highlighter strokes to their starting row', () => {
+    const start = { x: 0.1, y: 0.35, pressure: 0.5 };
+    const end = { x: 0.8, y: 0.48, pressure: 0.7 };
+
+    expect(straightInkPoint(start, end, true)).toEqual({ ...end, y: start.y });
+    expect(straightInkPoint(start, end)).toBe(end);
   });
 
   it('keeps dot strokes and rejects empty strokes', () => {

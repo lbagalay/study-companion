@@ -170,6 +170,25 @@ export function PdfNotesPanel({
       currentPage,
     );
 
+  const editorValuesRef =
+    useRef({
+      content,
+      notePage,
+      title,
+    });
+
+  useEffect(() => {
+    editorValuesRef.current = {
+      content,
+      notePage,
+      title,
+    };
+  }, [
+    content,
+    notePage,
+    title,
+  ]);
+
   const [
     saveMessage,
     setSaveMessage,
@@ -336,9 +355,18 @@ export function PdfNotesPanel({
       return;
     }
 
-    setNotePage(
-      currentPage,
-    );
+    const syncTimer =
+      setTimeout(() => {
+        setNotePage(
+          currentPage,
+        );
+      }, 0);
+
+    return () => {
+      clearTimeout(
+        syncTimer,
+      );
+    };
   }, [
     content,
     currentPage,
@@ -415,6 +443,7 @@ export function PdfNotesPanel({
       onSuccess:
         (
           saved,
+          payload,
         ) => {
           /*
            * Update the local PDF notes cache
@@ -475,41 +504,43 @@ export function PdfNotesPanel({
 
           const savedPage =
             saved.page_number ??
-            notePage;
+            payload.pageNumber;
 
-          const savedTitle =
-            saved.title ??
-            '';
-
-          const savedContent =
-            saved.content ??
-            '';
+          const savedSignature =
+            noteSignature(
+              payload.title,
+              payload.content,
+              savedPage,
+            );
 
           setSelectedNoteId(
             saved.id,
           );
 
-          setTitle(
-            savedTitle,
-          );
-
-          setContent(
-            savedContent,
-          );
-
-          setNotePage(
-            savedPage,
-          );
+          if (!payload.id) {
+            setNotePage(
+              savedPage,
+            );
+          }
 
           lastSavedSignatureRef.current =
+            savedSignature;
+
+          const editorValues =
+            editorValuesRef.current;
+
+          const editorSignature =
             noteSignature(
-              savedTitle,
-              savedContent,
-              savedPage,
+              editorValues.title,
+              editorValues.content,
+              editorValues.notePage,
             );
 
           setSaveMessage(
-            'Saved',
+            editorSignature ===
+              savedSignature
+              ? 'Saved'
+              : 'Changes pending…',
           );
         },
 

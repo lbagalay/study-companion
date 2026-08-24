@@ -43,6 +43,7 @@ import {
   inkStrokeHitTest,
   normalizedInkPoint,
   parsePdfInkStrokes,
+  straightInkPoint,
 } from '@/lib/pdf/annotations';
 
 import {
@@ -192,9 +193,6 @@ const TOOL_WIDTHS: Record<
 const META_PREFIX =
   'SCINK';
 
-const HIGHLIGHTER_HORIZONTAL_SNAP_DEGREES =
-  10;
-
 /* ============================================================
  * HELPERS
  * ============================================================
@@ -301,58 +299,12 @@ function snapStraightPoint(
    * perfectly horizontal.
    */
 
-  if (
-    tool !==
-    'HIGHLIGHTER'
-  ) {
-    return end;
-  }
-
-  const dx =
-    end.x -
-    start.x;
-
-  const dy =
-    end.y -
-    start.y;
-
-  if (
-    Math.abs(dx) <
-    0.00001
-  ) {
-    return end;
-  }
-
-  const angle =
-    Math.abs(
-      Math.atan2(
-        dy,
-        dx,
-      ) *
-        (180 /
-          Math.PI),
-    );
-
-  const normalized =
-    Math.min(
-      angle,
-      Math.abs(
-        180 -
-          angle,
-      ),
-    );
-
-  if (
-    normalized >
-    HIGHLIGHTER_HORIZONTAL_SNAP_DEGREES
-  ) {
-    return end;
-  }
-
-  return {
-    ...end,
-    y: start.y,
-  };
+  return straightInkPoint(
+    start,
+    end,
+    tool ===
+      'HIGHLIGHTER',
+  );
 }
 
 /* ============================================================
@@ -2288,12 +2240,18 @@ const PdfInkCanvas =
             nextIndex,
           );
 
+          onHistoryChange(
+            nextIndex > 0,
+            false,
+          );
+
           persist(
             nextStrokes,
           );
         },
 
         [
+          onHistoryChange,
           persist,
         ],
       );
@@ -2318,12 +2276,20 @@ const PdfInkCanvas =
           nextIndex,
         );
 
+        onHistoryChange(
+          nextIndex > 0,
+          nextIndex <
+            historyRef.current.length -
+              1,
+        );
+
         persist(
           historyRef.current[
             nextIndex
           ],
         );
       }, [
+        onHistoryChange,
         persist,
       ]);
 
@@ -2348,12 +2314,20 @@ const PdfInkCanvas =
           nextIndex,
         );
 
+        onHistoryChange(
+          nextIndex > 0,
+          nextIndex <
+            historyRef.current.length -
+              1,
+        );
+
         persist(
           historyRef.current[
             nextIndex
           ],
         );
       }, [
+        onHistoryChange,
         persist,
       ]);
 
@@ -3723,6 +3697,19 @@ export function PdfAnnotationProvider({
             HIGHLIGHTER_COLORS[5],
           );
         }
+
+        if (
+          nextTool ===
+          'HIGHLIGHTER'
+        ) {
+          setInkMode(
+            'STRAIGHT',
+          );
+
+          setLineStyle(
+            'SOLID',
+          );
+        }
       },
 
       [
@@ -5024,6 +5011,8 @@ export function PdfAnnotationToolbar({
     redoActive,
     reloadActive,
     retryActive,
+    setStylusOnly,
+    stylusOnly,
     tool,
     undoActive,
   } =
@@ -5084,19 +5073,6 @@ export function PdfAnnotationToolbar({
       nextTool,
     );
 
-    /*
-     * Open Highlighter settings
-     * the first time so Straight
-     * mode is easy to discover.
-     */
-    if (
-      nextTool ===
-      'HIGHLIGHTER'
-    ) {
-      setSettingsOpen(
-        true,
-      );
-    }
   };
 
   const quickColors =
@@ -5405,6 +5381,54 @@ export function PdfAnnotationToolbar({
                 },
               ]}
             />
+
+            <Pressable
+              accessibilityLabel={
+                stylusOnly
+                  ? 'Stylus only is on'
+                  : 'Stylus only is off'
+              }
+              accessibilityRole="switch"
+              accessibilityState={{
+                checked:
+                  stylusOnly,
+              }}
+              onPress={() =>
+                setStylusOnly(
+                  !stylusOnly,
+                )
+              }
+              style={[
+                styles.actionButton,
+
+                {
+                  backgroundColor:
+                    stylusOnly
+                      ? palette.accentSoft
+                      : palette.surfaceAlt,
+
+                  borderColor:
+                    stylusOnly
+                      ? palette.accent
+                      : 'transparent',
+
+                  borderWidth:
+                    1,
+                },
+              ]}
+            >
+              <Ionicons
+                color={
+                  stylusOnly
+                    ? palette.accentStrong
+                    : palette.textMuted
+                }
+                name="pencil"
+                size={
+                  19
+                }
+              />
+            </Pressable>
 
             {/* QUICK COLORS */}
             {isDrawingTool(

@@ -100,12 +100,20 @@ export default function StudyScreen() {
   const splitLandscape =
     landscape &&
     width >=
-      880;
+      1024 &&
+    height >=
+      600;
+
+  const shortLandscape =
+    landscape &&
+    height <
+      600;
 
   const compact =
     !splitLandscape &&
-    width <
-      900;
+    (width <
+      900 ||
+      shortLandscape);
 
   const phone =
     width <
