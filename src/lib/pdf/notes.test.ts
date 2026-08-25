@@ -4,12 +4,18 @@ import { parsePdfNoteDraft, pdfNoteDisplayTitle, pdfNoteValidationMessage } from
 
 describe('PDF page notes', () => {
   it('normalizes an optional title while preserving the linked page', () => {
-    expect(parsePdfNoteDraft({ content: '  Important definition  ', pageNumber: 4, title: '  ' }, 12)).toEqual({ content: 'Important definition', pageNumber: 4, title: null });
+    expect(
+      parsePdfNoteDraft({ content: '  Important definition  ', pageNumber: 4, title: '  ' }, 12),
+    ).toEqual({ content: 'Important definition', pageNumber: 4, title: null });
   });
 
   it('rejects empty notes and pages outside the PDF', () => {
-    expect(() => parsePdfNoteDraft({ content: ' ', pageNumber: 2, title: '' }, 12)).toThrow('Write something before saving.');
-    expect(() => parsePdfNoteDraft({ content: 'Remember this', pageNumber: 13, title: '' }, 12)).toThrow('Choose a page from 1 to 12.');
+    expect(() => parsePdfNoteDraft({ content: ' ', pageNumber: 2, title: '' }, 12)).toThrow(
+      'Write something before saving.',
+    );
+    expect(() =>
+      parsePdfNoteDraft({ content: 'Remember this', pageNumber: 13, title: '' }, 12),
+    ).toThrow('Choose a page from 1 to 12.');
   });
 
   it('provides a useful label when the optional title is empty', () => {

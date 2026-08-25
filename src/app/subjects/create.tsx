@@ -1,2 +1,4 @@
 import { SubjectForm } from '@/components/subjects/SubjectForm';
-export default function CreateSubjectScreen() { return <SubjectForm />; }
+export default function CreateSubjectScreen() {
+  return <SubjectForm />;
+}

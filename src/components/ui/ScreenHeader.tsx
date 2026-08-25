@@ -1,28 +1,18 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import type { PropsWithChildren } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import {
-  radii,
-  spacing,
-  typography,
-} from '@/constants/theme';
+import { radii, spacing, typography } from '@/constants/theme';
 
 import { useAppTheme } from '@/hooks/useAppTheme';
 
-type ScreenHeaderProps =
-  PropsWithChildren<{
-    back?: boolean;
-    description?: string;
-    onBack?: () => void;
-    title: string;
-  }>;
+type ScreenHeaderProps = PropsWithChildren<{
+  back?: boolean;
+  description?: string;
+  onBack?: () => void;
+  title: string;
+}>;
 
 export function ScreenHeader({
   back = false,
@@ -79,23 +69,13 @@ export function ScreenHeader({
             style={({ pressed }) => [
               styles.backButton,
               {
-                backgroundColor:
-                  palette.surface,
-                borderColor:
-                  palette.border,
-                opacity: pressed
-                  ? 0.65
-                  : 1,
+                backgroundColor: palette.surface,
+                borderColor: palette.border,
+                opacity: pressed ? 0.65 : 1,
               },
             ]}
           >
-            <Ionicons
-              color={
-                palette.accentStrong
-              }
-              name="arrow-back"
-              size={21}
-            />
+            <Ionicons color={palette.accentStrong} name="arrow-back" size={21} />
           </Pressable>
         ) : null}
 
@@ -104,8 +84,7 @@ export function ScreenHeader({
             style={[
               styles.title,
               {
-                color:
-                  palette.text,
+                color: palette.text,
               },
             ]}
           >
@@ -117,8 +96,7 @@ export function ScreenHeader({
               style={[
                 styles.description,
                 {
-                  color:
-                    palette.textMuted,
+                  color: palette.textMuted,
                 },
               ]}
             >
@@ -127,15 +105,7 @@ export function ScreenHeader({
           ) : null}
         </View>
 
-        {children ? (
-          <View
-            style={
-              styles.actions
-            }
-          >
-            {children}
-          </View>
-        ) : null}
+        {children ? <View style={styles.actions}>{children}</View> : null}
       </View>
     </View>
   );
@@ -143,14 +113,12 @@ export function ScreenHeader({
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom:
-      spacing.lg,
+    marginBottom: spacing.lg,
     width: '100%',
   },
 
   topRow: {
-    alignItems:
-      'flex-start',
+    alignItems: 'flex-start',
     flexDirection: 'row',
     gap: spacing.md,
     width: '100%',
@@ -158,13 +126,11 @@ const styles = StyleSheet.create({
 
   backButton: {
     alignItems: 'center',
-    borderRadius:
-      radii.pill,
+    borderRadius: radii.pill,
     borderWidth: 1,
     flexShrink: 0,
     height: 42,
-    justifyContent:
-      'center',
+    justifyContent: 'center',
     marginTop: 3,
     width: 42,
   },
@@ -184,13 +150,11 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontSize: 14,
     lineHeight: 20,
-    marginTop:
-      spacing.xs,
+    marginTop: spacing.xs,
   },
 
   actions: {
-    alignItems:
-      'center',
+    alignItems: 'center',
     flexDirection: 'row',
     flexShrink: 0,
     gap: spacing.sm,

@@ -60,7 +60,8 @@ export type Assignment = Timestamps & {
   completed_at: string | null;
 };
 
-export type ExamType = 'QUIZ' | 'EXAM' | 'MIDTERM' | 'FINAL' | 'PRACTICAL' | 'PRESENTATION' | 'OTHER';
+export type ExamType =
+  'QUIZ' | 'EXAM' | 'MIDTERM' | 'FINAL' | 'PRACTICAL' | 'PRESENTATION' | 'OTHER';
 export type ExamStatus = 'UPCOMING' | 'COMPLETED' | 'CANCELLED';
 
 export type Exam = Timestamps & {
@@ -190,25 +191,98 @@ type CreateFields = { id?: string; user_id?: string; created_at?: string; update
 export type Database = {
   public: {
     Tables: {
-      profiles: TableDefinition<Profile, Partial<Profile> & Pick<Profile, 'id' | 'email'>, Partial<Profile>>;
-      subjects: TableDefinition<Subject, CreateFields & Pick<Subject, 'name'> & Partial<Omit<Subject, keyof CreateFields | 'name'>>, Partial<Subject>>;
-      class_schedules: TableDefinition<ClassSchedule, CreateFields & Pick<ClassSchedule, 'subject_id' | 'day_of_week' | 'start_time' | 'end_time'> & Partial<Pick<ClassSchedule, 'room'>>, Partial<ClassSchedule>>;
-      assignments: TableDefinition<Assignment, CreateFields & Pick<Assignment, 'subject_id' | 'title' | 'due_at'> & Partial<Omit<Assignment, keyof CreateFields | 'subject_id' | 'title' | 'due_at'>>, Partial<Assignment>>;
-      exams: TableDefinition<Exam, CreateFields & Pick<Exam, 'subject_id' | 'title' | 'exam_at'> & Partial<Omit<Exam, keyof CreateFields | 'subject_id' | 'title' | 'exam_at'>>, Partial<Exam>>;
-      study_materials: TableDefinition<StudyMaterial, CreateFields & Pick<StudyMaterial, 'subject_id' | 'title' | 'type'> & Partial<Omit<StudyMaterial, keyof CreateFields | 'subject_id' | 'title' | 'type'>>, Partial<StudyMaterial>>;
-      notes: TableDefinition<Note, CreateFields & Pick<Note, 'subject_id' | 'title'> & Partial<Omit<Note, keyof CreateFields | 'subject_id' | 'title'>>, Partial<Note>>;
-      pdf_annotations: TableDefinition<PdfAnnotation, CreateFields & Pick<PdfAnnotation, 'material_id' | 'page_number'> & { strokes?: Json }, Partial<Omit<PdfAnnotation, 'strokes'>> & { strokes?: Json }>;
-      study_sessions: TableDefinition<StudySession, CreateFields & Pick<StudySession, 'subject_id' | 'topic' | 'planned_at'> & Partial<Omit<StudySession, keyof CreateFields | 'subject_id' | 'topic' | 'planned_at'>>, Partial<StudySession>>;
-      web_push_subscriptions: TableDefinition<WebPushSubscription, Pick<WebPushSubscription, 'endpoint' | 'p256dh' | 'auth'> & Partial<WebPushSubscription>, Partial<WebPushSubscription>>;
-      notification_deliveries: TableDefinition<NotificationDelivery, Pick<NotificationDelivery, 'user_id' | 'source_type' | 'source_id' | 'reminder_offset' | 'scheduled_for' | 'title' | 'body' | 'target_path'> & Partial<NotificationDelivery>, Partial<NotificationDelivery>>;
+      profiles: TableDefinition<
+        Profile,
+        Partial<Profile> & Pick<Profile, 'id' | 'email'>,
+        Partial<Profile>
+      >;
+      subjects: TableDefinition<
+        Subject,
+        CreateFields & Pick<Subject, 'name'> & Partial<Omit<Subject, keyof CreateFields | 'name'>>,
+        Partial<Subject>
+      >;
+      class_schedules: TableDefinition<
+        ClassSchedule,
+        CreateFields &
+          Pick<ClassSchedule, 'subject_id' | 'day_of_week' | 'start_time' | 'end_time'> &
+          Partial<Pick<ClassSchedule, 'room'>>,
+        Partial<ClassSchedule>
+      >;
+      assignments: TableDefinition<
+        Assignment,
+        CreateFields &
+          Pick<Assignment, 'subject_id' | 'title' | 'due_at'> &
+          Partial<Omit<Assignment, keyof CreateFields | 'subject_id' | 'title' | 'due_at'>>,
+        Partial<Assignment>
+      >;
+      exams: TableDefinition<
+        Exam,
+        CreateFields &
+          Pick<Exam, 'subject_id' | 'title' | 'exam_at'> &
+          Partial<Omit<Exam, keyof CreateFields | 'subject_id' | 'title' | 'exam_at'>>,
+        Partial<Exam>
+      >;
+      study_materials: TableDefinition<
+        StudyMaterial,
+        CreateFields &
+          Pick<StudyMaterial, 'subject_id' | 'title' | 'type'> &
+          Partial<Omit<StudyMaterial, keyof CreateFields | 'subject_id' | 'title' | 'type'>>,
+        Partial<StudyMaterial>
+      >;
+      notes: TableDefinition<
+        Note,
+        CreateFields &
+          Pick<Note, 'subject_id' | 'title'> &
+          Partial<Omit<Note, keyof CreateFields | 'subject_id' | 'title'>>,
+        Partial<Note>
+      >;
+      pdf_annotations: TableDefinition<
+        PdfAnnotation,
+        CreateFields & Pick<PdfAnnotation, 'material_id' | 'page_number'> & { strokes?: Json },
+        Partial<Omit<PdfAnnotation, 'strokes'>> & { strokes?: Json }
+      >;
+      study_sessions: TableDefinition<
+        StudySession,
+        CreateFields &
+          Pick<StudySession, 'subject_id' | 'topic' | 'planned_at'> &
+          Partial<Omit<StudySession, keyof CreateFields | 'subject_id' | 'topic' | 'planned_at'>>,
+        Partial<StudySession>
+      >;
+      web_push_subscriptions: TableDefinition<
+        WebPushSubscription,
+        Pick<WebPushSubscription, 'endpoint' | 'p256dh' | 'auth'> & Partial<WebPushSubscription>,
+        Partial<WebPushSubscription>
+      >;
+      notification_deliveries: TableDefinition<
+        NotificationDelivery,
+        Pick<
+          NotificationDelivery,
+          | 'user_id'
+          | 'source_type'
+          | 'source_id'
+          | 'reminder_offset'
+          | 'scheduled_for'
+          | 'title'
+          | 'body'
+          | 'target_path'
+        > &
+          Partial<NotificationDelivery>,
+        Partial<NotificationDelivery>
+      >;
     };
     Views: Record<string, never>;
     Functions: {
-      register_web_push_subscription: { Args: { p_auth: string; p_endpoint: string; p_p256dh: string; p_user_agent: string }; Returns: undefined };
+      register_web_push_subscription: {
+        Args: { p_auth: string; p_endpoint: string; p_p256dh: string; p_user_agent: string };
+        Returns: undefined;
+      };
       unregister_web_push_subscription: { Args: { p_endpoint: string }; Returns: undefined };
       claim_due_web_notifications: { Args: { p_limit?: number }; Returns: NotificationDelivery[] };
       import_study_load: { Args: { p_subjects: Json }; Returns: Json };
-      update_pdf_reading_progress: { Args: { p_material_id: string; p_page: number; p_page_count: number }; Returns: Json };
+      update_pdf_reading_progress: {
+        Args: { p_material_id: string; p_page: number; p_page_count: number };
+        Returns: Json;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

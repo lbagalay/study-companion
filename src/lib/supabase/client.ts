@@ -34,7 +34,9 @@ export function getSupabaseClient(): SupabaseClient<Database> | null {
 export function requireSupabaseClient(): SupabaseClient<Database> {
   const supabase = getSupabaseClient();
   if (!supabase) {
-    throw new Error('Supabase is not configured. Add the public project URL and publishable key to .env.');
+    throw new Error(
+      'Supabase is not configured. Add the public project URL and publishable key to .env.',
+    );
   }
   return supabase;
 }

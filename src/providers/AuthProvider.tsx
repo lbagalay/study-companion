@@ -30,37 +30,60 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!supabase) return;
     let mounted = true;
     void supabase.auth.getSession().then(({ data }) => {
-      if (mounted) { setSession(data.session); setLoading(false); }
+      if (mounted) {
+        setSession(data.session);
+        setLoading(false);
+      }
     });
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setLoading(false);
     });
-    return () => { mounted = false; data.subscription.unsubscribe(); };
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
   }, [supabase]);
 
   useEffect(() => {
     if (!supabase || !incomingUrl) return;
     const normalized = incomingUrl.replace('#', incomingUrl.includes('?') ? '&' : '?');
-    const url = new URL(normalized); const code = url.searchParams.get('code'); const accessToken = url.searchParams.get('access_token'); const refreshToken = url.searchParams.get('refresh_token');
+    const url = new URL(normalized);
+    const code = url.searchParams.get('code');
+    const accessToken = url.searchParams.get('access_token');
+    const refreshToken = url.searchParams.get('refresh_token');
     if (code) void supabase.auth.exchangeCodeForSession(code);
-    else if (accessToken && refreshToken) void supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    else if (accessToken && refreshToken)
+      void supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
   }, [incomingUrl, supabase]);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    if (!supabase) throw new Error('Connect Supabase in .env before signing in.');
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    setSession(data.session);
-    setLoading(false);
-  }, [supabase]);
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      if (!supabase) throw new Error('Connect Supabase in .env before signing in.');
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      setSession(data.session);
+      setLoading(false);
+    },
+    [supabase],
+  );
 
-  const signUp = useCallback(async ({ email, password, fullName, preferredName }: RegisterInput) => {
-    if (!supabase) throw new Error('Connect Supabase in .env before registering.');
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, preferred_name: preferredName }, emailRedirectTo: Linking.createURL('/') } });
-    if (error) throw error;
-    return Boolean(data.session);
-  }, [supabase]);
+  const signUp = useCallback(
+    async ({ email, password, fullName, preferredName }: RegisterInput) => {
+      if (!supabase) throw new Error('Connect Supabase in .env before registering.');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName, preferred_name: preferredName },
+          emailRedirectTo: Linking.createURL('/'),
+        },
+      });
+      if (error) throw error;
+      return Boolean(data.session);
+    },
+    [supabase],
+  );
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
@@ -68,21 +91,40 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (error) throw error;
   }, [supabase]);
 
-  const sendPasswordReset = useCallback(async (email: string) => {
-    if (!supabase) throw new Error('Connect Supabase in .env before resetting a password.');
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: Linking.createURL('/reset-password') });
-    if (error) throw error;
-  }, [supabase]);
+  const sendPasswordReset = useCallback(
+    async (email: string) => {
+      if (!supabase) throw new Error('Connect Supabase in .env before resetting a password.');
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: Linking.createURL('/reset-password'),
+      });
+      if (error) throw error;
+    },
+    [supabase],
+  );
 
-  const updatePassword = useCallback(async (password: string) => {
-    if (!supabase) throw new Error('Connect Supabase in .env before resetting a password.');
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) throw error;
-  }, [supabase]);
+  const updatePassword = useCallback(
+    async (password: string) => {
+      if (!supabase) throw new Error('Connect Supabase in .env before resetting a password.');
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+    },
+    [supabase],
+  );
 
-  const value = useMemo<AuthContextValue>(() => ({
-    configured: Boolean(supabase), loading, session, user: session?.user ?? null, signIn, signOut, signUp, sendPasswordReset, updatePassword,
-  }), [loading, sendPasswordReset, session, signIn, signOut, signUp, supabase, updatePassword]);
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      configured: Boolean(supabase),
+      loading,
+      session,
+      user: session?.user ?? null,
+      signIn,
+      signOut,
+      signUp,
+      sendPasswordReset,
+      updatePassword,
+    }),
+    [loading, sendPasswordReset, session, signIn, signOut, signUp, supabase, updatePassword],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

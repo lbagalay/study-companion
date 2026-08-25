@@ -10,6 +10,7 @@ export function pdfReadingProgress(page: number, pageCount: number) {
 }
 
 export function scalePdfZoom(currentZoom: number, distanceRatio: number) {
-  if (!Number.isFinite(currentZoom) || !Number.isFinite(distanceRatio) || distanceRatio <= 0) return 1;
+  if (!Number.isFinite(currentZoom) || !Number.isFinite(distanceRatio) || distanceRatio <= 0)
+    return 1;
   return Math.min(2.5, Math.max(0.75, Number((currentZoom * distanceRatio).toFixed(3))));
 }

@@ -10,7 +10,25 @@ export function FormField({ accessibilityLabel, error, label, multiline, style, 
   return (
     <View style={styles.wrapper}>
       <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
-      <TextInput accessibilityLabel={accessibilityLabel ?? label} accessibilityState={{ disabled: props.editable === false }} placeholderTextColor={palette.textMuted} selectionColor={palette.accent} style={[styles.input, multiline && styles.multiline, { backgroundColor: palette.surface, borderColor: error ? palette.danger : palette.border, color: palette.text }, style]} multiline={multiline} textAlignVertical={multiline ? 'top' : 'center'} {...props} />
+      <TextInput
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityState={{ disabled: props.editable === false }}
+        placeholderTextColor={palette.textMuted}
+        selectionColor={palette.accent}
+        style={[
+          styles.input,
+          multiline && styles.multiline,
+          {
+            backgroundColor: palette.surface,
+            borderColor: error ? palette.danger : palette.border,
+            color: palette.text,
+          },
+          style,
+        ]}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : 'center'}
+        {...props}
+      />
       {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
     </View>
   );
@@ -19,7 +37,15 @@ export function FormField({ accessibilityLabel, error, label, multiline, style, 
 const styles = StyleSheet.create({
   wrapper: { gap: spacing.sm },
   label: typography.label,
-  input: { borderRadius: radii.md, borderWidth: 1, boxShadow: '0 5px 16px rgba(14, 27, 72, 0.05)', fontSize: typography.body.fontSize, minHeight: 54, outlineColor: '#87A7D0', paddingHorizontal: spacing.md },
+  input: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    boxShadow: '0 5px 16px rgba(14, 27, 72, 0.05)',
+    fontSize: typography.body.fontSize,
+    minHeight: 54,
+    outlineColor: '#87A7D0',
+    paddingHorizontal: spacing.md,
+  },
   multiline: { minHeight: 112, paddingTop: spacing.md },
   error: { ...typography.caption, marginLeft: spacing.xs },
 });

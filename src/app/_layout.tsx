@@ -13,6 +13,7 @@ import {
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { FeedbackState } from '@/components/ui/FeedbackState';
 import { LaunchAnimation } from '@/components/ui/LaunchAnimation';
@@ -25,24 +26,47 @@ import { QueryProvider } from '@/providers/QueryProvider';
 configureNotifications();
 
 export default function RootLayout() {
-  const [nunitoLoaded] = useNunitoFonts({
+  const [nunitoLoaded, nunitoError] = useNunitoFonts({
     Nunito_700Bold,
     Nunito_800ExtraBold,
   });
 
-  const [interLoaded] = useInterFonts({
+  const [interLoaded, interError] = useInterFonts({
     Inter_400Regular,
     Inter_500Medium,
   });
 
-  if (!nunitoLoaded || !interLoaded) {
+  /*
+   * A font that fails to download must not strand the
+   * app on a blank screen. Render with system fallbacks
+   * instead once the request has settled either way.
+   */
+  const fontsSettled = (nunitoLoaded || nunitoError) && (interLoaded || interError);
+
+  if (!fontsSettled) {
     return null;
   }
 
   return (
-    <AuthProvider>
-      <AppProviders />
-    </AuthProvider>
+    // Every screen calls useSafeAreaInsets() or renders SafeAreaView
+    // (the tab bar's floating pill, ScreenContainer, etc). Without this
+    // provider those all silently fall back to zero insets on native,
+    // so the tab bar and screen content sit flush under the notch /
+    // status bar and behind the home indicator.
+    <SafeAreaProvider>
+      <AuthProvider>
+        <View style={styles.root}>
+          <AppProviders />
+
+          {/*
+           * Kept outside the user-keyed QueryProvider so that
+           * signing in does not remount the splash and replay
+           * it over — and block taps on — the home screen.
+           */}
+          <LaunchAnimation />
+        </View>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -56,7 +80,6 @@ function AppProviders() {
     >
       <View style={styles.root}>
         <RootNavigator />
-        <LaunchAnimation />
       </View>
     </QueryProvider>
   );

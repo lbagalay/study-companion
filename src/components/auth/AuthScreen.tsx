@@ -12,11 +12,7 @@ import {
 
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 
-import {
-  radii,
-  spacing,
-  typography,
-} from '@/constants/theme';
+import { radii, spacing, typography } from '@/constants/theme';
 
 import { useAppTheme } from '@/hooks/useAppTheme';
 
@@ -36,15 +32,8 @@ export function AuthScreen({
   return (
     <ScreenContainer>
       <KeyboardAvoidingView
-        behavior={
-          Platform.OS === 'ios'
-            ? 'padding'
-            : undefined
-        }
-        style={[
-          styles.container,
-          compact && styles.containerCompact,
-        ]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[styles.container, compact && styles.containerCompact]}
       >
         {/* Decorative background */}
         <View
@@ -52,8 +41,7 @@ export function AuthScreen({
           style={[
             styles.glowLarge,
             {
-              backgroundColor:
-                palette.accentSoft,
+              backgroundColor: palette.accentSoft,
             },
           ]}
         />
@@ -63,8 +51,7 @@ export function AuthScreen({
           style={[
             styles.glowSmall,
             {
-              backgroundColor:
-                palette.lavenderSoft,
+              backgroundColor: palette.lavenderSoft,
             },
           ]}
         />
@@ -74,8 +61,7 @@ export function AuthScreen({
           style={[
             styles.glowDot,
             {
-              backgroundColor:
-                palette.accent,
+              backgroundColor: palette.accent,
             },
           ]}
         />
@@ -86,10 +72,8 @@ export function AuthScreen({
             styles.card,
             compact && styles.cardCompact,
             {
-              backgroundColor:
-                palette.surface,
-              borderColor:
-                palette.border,
+              backgroundColor: palette.surface,
+              borderColor: palette.border,
             },
           ]}
         >
@@ -98,8 +82,7 @@ export function AuthScreen({
             style={[
               styles.ribbon,
               {
-                backgroundColor:
-                  palette.accentSoft,
+                backgroundColor: palette.accentSoft,
               },
             ]}
           />
@@ -110,10 +93,8 @@ export function AuthScreen({
               style={[
                 styles.logoShell,
                 {
-                  backgroundColor:
-                    palette.accentSoft,
-                  borderColor:
-                    palette.border,
+                  backgroundColor: palette.accentSoft,
+                  borderColor: palette.border,
                 },
               ]}
             >
@@ -132,8 +113,7 @@ export function AuthScreen({
               style={[
                 styles.brand,
                 {
-                  color:
-                    palette.accentStrong,
+                  color: palette.accentStrong,
                 },
               ]}
             >
@@ -157,8 +137,7 @@ export function AuthScreen({
               style={[
                 styles.description,
                 {
-                  color:
-                    palette.textMuted,
+                  color: palette.textMuted,
                 },
               ]}
             >
@@ -170,8 +149,7 @@ export function AuthScreen({
             style={[
               styles.formArea,
               {
-                borderTopColor:
-                  palette.border,
+                borderTopColor: palette.border,
               },
             ]}
           >
@@ -185,8 +163,7 @@ export function AuthScreen({
             style={[
               styles.footerLine,
               {
-                backgroundColor:
-                  palette.border,
+                backgroundColor: palette.border,
               },
             ]}
           />
@@ -195,8 +172,7 @@ export function AuthScreen({
             style={[
               styles.footer,
               {
-                color:
-                  palette.textMuted,
+                color: palette.textMuted,
               },
             ]}
           >
@@ -207,8 +183,7 @@ export function AuthScreen({
             style={[
               styles.footerLine,
               {
-                backgroundColor:
-                  palette.border,
+                backgroundColor: palette.border,
               },
             ]}
           />
@@ -239,8 +214,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 32,
     borderWidth: 1,
-    boxShadow:
-      '0 24px 70px rgba(14, 27, 72, 0.12)',
+    boxShadow: '0 24px 70px rgba(14, 27, 72, 0.12)',
     overflow: 'hidden',
     paddingBottom: 30,
     paddingHorizontal: 32,

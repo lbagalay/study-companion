@@ -12,11 +12,30 @@ describe('annotated PDF export', () => {
     const exported = await createAnnotatedPdf(sourceBytes, [
       {
         page_number: 1,
-        strokes: [{ color: '#C18DB4', id: 'stroke-1', points: [{ pressure: 0.5, x: 0.1, y: 0.2 }, { pressure: 0.5, x: 0.8, y: 0.7 }], tool: 'PEN', width: 0.004 }],
+        strokes: [
+          {
+            color: '#C18DB4',
+            id: 'stroke-1',
+            points: [
+              { pressure: 0.5, x: 0.1, y: 0.2 },
+              { pressure: 0.5, x: 0.8, y: 0.7 },
+            ],
+            tool: 'PEN',
+            width: 0.004,
+          },
+        ],
       },
       {
         page_number: 2,
-        strokes: [{ color: '#87A7D0', id: 'outside', points: [{ pressure: 0.5, x: 0.2, y: 0.2 }], tool: 'HIGHLIGHTER', width: 0.02 }],
+        strokes: [
+          {
+            color: '#87A7D0',
+            id: 'outside',
+            points: [{ pressure: 0.5, x: 0.2, y: 0.2 }],
+            tool: 'HIGHLIGHTER',
+            width: 0.02,
+          },
+        ],
       },
     ]);
 
@@ -28,7 +47,9 @@ describe('annotated PDF export', () => {
   });
 
   it('sanitizes the downloaded file name', () => {
-    expect(annotatedPdfFileName('Psychology: Week 1?.PDF')).toBe('Psychology- Week 1-annotated.pdf');
+    expect(annotatedPdfFileName('Psychology: Week 1?.PDF')).toBe(
+      'Psychology- Week 1-annotated.pdf',
+    );
     expect(annotatedPdfFileName(null, '')).toBe('study-material-annotated.pdf');
   });
 

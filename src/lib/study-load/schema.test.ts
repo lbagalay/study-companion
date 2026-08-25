@@ -15,15 +15,25 @@ const validSubject = {
 
 describe('study load extraction schema', () => {
   it('accepts reviewed subject and schedule data', () => {
-    expect(studyLoadExtractionSchema.parse({ subjects: [validSubject] }).subjects[0].code).toBe('PHYS 101');
+    expect(studyLoadExtractionSchema.parse({ subjects: [validSubject] }).subjects[0].code).toBe(
+      'PHYS 101',
+    );
   });
 
   it('rejects invalid or reversed meeting times', () => {
-    const result = studyLoadExtractionSchema.safeParse({ subjects: [{ ...validSubject, schedules: [{ ...validSubject.schedules[0], end_time: '08:00' }] }] });
+    const result = studyLoadExtractionSchema.safeParse({
+      subjects: [
+        { ...validSubject, schedules: [{ ...validSubject.schedules[0], end_time: '08:00' }] },
+      ],
+    });
     expect(result.success).toBe(false);
   });
 
   it('rejects imports larger than the supported batch', () => {
-    expect(studyLoadExtractionSchema.safeParse({ subjects: Array.from({ length: 51 }, () => validSubject) }).success).toBe(false);
+    expect(
+      studyLoadExtractionSchema.safeParse({
+        subjects: Array.from({ length: 51 }, () => validSubject),
+      }).success,
+    ).toBe(false);
   });
 });

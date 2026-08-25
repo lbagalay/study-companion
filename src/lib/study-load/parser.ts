@@ -1,14 +1,16 @@
-import { studyLoadExtractionSchema, type ExtractedSchedule, type StudyLoadExtraction } from '@/lib/study-load/schema';
+import {
+  studyLoadExtractionSchema,
+  type ExtractedSchedule,
+  type StudyLoadExtraction,
+} from '@/lib/study-load/schema';
 
-const rowPattern = /(.*?)\s+(\d{3,6})\s+((?:Th|Su|Sa|M|T|W|F|S)+)\s+(\d{1,2}\s*[:;.]\s*\d{2}\s*(?:AM|PM))\s*[-–—]\s*(\d{1,2}\s*[:;.]\s*\d{2}\s*(?:AM|PM))\s+(?:R[mn]\.?\s*)?(.+?)\s+(\d+(?:[.,]\d+)?)\b/gi;
+const rowPattern =
+  /(.*?)\s+(\d{3,6})\s+((?:Th|Su|Sa|M|T|W|F|S)+)\s+(\d{1,2}\s*[:;.]\s*\d{2}\s*(?:AM|PM))\s*[-–—]\s*(\d{1,2}\s*[:;.]\s*\d{2}\s*(?:AM|PM))\s+(?:R[mn]\.?\s*)?(.+?)\s+(\d+(?:[.,]\d+)?)\b/gi;
 
 const dayNumbers: Record<string, number> = { F: 5, M: 1, S: 6, Sa: 6, Su: 0, T: 2, Th: 4, W: 3 };
 
 function cleanOcrText(value: string) {
-  return value
-    .replace(/[|]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return value.replace(/[|]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function stripHeader(value: string) {
@@ -21,7 +23,14 @@ function stripHeader(value: string) {
 function splitSubject(value: string) {
   const cleaned = stripHeader(value);
   const match = cleaned.match(/^([A-Za-z][A-Za-z-]*\s*\d+[A-Za-z]?|[A-Z]{2,})\s+(.+)$/);
-  if (match) return { code: match[1].replace(/([A-Za-z])(\d)/, '$1 $2').replace(/\s+/g, ' ').trim(), name: match[2].trim() };
+  if (match)
+    return {
+      code: match[1]
+        .replace(/([A-Za-z])(\d)/, '$1 $2')
+        .replace(/\s+/g, ' ')
+        .trim(),
+      name: match[2].trim(),
+    };
 
   const [code = '', ...title] = cleaned.split(' ');
   return { code, name: title.join(' ').trim() };

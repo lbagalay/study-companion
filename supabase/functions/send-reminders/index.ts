@@ -32,17 +32,16 @@ function required(name: string) {
 }
 
 function serviceKey() {
-  const direct =
-    Deno.env.get('SUPABASE_SECRET_KEY') ??
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const direct = Deno.env.get('SUPABASE_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
   if (direct) {
     return direct;
   }
 
-  const dictionary = JSON.parse(
-    Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}',
-  ) as Record<string, string>;
+  const dictionary = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}') as Record<
+    string,
+    string
+  >;
 
   if (!dictionary.default) {
     throw new Error('Missing Supabase secret key');
@@ -54,16 +53,11 @@ function serviceKey() {
 function authorized(req: Request) {
   const expected = required('REMINDER_CRON_SECRET');
 
-  return (
-    req.headers.get('authorization') ===
-    `Bearer ${expected}`
-  );
+  return req.headers.get('authorization') === `Bearer ${expected}`;
 }
 
 function errorMessage(error: unknown) {
-  return error instanceof Error
-    ? error.message.slice(0, 1000)
-    : 'Unknown Web Push error';
+  return error instanceof Error ? error.message.slice(0, 1000) : 'Unknown Web Push error';
 }
 
 Deno.serve(async (req: Request) => {
@@ -90,16 +84,12 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabase = createClient(
-      required('SUPABASE_URL'),
-      serviceKey(),
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
+    const supabase = createClient(required('SUPABASE_URL'), serviceKey(), {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
-    );
+    });
 
     const vapidDetails = {
       subject: required('VAPID_SUBJECT'),
@@ -111,18 +101,12 @@ Deno.serve(async (req: Request) => {
      * Finds reminder deliveries that are due now
      * and marks them PROCESSING.
      */
-    const { data, error } = await supabase.rpc(
-      'claim_due_web_notifications',
-      {
-        p_limit: 100,
-      },
-    );
+    const { data, error } = await supabase.rpc('claim_due_web_notifications', {
+      p_limit: 100,
+    });
 
     if (error) {
-      console.error(
-        'Could not claim notifications:',
-        error,
-      );
+      console.error('Could not claim notifications:', error);
 
       return Response.json(
         {
@@ -134,8 +118,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const deliveries =
-      (data ?? []) as Delivery[];
+    const deliveries = (data ?? []) as Delivery[];
 
     let delivered = 0;
     let failed = 0;
@@ -145,40 +128,26 @@ Deno.serve(async (req: Request) => {
        * Get every device/browser registered
        * to this user.
        */
-      const {
-        data: subscriptions,
-        error: subscriptionError,
-      } = await supabase
+      const { data: subscriptions, error: subscriptionError } = await supabase
         .from('web_push_subscriptions')
-        .select(
-          'endpoint,p256dh,auth',
-        )
-        .eq(
-          'user_id',
-          delivery.user_id,
-        );
+        .select('endpoint,p256dh,auth')
+        .eq('user_id', delivery.user_id);
 
       let successes = 0;
 
       const failures: string[] = [];
 
       if (subscriptionError) {
-        failures.push(
-          subscriptionError.message,
-        );
+        failures.push(subscriptionError.message);
       }
 
-      for (
-        const subscription of
-          (subscriptions ?? []) as Subscription[]
-      ) {
+      for (const subscription of (subscriptions ?? []) as Subscription[]) {
         try {
           const payload = JSON.stringify({
             title: delivery.title,
             body: delivery.body,
 
-            url:
-              delivery.target_path,
+            url: delivery.target_path,
 
             tag:
               `${delivery.source_type.toLowerCase()}-` +
@@ -188,15 +157,12 @@ Deno.serve(async (req: Request) => {
 
           await webPush.sendNotification(
             {
-              endpoint:
-                subscription.endpoint,
+              endpoint: subscription.endpoint,
 
               keys: {
-                auth:
-                  subscription.auth,
+                auth: subscription.auth,
 
-                p256dh:
-                  subscription.p256dh,
+                p256dh: subscription.p256dh,
               },
             },
             payload,
@@ -215,14 +181,9 @@ Deno.serve(async (req: Request) => {
             }
           ).statusCode;
 
-          const message =
-            errorMessage(pushError);
+          const message = errorMessage(pushError);
 
-          console.error(
-            'Push failed:',
-            statusCode,
-            message,
-          );
+          console.error('Push failed:', statusCode, message);
 
           failures.push(message);
 
@@ -233,61 +194,35 @@ Deno.serve(async (req: Request) => {
            * Remove it so we do not keep trying
            * to send to a dead browser/device.
            */
-          if (
-            statusCode === 404 ||
-            statusCode === 410
-          ) {
+          if (statusCode === 404 || statusCode === 410) {
             await supabase
-              .from(
-                'web_push_subscriptions',
-              )
+              .from('web_push_subscriptions')
               .delete()
-              .eq(
-                'endpoint',
-                subscription.endpoint,
-              );
+              .eq('endpoint', subscription.endpoint);
           }
         }
       }
 
-      const completed =
-        successes > 0;
+      const completed = successes > 0;
 
       /*
        * Mark notification as delivered/failed.
        */
-      const {
-        error: updateError,
-      } = await supabase
-        .from(
-          'notification_deliveries',
-        )
+      const { error: updateError } = await supabase
+        .from('notification_deliveries')
         .update({
-          delivered_at: completed
-            ? new Date().toISOString()
-            : null,
+          delivered_at: completed ? new Date().toISOString() : null,
 
           error: completed
             ? null
-            : (
-                failures.join(' | ') ||
-                'No active push subscriptions'
-              ).slice(0, 1000),
+            : (failures.join(' | ') || 'No active push subscriptions').slice(0, 1000),
 
-          status: completed
-            ? 'DELIVERED'
-            : 'FAILED',
+          status: completed ? 'DELIVERED' : 'FAILED',
         })
-        .eq(
-          'id',
-          delivery.id,
-        );
+        .eq('id', delivery.id);
 
       if (updateError) {
-        console.error(
-          'Could not update delivery:',
-          updateError,
-        );
+        console.error('Could not update delivery:', updateError);
       }
 
       if (completed) {
@@ -303,10 +238,7 @@ Deno.serve(async (req: Request) => {
       failed,
     });
   } catch (error) {
-    console.error(
-      'send-reminders failed:',
-      error,
-    );
+    console.error('send-reminders failed:', error);
 
     return Response.json(
       {

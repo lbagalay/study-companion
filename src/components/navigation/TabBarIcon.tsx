@@ -31,10 +31,38 @@ export function TabBarIcon({ color, focused, name, size }: TabBarIconProps) {
       ]),
     ]).start();
   }, [focused, lift, scale]);
-  return <Animated.View style={[styles.wrap, focused && styles.focused, { backgroundColor: focused ? brand.mauve : 'transparent', transform: [{ translateY: lift }, { scale }] }]}><Ionicons color={color} name={focused ? name : (`${name}-outline` as IoniconName)} size={Math.min(size, focused ? 19 : 20)} /></Animated.View>;
+  return (
+    <Animated.View
+      style={[
+        styles.wrap,
+        focused && styles.focused,
+        {
+          backgroundColor: focused ? brand.mauve : 'transparent',
+          transform: [{ translateY: lift }, { scale }],
+        },
+      ]}
+    >
+      <Ionicons
+        color={color}
+        name={focused ? name : (`${name}-outline` as IoniconName)}
+        size={Math.min(size, focused ? 19 : 20)}
+      />
+    </Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', borderRadius: 999, height: 30, justifyContent: 'center', width: 30 },
-  focused: { borderColor: 'rgba(255, 255, 255, 0.6)', borderWidth: 1, boxShadow: '0 4px 10px rgba(193, 141, 180, 0.28)', elevation: 2 },
+  wrap: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
+  },
+  focused: {
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    borderWidth: 1,
+    boxShadow: '0 4px 10px rgba(193, 141, 180, 0.28)',
+    elevation: 2,
+  },
 });

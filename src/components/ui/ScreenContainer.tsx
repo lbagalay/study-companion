@@ -10,7 +10,10 @@ export function ScreenContainer({ children }: PropsWithChildren) {
   const palette = useAppTheme();
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: palette.background }]}>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.safeArea, { backgroundColor: palette.background }]}
+    >
       <EditorialBackdrop />
       <ScrollView
         contentContainerStyle={styles.content}

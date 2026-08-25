@@ -13,27 +13,12 @@ import {
 } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AppButton } from '@/components/ui/AppButton';
 import { EntityList } from '@/components/ui/EntityList';
-import {
-  radii,
-  spacing,
-  typography,
-} from '@/constants/theme';
+import { radii, spacing, typography } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import {
-  useAssignments,
-  useExams,
-  useSubjects,
-} from '@/hooks/useStudyData';
+import { useAssignments, useExams, useSubjects } from '@/hooks/useStudyData';
 
 const TASK_COLORS = {
   ASSIGNMENT: '#4F7FD8',
@@ -55,15 +40,7 @@ type CalendarEvent = {
 const DAY_WIDTH = 122;
 const MAX_EVENTS = 4;
 
-const WEEK_DAYS = [
-  'SUN',
-  'MON',
-  'TUE',
-  'WED',
-  'THU',
-  'FRI',
-  'SAT',
-];
+const WEEK_DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function TasksScreen() {
   const router = useRouter();
@@ -73,17 +50,14 @@ export default function TasksScreen() {
   const exams = useExams();
   const subjects = useSubjects();
 
-  const [month, setMonth] = useState(
-    startOfMonth(new Date()),
-  );
+  const [month, setMonth] = useState(startOfMonth(new Date()));
 
   const events = useMemo<CalendarEvent[]>(() => {
     const assignmentEvents =
       assignments.data?.map((item) => {
         const date = new Date(item.due_at);
 
-        const completed =
-          item.status === 'COMPLETED';
+        const completed = item.status === 'COMPLETED';
 
         return {
           id: `assignment-${item.id}`,
@@ -92,9 +66,7 @@ export default function TasksScreen() {
           kind: 'ASSIGNMENT' as const,
           color: TASK_COLORS.ASSIGNMENT,
           completed,
-          overdue:
-            !completed &&
-            isBefore(date, new Date()),
+          overdue: !completed && isBefore(date, new Date()),
 
           onPress: () =>
             router.push({
@@ -108,21 +80,16 @@ export default function TasksScreen() {
 
     const examEvents =
       exams.data?.map((item) => {
-        const isQuiz =
-          item.type === 'QUIZ';
+        const isQuiz = item.type === 'QUIZ';
 
         return {
           id: `exam-${item.id}`,
           title: item.title,
           date: new Date(item.exam_at),
 
-          kind: isQuiz
-            ? ('QUIZ' as const)
-            : ('EXAM' as const),
+          kind: isQuiz ? ('QUIZ' as const) : ('EXAM' as const),
 
-          color: isQuiz
-            ? TASK_COLORS.QUIZ
-            : TASK_COLORS.EXAM,
+          color: isQuiz ? TASK_COLORS.QUIZ : TASK_COLORS.EXAM,
 
           onPress: () =>
             router.push({
@@ -134,30 +101,17 @@ export default function TasksScreen() {
         };
       }) ?? [];
 
-    return [
-      ...assignmentEvents,
-      ...examEvents,
-    ];
-  }, [
-    assignments.data,
-    exams.data,
-    router,
-  ]);
+    return [...assignmentEvents, ...examEvents];
+  }, [assignments.data, exams.data, router]);
 
   const calendarDays = useMemo(() => {
-    const beginning = startOfWeek(
-      startOfMonth(month),
-      {
-        weekStartsOn: 0,
-      },
-    );
+    const beginning = startOfWeek(startOfMonth(month), {
+      weekStartsOn: 0,
+    });
 
-    const ending = endOfWeek(
-      endOfMonth(month),
-      {
-        weekStartsOn: 0,
-      },
-    );
+    const ending = endOfWeek(endOfMonth(month), {
+      weekStartsOn: 0,
+    });
 
     return eachDayOfInterval({
       start: beginning,
@@ -168,14 +122,8 @@ export default function TasksScreen() {
   const weeks = useMemo(() => {
     const result: Date[][] = [];
 
-    for (
-      let index = 0;
-      index < calendarDays.length;
-      index += 7
-    ) {
-      result.push(
-        calendarDays.slice(index, index + 7),
-      );
+    for (let index = 0; index < calendarDays.length; index += 7) {
+      result.push(calendarDays.slice(index, index + 7));
     }
 
     return result;
@@ -183,14 +131,8 @@ export default function TasksScreen() {
 
   const eventsForDay = (day: Date) =>
     events
-      .filter((event) =>
-        isSameDay(event.date, day),
-      )
-      .sort(
-        (a, b) =>
-          a.date.getTime() -
-          b.date.getTime(),
-      );
+      .filter((event) => isSameDay(event.date, day))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   return (
     <EntityList
@@ -198,54 +140,28 @@ export default function TasksScreen() {
       description="Assignments, quizzes, and exams across your month."
       empty={false}
       emptyMessage=""
-      error={
-        assignments.error ??
-        exams.error
-      }
-      loading={
-        assignments.isLoading ||
-        exams.isLoading
-      }
-      onAdd={() =>
-        router.push('/assignments/create')
-      }
+      error={assignments.error ?? exams.error}
+      loading={assignments.isLoading || exams.isLoading}
+      onAdd={() => router.push('/assignments/create')}
       onRefresh={() =>
-        void Promise.all([
-          assignments.refetch(),
-          exams.refetch(),
-          subjects.refetch(),
-        ])
+        void Promise.all([assignments.refetch(), exams.refetch(), subjects.refetch()])
       }
-      refreshing={
-        assignments.isRefetching ||
-        exams.isRefetching
-      }
+      onSecondaryAdd={() => router.push('/exams/create')}
+      refreshing={assignments.isRefetching || exams.isRefetching}
+      secondaryAddIcon="school-outline"
+      secondaryAddLabel="Add quiz or exam"
       title="Tasks"
     >
-      <AppButton
-        icon="school-outline"
-        label="Add quiz or exam"
-        onPress={() =>
-          router.push('/exams/create')
-        }
-        variant="secondary"
-      />
-
       {/* MONTH NAVIGATION */}
       <View style={styles.monthNavigation}>
         <Pressable
           accessibilityLabel="Previous month"
           accessibilityRole="button"
-          onPress={() =>
-            setMonth((current) =>
-              subMonths(current, 1),
-            )
-          }
+          onPress={() => setMonth((current) => subMonths(current, 1))}
           style={[
             styles.monthButton,
             {
-              backgroundColor:
-                palette.surfaceAlt,
+              backgroundColor: palette.surfaceAlt,
               borderColor: palette.border,
             },
           ]}
@@ -266,11 +182,7 @@ export default function TasksScreen() {
           accessibilityHint="Returns the calendar to the current month"
           accessibilityLabel={`${format(month, 'MMMM yyyy')}. Return to current month`}
           accessibilityRole="button"
-          onPress={() =>
-            setMonth(
-              startOfMonth(new Date()),
-            )
-          }
+          onPress={() => setMonth(startOfMonth(new Date()))}
           style={styles.monthTitleArea}
         >
           <Text
@@ -299,16 +211,11 @@ export default function TasksScreen() {
         <Pressable
           accessibilityLabel="Next month"
           accessibilityRole="button"
-          onPress={() =>
-            setMonth((current) =>
-              addMonths(current, 1),
-            )
-          }
+          onPress={() => setMonth((current) => addMonths(current, 1))}
           style={[
             styles.monthButton,
             {
-              backgroundColor:
-                palette.surfaceAlt,
+              backgroundColor: palette.surfaceAlt,
               borderColor: palette.border,
             },
           ]}
@@ -333,8 +240,7 @@ export default function TasksScreen() {
             style={[
               styles.legendDot,
               {
-                backgroundColor:
-                  TASK_COLORS.ASSIGNMENT,
+                backgroundColor: TASK_COLORS.ASSIGNMENT,
               },
             ]}
           />
@@ -355,8 +261,7 @@ export default function TasksScreen() {
             style={[
               styles.legendDot,
               {
-                backgroundColor:
-                  TASK_COLORS.QUIZ,
+                backgroundColor: TASK_COLORS.QUIZ,
               },
             ]}
           />
@@ -377,8 +282,7 @@ export default function TasksScreen() {
             style={[
               styles.legendDot,
               {
-                backgroundColor:
-                  TASK_COLORS.EXAM,
+                backgroundColor: TASK_COLORS.EXAM,
               },
             ]}
           />
@@ -400,18 +304,12 @@ export default function TasksScreen() {
         style={[
           styles.calendarShell,
           {
-            backgroundColor:
-              palette.surface,
+            backgroundColor: palette.surface,
             borderColor: palette.border,
           },
         ]}
       >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View>
             {/* DAYS */}
             <View style={styles.weekHeader}>
@@ -421,8 +319,7 @@ export default function TasksScreen() {
                   style={[
                     styles.weekHeaderCell,
                     {
-                      borderColor:
-                        palette.border,
+                      borderColor: palette.border,
                     },
                   ]}
                 >
@@ -430,8 +327,7 @@ export default function TasksScreen() {
                     style={[
                       styles.weekDay,
                       {
-                        color:
-                          palette.textMuted,
+                        color: palette.textMuted,
                       },
                     ]}
                   >
@@ -442,165 +338,112 @@ export default function TasksScreen() {
             </View>
 
             {/* WEEKS */}
-            {weeks.map(
-              (week, weekIndex) => (
-                <View
-                  key={weekIndex}
-                  style={styles.weekRow}
-                >
-                  {week.map((day) => {
-                    const dayEvents =
-                      eventsForDay(day);
+            {weeks.map((week, weekIndex) => (
+              <View key={weekIndex} style={styles.weekRow}>
+                {week.map((day) => {
+                  const dayEvents = eventsForDay(day);
 
-                    const visibleEvents =
-                      dayEvents.slice(
-                        0,
-                        MAX_EVENTS,
-                      );
+                  const visibleEvents = dayEvents.slice(0, MAX_EVENTS);
 
-                    const hiddenCount =
-                      Math.max(
-                        0,
-                        dayEvents.length -
-                          MAX_EVENTS,
-                      );
+                  const hiddenCount = Math.max(0, dayEvents.length - MAX_EVENTS);
 
-                    const currentMonth =
-                      isSameMonth(
-                        day,
-                        month,
-                      );
+                  const currentMonth = isSameMonth(day, month);
 
-                    const today =
-                      isSameDay(
-                        day,
-                        new Date(),
-                      );
+                  const today = isSameDay(day, new Date());
 
-                    return (
-                      <View
-                        key={day.toISOString()}
-                        style={[
-                          styles.dayCell,
-                          {
-                            borderColor:
-                              palette.border,
+                  return (
+                    <View
+                      key={day.toISOString()}
+                      style={[
+                        styles.dayCell,
+                        {
+                          borderColor: palette.border,
 
-                            backgroundColor:
-                              currentMonth
-                                ? palette.surface
-                                : palette.surfaceAlt,
-                          },
-                        ]}
-                      >
-                        {/* DATE NUMBER */}
+                          backgroundColor: currentMonth ? palette.surface : palette.surfaceAlt,
+                        },
+                      ]}
+                    >
+                      {/* DATE NUMBER */}
+                      <View style={styles.dayNumberRow}>
                         <View
-                          style={
-                            styles.dayNumberRow
-                          }
-                        >
-                          <View
-                            style={[
-                              styles.dayNumberBubble,
+                          style={[
+                            styles.dayNumberBubble,
 
-                              today
-                                ? {
-                                    backgroundColor:
-                                      palette.accentSolid,
-                                  }
-                                : null,
+                            today
+                              ? {
+                                  backgroundColor: palette.accentSolid,
+                                }
+                              : null,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.dayNumber,
+                              {
+                                color: today
+                                  ? '#FFFFFF'
+                                  : currentMonth
+                                    ? palette.text
+                                    : palette.textMuted,
+                              },
+                            ]}
+                          >
+                            {format(day, 'd')}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* EVENTS */}
+                      <View style={styles.events}>
+                        {visibleEvents.map((event) => (
+                          <Pressable
+                            accessibilityLabel={`${event.kind === 'QUIZ' ? 'Quiz' : event.kind === 'EXAM' ? 'Exam' : 'Assignment'}: ${event.title}${event.completed ? ', completed' : event.overdue ? ', overdue' : ''}`}
+                            accessibilityRole="button"
+                            key={event.id}
+                            onPress={event.onPress}
+                            style={({ pressed }) => [
+                              styles.event,
+
+                              {
+                                backgroundColor: event.color,
+
+                                opacity: event.completed ? 0.45 : pressed ? 0.75 : 1,
+                              },
                             ]}
                           >
                             <Text
+                              numberOfLines={1}
                               style={[
-                                styles.dayNumber,
-                                {
-                                  color: today
-                                    ? '#FFFFFF'
-                                    : currentMonth
-                                      ? palette.text
-                                      : palette.textMuted,
-                                },
+                                styles.eventText,
+
+                                event.completed ? styles.completedText : null,
                               ]}
                             >
-                              {format(day, 'd')}
+                              {event.title}
                             </Text>
-                          </View>
-                        </View>
 
-                        {/* EVENTS */}
-                        <View
-                          style={styles.events}
-                        >
-                          {visibleEvents.map(
-                            (event) => (
-                              <Pressable
-                                accessibilityLabel={`${event.kind === 'QUIZ' ? 'Quiz' : event.kind === 'EXAM' ? 'Exam' : 'Assignment'}: ${event.title}${event.completed ? ', completed' : event.overdue ? ', overdue' : ''}`}
-                                accessibilityRole="button"
-                                key={event.id}
-                                onPress={
-                                  event.onPress
-                                }
-                                style={({ pressed }) => [
-                                  styles.event,
+                            {event.overdue ? <View style={styles.overdueDot} /> : null}
+                          </Pressable>
+                        ))}
 
-                                  {
-                                    backgroundColor:
-                                      event.color,
-
-                                    opacity:
-                                      event.completed
-                                        ? 0.45
-                                        : pressed
-                                          ? 0.75
-                                          : 1,
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  numberOfLines={1}
-                                  style={[
-                                    styles.eventText,
-
-                                    event.completed
-                                      ? styles.completedText
-                                      : null,
-                                  ]}
-                                >
-                                  {event.title}
-                                </Text>
-
-                                {event.overdue ? (
-                                  <View
-                                    style={
-                                      styles.overdueDot
-                                    }
-                                  />
-                                ) : null}
-                              </Pressable>
-                            ),
-                          )}
-
-                          {hiddenCount > 0 ? (
-                            <Text
-                              style={[
-                                styles.moreText,
-                                {
-                                  color:
-                                    palette.textMuted,
-                                },
-                              ]}
-                            >
-                              +{hiddenCount} more
-                            </Text>
-                          ) : null}
-                        </View>
+                        {hiddenCount > 0 ? (
+                          <Text
+                            style={[
+                              styles.moreText,
+                              {
+                                color: palette.textMuted,
+                              },
+                            ]}
+                          >
+                            +{hiddenCount} more
+                          </Text>
+                        ) : null}
                       </View>
-                    );
-                  })}
-                </View>
-              ),
-            )}
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
           </View>
         </ScrollView>
       </View>

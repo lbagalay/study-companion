@@ -1,55 +1,24 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import {
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import {
-  radii,
-  spacing,
-  typography,
-} from '@/constants/theme';
+import { radii, spacing, typography } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { keys } from '@/hooks/useStudyData';
+import { confirmDestructive } from '@/lib/confirm';
 import { getErrorMessage } from '@/lib/errors';
 
-import {
-  deleteRecord,
-  listPdfNotes,
-  saveNote,
-} from '@/services';
+import { deleteRecord, listPdfNotes, saveNote } from '@/services';
 
-import type {
-  StudyMaterial,
-} from '@/types/database';
+import type { StudyMaterial } from '@/types/database';
 
 /* ============================================================
  * TYPES
  * ============================================================
  */
 
-type PdfNote = NonNullable<
-  Awaited<
-    ReturnType<typeof saveNote>
-  >
->;
+type PdfNote = NonNullable<Awaited<ReturnType<typeof saveNote>>>;
 
 type SavePayload = {
   content: string;
@@ -63,11 +32,7 @@ type SavePayload = {
  * ============================================================
  */
 
-function noteSignature(
-  title: string,
-  content: string,
-  pageNumber: number,
-) {
+function noteSignature(title: string, content: string, pageNumber: number) {
   return JSON.stringify({
     content,
     pageNumber,
@@ -89,50 +54,32 @@ export function PdfNotesPanel({
   currentPage: number;
   material: StudyMaterial;
 
-  onJumpToPage: (
-    page: number,
-  ) => void;
+  onJumpToPage: (page: number) => void;
 
   pageCount: number;
 }) {
-  const palette =
-    useAppTheme();
+  const palette = useAppTheme();
 
-  const queryClient =
-    useQueryClient();
+  const queryClient = useQueryClient();
 
-  const queryKey = [
-    'pdf-notes',
-    material.id,
-  ] as const;
+  const queryKey = ['pdf-notes', material.id] as const;
 
   /* ==========================================================
    * QUERY
    * ==========================================================
    */
 
-  const notes =
-    useQuery({
-      queryKey,
+  const notes = useQuery({
+    queryKey,
 
-      queryFn: async () => {
-        const result =
-          await listPdfNotes(
-            material.id,
-          );
+    queryFn: async () => {
+      const result = await listPdfNotes(material.id);
 
-        return result.filter(
-          (
-            item,
-          ): item is PdfNote =>
-            item !== null &&
-            item !== undefined,
-        );
-      },
+      return result.filter((item): item is PdfNote => item !== null && item !== undefined);
+    },
 
-      staleTime:
-        60_000,
-    });
+    staleTime: 60_000,
+  });
 
   /* ==========================================================
    * LOCAL EDITOR STATE
@@ -142,40 +89,19 @@ export function PdfNotesPanel({
    * ==========================================================
    */
 
-  const [
-    selectedNoteId,
-    setSelectedNoteId,
-  ] =
-    useState<
-      string | null
-    >(null);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
-  const [
-    title,
-    setTitle,
-  ] =
-    useState('');
+  const [title, setTitle] = useState('');
 
-  const [
+  const [content, setContent] = useState('');
+
+  const [notePage, setNotePage] = useState(currentPage);
+
+  const editorValuesRef = useRef({
     content,
-    setContent,
-  ] =
-    useState('');
-
-  const [
     notePage,
-    setNotePage,
-  ] =
-    useState(
-      currentPage,
-    );
-
-  const editorValuesRef =
-    useRef({
-      content,
-      notePage,
-      title,
-    });
+    title,
+  });
 
   useEffect(() => {
     editorValuesRef.current = {
@@ -183,85 +109,63 @@ export function PdfNotesPanel({
       notePage,
       title,
     };
-  }, [
-    content,
-    notePage,
-    title,
-  ]);
+  }, [content, notePage, title]);
 
-  const [
-    saveMessage,
-    setSaveMessage,
-  ] =
-    useState<
-      string | null
-    >(null);
+  /*
+   * The unmount-flush cleanup effect below registers once (empty deps),
+   * so it can only see fresh values through refs, not through state.
+   */
+  const selectedNoteIdRef = useRef<string | null>(null);
 
-  const lastSavedSignatureRef =
-    useRef('');
+  const selectedNoteFavoriteRef = useRef(false);
 
-  const autosaveTimerRef =
-    useRef<
-      ReturnType<
-        typeof setTimeout
-      > | null
-    >(null);
+  useEffect(() => {
+    selectedNoteIdRef.current = selectedNoteId;
+  }, [selectedNoteId]);
+
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  const lastSavedSignatureRef = useRef('');
+
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ==========================================================
    * SELECTED NOTE
    * ==========================================================
    */
 
-  const selectedNote =
-    useMemo(
-      () =>
-        notes.data?.find(
-          (
-            item,
-          ) =>
-            item.id ===
-            selectedNoteId,
-        ),
+  const selectedNote = useMemo(
+    () => notes.data?.find((item) => item.id === selectedNoteId),
 
-      [
-        notes.data,
-        selectedNoteId,
-      ],
-    );
+    [notes.data, selectedNoteId],
+  );
+
+  useEffect(() => {
+    selectedNoteFavoriteRef.current = selectedNote?.favorite ?? false;
+  }, [selectedNote]);
 
   /* ==========================================================
    * AUTOSAVE TIMER
    * ==========================================================
    */
 
-  const clearAutosave =
-    () => {
-      if (
-        autosaveTimerRef.current
-      ) {
-        clearTimeout(
-          autosaveTimerRef.current,
-        );
+  const clearAutosave = () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
 
-        autosaveTimerRef.current =
-          null;
-      }
-    };
+      autosaveTimerRef.current = null;
+    }
+  };
 
   /* ==========================================================
    * RESET / NEW NOTE
    * ==========================================================
    */
 
-  const resetComposer = (
-    page =
-      currentPage,
-  ) => {
+  const resetComposer = (page = currentPage) => {
     clearAutosave();
 
-    setSelectedNoteId(
-      null,
-    );
+    setSelectedNoteId(null);
 
     setTitle('');
 
@@ -271,19 +175,13 @@ export function PdfNotesPanel({
       Math.max(
         1,
 
-        Math.min(
-          pageCount,
-          page,
-        ),
+        Math.min(pageCount, page),
       ),
     );
 
-    setSaveMessage(
-      null,
-    );
+    setSaveMessage(null);
 
-    lastSavedSignatureRef.current =
-      '';
+    lastSavedSignatureRef.current = '';
   };
 
   /* ==========================================================
@@ -291,49 +189,26 @@ export function PdfNotesPanel({
    * ==========================================================
    */
 
-  const openNote = (
-    item: PdfNote,
-  ) => {
+  const openNote = (item: PdfNote) => {
     clearAutosave();
 
-    const page =
-      item.page_number ??
-      currentPage;
+    const page = item.page_number ?? currentPage;
 
-    const nextTitle =
-      item.title ??
-      '';
+    const nextTitle = item.title ?? '';
 
-    const nextContent =
-      item.content ??
-      '';
+    const nextContent = item.content ?? '';
 
-    setSelectedNoteId(
-      item.id,
-    );
+    setSelectedNoteId(item.id);
 
-    setTitle(
-      nextTitle,
-    );
+    setTitle(nextTitle);
 
-    setContent(
-      nextContent,
-    );
+    setContent(nextContent);
 
-    setNotePage(
-      page,
-    );
+    setNotePage(page);
 
-    lastSavedSignatureRef.current =
-      noteSignature(
-        nextTitle,
-        nextContent,
-        page,
-      );
+    lastSavedSignatureRef.current = noteSignature(nextTitle, nextContent, page);
 
-    setSaveMessage(
-      null,
-    );
+    setSaveMessage(null);
   };
 
   /* ==========================================================
@@ -342,287 +217,168 @@ export function PdfNotesPanel({
    */
 
   useEffect(() => {
-    if (
-      selectedNoteId
-    ) {
+    if (selectedNoteId) {
       return;
     }
 
-    if (
-      title.trim() ||
-      content.trim()
-    ) {
+    if (title.trim() || content.trim()) {
       return;
     }
 
-    const syncTimer =
-      setTimeout(() => {
-        setNotePage(
-          currentPage,
-        );
-      }, 0);
+    const syncTimer = setTimeout(() => {
+      setNotePage(currentPage);
+    }, 0);
 
     return () => {
-      clearTimeout(
-        syncTimer,
-      );
+      clearTimeout(syncTimer);
     };
-  }, [
-    content,
-    currentPage,
-    selectedNoteId,
-    title,
-  ]);
+  }, [content, currentPage, selectedNoteId, title]);
 
   /* ==========================================================
    * SAVE NOTE
    * ==========================================================
    */
 
-  const saveMutation =
-    useMutation<
-      PdfNote,
-      Error,
-      SavePayload
-    >({
-      mutationFn:
-        async (
-          payload,
-        ) => {
-          const saved =
-            await saveNote(
-              {
-                content:
-                  payload.content,
+  const saveMutation = useMutation<PdfNote, Error, SavePayload>({
+    mutationFn: async (payload) => {
+      const saved = await saveNote(
+        {
+          content: payload.content,
 
-                favorite:
-                  selectedNote
-                    ?.favorite ??
-                  false,
+          favorite: selectedNote?.favorite ?? false,
 
-                material_id:
-                  material.id,
+          material_id: material.id,
 
-                page_number:
-                  payload.pageNumber,
+          page_number: payload.pageNumber,
 
-                subject_id:
-                  material.subject_id,
+          subject_id: material.subject_id,
 
-                title:
-                  payload.title.trim()
-                    ? payload.title.trim()
-                    : `Page ${payload.pageNumber} note`,
-              },
+          title: payload.title.trim() ? payload.title.trim() : `Page ${payload.pageNumber} note`,
+        },
 
-              payload.id,
-            );
+        payload.id,
+      );
 
-          /*
-           * Supabase .single() can still be
-           * typed as possibly null.
-           *
-           * From this point forward PdfNote
-           * is guaranteed to be non-null.
-           */
-          if (!saved) {
-            throw new Error(
-              'The note was saved but no note record was returned.',
-            );
+      /*
+       * Supabase .single() can still be
+       * typed as possibly null.
+       *
+       * From this point forward PdfNote
+       * is guaranteed to be non-null.
+       */
+      if (!saved) {
+        throw new Error('The note was saved but no note record was returned.');
+      }
+
+      return saved;
+    },
+
+    onMutate: () => {
+      setSaveMessage('Saving…');
+    },
+
+    onSuccess: (saved, payload) => {
+      /*
+       * Update the local PDF notes cache
+       * directly.
+       *
+       * No full refetch = smoother editor.
+       */
+      queryClient.setQueryData<PdfNote[]>(
+        queryKey,
+
+        (current) => {
+          const existing = current ?? [];
+
+          const alreadyExists = existing.some((item) => item.id === saved.id);
+
+          if (alreadyExists) {
+            return existing.map((item) => (item.id === saved.id ? saved : item));
           }
 
-          return saved;
+          return [saved, ...existing];
         },
+      );
 
-      onMutate: () => {
-        setSaveMessage(
-          'Saving…',
-        );
-      },
+      /*
+       * Refresh the normal Notes screen
+       * later without blocking typing.
+       */
+      void queryClient.invalidateQueries({
+        queryKey: keys.notes,
+      });
 
-      onSuccess:
-        (
-          saved,
-          payload,
-        ) => {
-          /*
-           * Update the local PDF notes cache
-           * directly.
-           *
-           * No full refetch = smoother editor.
-           */
-          queryClient.setQueryData<
-            PdfNote[]
-          >(
-            queryKey,
+      const savedPage = saved.page_number ?? payload.pageNumber;
 
-            (
-              current,
-            ) => {
-              const existing =
-                current ??
-                [];
+      const savedSignature = noteSignature(payload.title, payload.content, savedPage);
 
-              const alreadyExists =
-                existing.some(
-                  (
-                    item,
-                  ) =>
-                    item.id ===
-                    saved.id,
-                );
+      setSelectedNoteId(saved.id);
 
-              if (
-                alreadyExists
-              ) {
-                return existing.map(
-                  (
-                    item,
-                  ) =>
-                    item.id ===
-                    saved.id
-                      ? saved
-                      : item,
-                );
-              }
+      if (!payload.id) {
+        setNotePage(savedPage);
+      }
 
-              return [
-                saved,
-                ...existing,
-              ];
-            },
-          );
+      lastSavedSignatureRef.current = savedSignature;
 
-          /*
-           * Refresh the normal Notes screen
-           * later without blocking typing.
-           */
-          void queryClient.invalidateQueries({
-            queryKey:
-              keys.notes,
-          });
+      const editorValues = editorValuesRef.current;
 
-          const savedPage =
-            saved.page_number ??
-            payload.pageNumber;
+      const editorSignature = noteSignature(
+        editorValues.title,
+        editorValues.content,
+        editorValues.notePage,
+      );
 
-          const savedSignature =
-            noteSignature(
-              payload.title,
-              payload.content,
-              savedPage,
-            );
+      setSaveMessage(editorSignature === savedSignature ? 'Saved' : 'Changes pending…');
+    },
 
-          setSelectedNoteId(
-            saved.id,
-          );
-
-          if (!payload.id) {
-            setNotePage(
-              savedPage,
-            );
-          }
-
-          lastSavedSignatureRef.current =
-            savedSignature;
-
-          const editorValues =
-            editorValuesRef.current;
-
-          const editorSignature =
-            noteSignature(
-              editorValues.title,
-              editorValues.content,
-              editorValues.notePage,
-            );
-
-          setSaveMessage(
-            editorSignature ===
-              savedSignature
-              ? 'Saved'
-              : 'Changes pending…',
-          );
-        },
-
-      onError:
-        (
-          error,
-        ) => {
-          setSaveMessage(
-            getErrorMessage(
-              error,
-            ),
-          );
-        },
-    });
+    onError: (error) => {
+      setSaveMessage(getErrorMessage(error));
+    },
+  });
 
   /* ==========================================================
    * MANUAL SAVE
    * ==========================================================
    */
 
-  const saveCurrent =
-    () => {
-      const trimmedContent =
-        content.trim();
+  const saveCurrent = () => {
+    const trimmedContent = content.trim();
 
-      const trimmedTitle =
-        title.trim();
+    const trimmedTitle = title.trim();
 
-      if (
-        !trimmedContent &&
-        !trimmedTitle
-      ) {
-        return;
-      }
+    if (!trimmedContent && !trimmedTitle) {
+      return;
+    }
 
-      const safePage =
-        Math.max(
-          1,
+    const safePage = Math.max(
+      1,
 
-          Math.min(
-            pageCount,
-            notePage,
-          ),
-        );
+      Math.min(pageCount, notePage),
+    );
 
-      const signature =
-        noteSignature(
-          title,
-          content,
-          safePage,
-        );
+    const signature = noteSignature(title, content, safePage);
 
-      /*
-       * Nothing changed.
-       */
-      if (
-        selectedNoteId &&
-        signature ===
-          lastSavedSignatureRef.current
-      ) {
-        setSaveMessage(
-          'Saved',
-        );
+    /*
+     * Nothing changed.
+     */
+    if (selectedNoteId && signature === lastSavedSignatureRef.current) {
+      setSaveMessage('Saved');
 
-        return;
-      }
+      return;
+    }
 
-      clearAutosave();
+    clearAutosave();
 
-      saveMutation.mutate({
-        content,
+    saveMutation.mutate({
+      content,
 
-        id:
-          selectedNoteId ??
-          undefined,
+      id: selectedNoteId ?? undefined,
 
-        pageNumber:
-          safePage,
+      pageNumber: safePage,
 
-        title,
-      });
-    };
+      title,
+    });
+  };
 
   /* ==========================================================
    * DEBOUNCED AUTOSAVE
@@ -640,53 +396,37 @@ export function PdfNotesPanel({
    */
 
   useEffect(() => {
-    if (
-      !selectedNoteId
-    ) {
+    if (!selectedNoteId) {
       return;
     }
 
-    const signature =
-      noteSignature(
-        title,
-        content,
-        notePage,
-      );
+    const signature = noteSignature(title, content, notePage);
 
-    if (
-      signature ===
-      lastSavedSignatureRef.current
-    ) {
+    if (signature === lastSavedSignatureRef.current) {
       return;
     }
 
     clearAutosave();
 
-    autosaveTimerRef.current =
-      setTimeout(
-        () => {
-          if (
-            !title.trim() &&
-            !content.trim()
-          ) {
-            return;
-          }
+    autosaveTimerRef.current = setTimeout(
+      () => {
+        if (!title.trim() && !content.trim()) {
+          return;
+        }
 
-          saveMutation.mutate({
-            content,
+        saveMutation.mutate({
+          content,
 
-            id:
-              selectedNoteId,
+          id: selectedNoteId,
 
-            pageNumber:
-              notePage,
+          pageNumber: notePage,
 
-            title,
-          });
-        },
+          title,
+        });
+      },
 
-        900,
-      );
+      900,
+    );
 
     return () => {
       clearAutosave();
@@ -697,166 +437,107 @@ export function PdfNotesPanel({
      * editor values.
      */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    content,
-    notePage,
-    selectedNoteId,
-    title,
-  ]);
+  }, [content, notePage, selectedNoteId, title]);
 
   /* ==========================================================
    * CLEANUP
+   *
+   * Leaving the reader mid-debounce (e.g. typing a
+   * note, then immediately closing the PDF) used to
+   * drop the pending edit on the floor. Flush it to
+   * Supabase instead of just clearing the timer.
    * ==========================================================
    */
 
-  useEffect(
-    () => {
-      return () => {
-        clearAutosave();
-      };
-    },
-    [],
-  );
+  useEffect(() => {
+    return () => {
+      clearAutosave();
+
+      const pending = editorValuesRef.current;
+
+      const noteId = selectedNoteIdRef.current;
+
+      if (!noteId) {
+        return;
+      }
+
+      const signature = noteSignature(pending.title, pending.content, pending.notePage);
+
+      if (signature === lastSavedSignatureRef.current) {
+        return;
+      }
+
+      if (!pending.title.trim() && !pending.content.trim()) {
+        return;
+      }
+
+      void saveNote(
+        {
+          content: pending.content,
+
+          favorite: selectedNoteFavoriteRef.current,
+
+          material_id: material.id,
+
+          page_number: pending.notePage,
+
+          subject_id: material.subject_id,
+
+          title: pending.title.trim() ? pending.title.trim() : `Page ${pending.notePage} note`,
+        },
+
+        noteId,
+      ).catch(() => undefined);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ==========================================================
    * DELETE NOTE
    * ==========================================================
    */
 
-  const deleteMutation =
-    useMutation({
-      mutationFn:
-        (
-          id: string,
-        ) =>
-          deleteRecord(
-            'notes',
-            id,
-          ),
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteRecord('notes', id),
 
-      onSuccess:
-        async (
-          _,
-          id,
-        ) => {
-          queryClient.setQueryData<
-            PdfNote[]
-          >(
-            queryKey,
+    onSuccess: async (_, id) => {
+      queryClient.setQueryData<PdfNote[]>(
+        queryKey,
 
-            (
-              current,
-            ) =>
-              current?.filter(
-                (
-                  item,
-                ) =>
-                  item.id !==
-                  id,
-              ) ??
-              [],
-          );
+        (current) => current?.filter((item) => item.id !== id) ?? [],
+      );
 
-          if (
-            selectedNoteId ===
-            id
-          ) {
-            resetComposer(
-              currentPage,
-            );
-          }
+      if (selectedNoteId === id) {
+        resetComposer(currentPage);
+      }
 
-          await queryClient.invalidateQueries({
-            queryKey:
-              keys.notes,
-          });
-        },
+      await queryClient.invalidateQueries({
+        queryKey: keys.notes,
+      });
+    },
 
-      onError:
-        (
-          error,
-        ) => {
-          Alert.alert(
-            'Could not delete note',
+    onError: (error) => {
+      Alert.alert(
+        'Could not delete note',
 
-            getErrorMessage(
-              error,
-            ),
-          );
-        },
-    });
+        getErrorMessage(error),
+      );
+    },
+  });
 
   /* ==========================================================
    * CONFIRM DELETE
    * ==========================================================
    */
 
-  const confirmDelete = (
-    item: PdfNote,
-  ) => {
-    const noteTitle =
-      item.title ??
-      `Page ${
-        item.page_number ??
-        '—'
-      } note`;
+  const confirmDelete = (item: PdfNote) => {
+    const noteTitle = item.title ?? `Page ${item.page_number ?? '—'} note`;
 
-    const message =
-      `Delete "${noteTitle}"? This cannot be undone.`;
+    confirmDestructive('Delete note?', `"${noteTitle}" will be permanently removed.`, () => {
+      clearAutosave();
 
-    const performDelete =
-      () => {
-        clearAutosave();
-
-        deleteMutation.mutate(
-          item.id,
-        );
-      };
-
-    if (
-      Platform.OS ===
-        'web' &&
-      typeof window !==
-        'undefined'
-    ) {
-      const confirmed =
-        window.confirm(
-          message,
-        );
-
-      if (
-        confirmed
-      ) {
-        performDelete();
-      }
-
-      return;
-    }
-
-    Alert.alert(
-      'Delete note?',
-      message,
-      [
-        {
-          style:
-            'cancel',
-
-          text:
-            'Cancel',
-        },
-
-        {
-          onPress:
-            performDelete,
-
-          style:
-            'destructive',
-
-          text:
-            'Delete',
-        },
-      ],
-    );
+      deleteMutation.mutate(item.id);
+    });
   };
 
   /* ==========================================================
@@ -864,22 +545,13 @@ export function PdfNotesPanel({
    * ==========================================================
    */
 
-  const updateNotePage = (
-    change: number,
-  ) => {
-    setNotePage(
-      (
-        current,
-      ) =>
-        Math.max(
-          1,
+  const updateNotePage = (change: number) => {
+    setNotePage((current) =>
+      Math.max(
+        1,
 
-          Math.min(
-            pageCount,
-            current +
-              change,
-          ),
-        ),
+        Math.min(pageCount, current + change),
+      ),
     );
   };
 
@@ -894,11 +566,9 @@ export function PdfNotesPanel({
         styles.panel,
 
         {
-          backgroundColor:
-            palette.surface,
+          backgroundColor: palette.surface,
 
-          borderColor:
-            palette.border,
+          borderColor: palette.border,
         },
       ]}
     >
@@ -907,40 +577,19 @@ export function PdfNotesPanel({
        * ====================================================
        */}
 
-      <View
-        style={
-          styles.header
-        }
-      >
-        <View
-          style={
-            styles.headerCopy
-          }
-        >
-          <View
-            style={
-              styles.titleRow
-            }
-          >
+      <View style={styles.header}>
+        <View style={styles.headerCopy}>
+          <View style={styles.titleRow}>
             <View
               style={[
                 styles.headerIcon,
 
                 {
-                  backgroundColor:
-                    palette.accentSoft,
+                  backgroundColor: palette.accentSoft,
                 },
               ]}
             >
-              <Ionicons
-                color={
-                  palette.accentStrong
-                }
-                name="document-text-outline"
-                size={
-                  18
-                }
-              />
+              <Ionicons color={palette.accentStrong} name="document-text-outline" size={18} />
             </View>
 
             <Text
@@ -948,8 +597,7 @@ export function PdfNotesPanel({
                 styles.heading,
 
                 {
-                  color:
-                    palette.text,
+                  color: palette.text,
                 },
               ]}
             >
@@ -962,8 +610,7 @@ export function PdfNotesPanel({
               styles.description,
 
               {
-                color:
-                  palette.textMuted,
+                color: palette.textMuted,
               },
             ]}
           >
@@ -974,44 +621,25 @@ export function PdfNotesPanel({
         <Pressable
           accessibilityLabel="Create new PDF note"
           accessibilityRole="button"
-          onPress={() =>
-            resetComposer(
-              currentPage,
-            )
-          }
-          style={({
-            pressed,
-          }) => [
+          onPress={() => resetComposer(currentPage)}
+          style={({ pressed }) => [
             styles.newButton,
 
             {
-              backgroundColor:
-                palette.accentSoft,
+              backgroundColor: palette.accentSoft,
 
-              opacity:
-                pressed
-                  ? 0.68
-                  : 1,
+              opacity: pressed ? 0.68 : 1,
             },
           ]}
         >
-          <Ionicons
-            color={
-              palette.accentStrong
-            }
-            name="add"
-            size={
-              17
-            }
-          />
+          <Ionicons color={palette.accentStrong} name="add" size={17} />
 
           <Text
             style={[
               styles.newButtonText,
 
               {
-                color:
-                  palette.accentStrong,
+                color: palette.accentStrong,
               },
             ]}
           >
@@ -1030,31 +658,20 @@ export function PdfNotesPanel({
           styles.composer,
 
           {
-            backgroundColor:
-              palette.surfaceAlt,
+            backgroundColor: palette.surfaceAlt,
 
-            borderColor:
-              palette.border,
+            borderColor: palette.border,
           },
         ]}
       >
-        <View
-          style={
-            styles.composerTop
-          }
-        >
-          <View
-            style={
-              styles.pageControl
-            }
-          >
+        <View style={styles.composerTop}>
+          <View style={styles.pageControl}>
             <Text
               style={[
                 styles.pageLabel,
 
                 {
-                  color:
-                    palette.textMuted,
+                  color: palette.textMuted,
                 },
               ]}
             >
@@ -1066,59 +683,33 @@ export function PdfNotesPanel({
                 styles.pageStepper,
 
                 {
-                  backgroundColor:
-                    palette.surface,
+                  backgroundColor: palette.surface,
 
-                  borderColor:
-                    palette.border,
+                  borderColor: palette.border,
                 },
               ]}
             >
               <Pressable
                 accessibilityLabel="Previous page"
-                disabled={
-                  notePage <=
-                  1
-                }
-                onPress={() =>
-                  updateNotePage(
-                    -1,
-                  )
-                }
+                disabled={notePage <= 1}
+                onPress={() => updateNotePage(-1)}
                 style={{
-                  opacity:
-                    notePage <=
-                    1
-                      ? 0.3
-                      : 1,
+                  opacity: notePage <= 1 ? 0.3 : 1,
                 }}
               >
-                <Ionicons
-                  color={
-                    palette.text
-                  }
-                  name="remove"
-                  size={
-                    16
-                  }
-                />
+                <Ionicons color={palette.text} name="remove" size={16} />
               </Pressable>
 
               <Pressable
                 accessibilityLabel={`Go to page ${notePage}`}
-                onPress={() =>
-                  onJumpToPage(
-                    notePage,
-                  )
-                }
+                onPress={() => onJumpToPage(notePage)}
               >
                 <Text
                   style={[
                     styles.pageNumber,
 
                     {
-                      color:
-                        palette.text,
+                      color: palette.text,
                     },
                   ]}
                 >
@@ -1128,32 +719,13 @@ export function PdfNotesPanel({
 
               <Pressable
                 accessibilityLabel="Next page"
-                disabled={
-                  notePage >=
-                  pageCount
-                }
-                onPress={() =>
-                  updateNotePage(
-                    1,
-                  )
-                }
+                disabled={notePage >= pageCount}
+                onPress={() => updateNotePage(1)}
                 style={{
-                  opacity:
-                    notePage >=
-                    pageCount
-                      ? 0.3
-                      : 1,
+                  opacity: notePage >= pageCount ? 0.3 : 1,
                 }}
               >
-                <Ionicons
-                  color={
-                    palette.text
-                  }
-                  name="add"
-                  size={
-                    16
-                  }
-                />
+                <Ionicons color={palette.text} name="add" size={16} />
               </Pressable>
             </View>
           </View>
@@ -1164,8 +736,7 @@ export function PdfNotesPanel({
                 styles.editingBadge,
 
                 {
-                  backgroundColor:
-                    palette.accentSoft,
+                  backgroundColor: palette.accentSoft,
                 },
               ]}
             >
@@ -1174,8 +745,7 @@ export function PdfNotesPanel({
                   styles.editingText,
 
                   {
-                    color:
-                      palette.accentStrong,
+                    color: palette.accentStrong,
                   },
                 ]}
               >
@@ -1188,8 +758,7 @@ export function PdfNotesPanel({
                 styles.editingBadge,
 
                 {
-                  backgroundColor:
-                    palette.surface,
+                  backgroundColor: palette.surface,
                 },
               ]}
             >
@@ -1198,8 +767,7 @@ export function PdfNotesPanel({
                   styles.editingText,
 
                   {
-                    color:
-                      palette.textMuted,
+                    color: palette.textMuted,
                   },
                 ]}
               >
@@ -1212,153 +780,87 @@ export function PdfNotesPanel({
         {/* TITLE */}
 
         <TextInput
-          onChangeText={
-            setTitle
-          }
+          onChangeText={setTitle}
           placeholder="Note title"
-          placeholderTextColor={
-            palette.textMuted
-          }
-          selectionColor={
-            palette.accent
-          }
+          placeholderTextColor={palette.textMuted}
+          selectionColor={palette.accent}
           style={[
             styles.titleInput,
 
             {
-              backgroundColor:
-                palette.surface,
+              backgroundColor: palette.surface,
 
-              borderColor:
-                palette.border,
+              borderColor: palette.border,
 
-              color:
-                palette.text,
+              color: palette.text,
             },
           ]}
-          value={
-            title
-          }
+          value={title}
         />
 
         {/* CONTENT */}
 
         <TextInput
           multiline
-          onChangeText={
-            setContent
-          }
+          onChangeText={setContent}
           placeholder="Write your note here…"
-          placeholderTextColor={
-            palette.textMuted
-          }
-          selectionColor={
-            palette.accent
-          }
+          placeholderTextColor={palette.textMuted}
+          selectionColor={palette.accent}
           style={[
             styles.contentInput,
 
             {
-              backgroundColor:
-                palette.surface,
+              backgroundColor: palette.surface,
 
-              borderColor:
-                palette.border,
+              borderColor: palette.border,
 
-              color:
-                palette.text,
+              color: palette.text,
             },
           ]}
           textAlignVertical="top"
-          value={
-            content
-          }
+          value={content}
         />
 
         {/* SAVE FOOTER */}
 
-        <View
-          style={
-            styles.composerFooter
-          }
-        >
-          <View
-            style={
-              styles.saveState
-            }
-          >
+        <View style={styles.composerFooter}>
+          <View style={styles.saveState}>
             {saveMutation.isPending ? (
-              <Ionicons
-                color={
-                  palette.textMuted
-                }
-                name="cloud-upload-outline"
-                size={
-                  14
-                }
-              />
-            ) : saveMessage ===
-              'Saved' ? (
-              <Ionicons
-                color={
-                  palette.success
-                }
-                name="checkmark-circle-outline"
-                size={
-                  14
-                }
-              />
+              <Ionicons color={palette.textMuted} name="cloud-upload-outline" size={14} />
+            ) : saveMessage === 'Saved' ? (
+              <Ionicons color={palette.success} name="checkmark-circle-outline" size={14} />
             ) : null}
 
             <Text
-              numberOfLines={
-                2
-              }
+              numberOfLines={2}
               style={[
                 styles.saveStateText,
 
                 {
-                  color:
-                    saveMessage ===
-                    'Saved'
-                      ? palette.success
-                      : palette.textMuted,
+                  color: saveMessage === 'Saved' ? palette.success : palette.textMuted,
                 },
               ]}
             >
               {saveMutation.isPending
                 ? 'Saving…'
-                : saveMessage ??
-                  (selectedNoteId
-                    ? 'Autosaves after typing'
-                    : 'Press Save when ready')}
+                : (saveMessage ??
+                  (selectedNoteId ? 'Autosaves after typing' : 'Press Save when ready'))}
             </Text>
           </View>
 
           <Pressable
             accessibilityLabel="Save note"
             accessibilityRole="button"
-            disabled={
-              saveMutation.isPending ||
-              (!title.trim() &&
-                !content.trim())
-            }
-            onPress={
-              saveCurrent
-            }
-            style={({
-              pressed,
-            }) => [
+            disabled={saveMutation.isPending || (!title.trim() && !content.trim())}
+            onPress={saveCurrent}
+            style={({ pressed }) => [
               styles.saveButton,
 
               {
-                backgroundColor:
-                  palette.accentSolid,
+                backgroundColor: palette.accentSolid,
 
                 opacity:
-                  saveMutation.isPending ||
-                  (!title.trim() &&
-                    !content.trim())
+                  saveMutation.isPending || (!title.trim() && !content.trim())
                     ? 0.4
                     : pressed
                       ? 0.74
@@ -1366,21 +868,9 @@ export function PdfNotesPanel({
               },
             ]}
           >
-            <Ionicons
-              color="#FFFFFF"
-              name="checkmark"
-              size={
-                16
-              }
-            />
+            <Ionicons color="#FFFFFF" name="checkmark" size={16} />
 
-            <Text
-              style={
-                styles.saveButtonText
-              }
-            >
-              Save
-            </Text>
+            <Text style={styles.saveButtonText}>Save</Text>
           </Pressable>
         </View>
       </View>
@@ -1390,18 +880,13 @@ export function PdfNotesPanel({
        * ====================================================
        */}
 
-      <View
-        style={
-          styles.listHeader
-        }
-      >
+      <View style={styles.listHeader}>
         <Text
           style={[
             styles.listTitle,
 
             {
-              color:
-                palette.text,
+              color: palette.text,
             },
           ]}
         >
@@ -1413,16 +898,11 @@ export function PdfNotesPanel({
             styles.count,
 
             {
-              color:
-                palette.textMuted,
+              color: palette.textMuted,
             },
           ]}
         >
-          {
-            notes.data
-              ?.length ??
-            0
-          }
+          {notes.data?.length ?? 0}
         </Text>
       </View>
 
@@ -1432,18 +912,13 @@ export function PdfNotesPanel({
        */}
 
       {notes.isLoading ? (
-        <View
-          style={
-            styles.empty
-          }
-        >
+        <View style={styles.empty}>
           <Text
             style={[
               styles.emptyText,
 
               {
-                color:
-                  palette.textMuted,
+                color: palette.textMuted,
               },
             ]}
           >
@@ -1457,42 +932,27 @@ export function PdfNotesPanel({
        * ====================================================
        */}
 
-      {!notes.isLoading &&
-      notes.error ? (
-        <View
-          style={
-            styles.empty
-          }
-        >
+      {!notes.isLoading && notes.error ? (
+        <View style={styles.empty}>
           <Text
             style={[
               styles.emptyText,
 
               {
-                color:
-                  palette.danger,
+                color: palette.danger,
               },
             ]}
           >
-            {
-              getErrorMessage(
-                notes.error,
-              )
-            }
+            {getErrorMessage(notes.error)}
           </Text>
 
-          <Pressable
-            onPress={() =>
-              void notes.refetch()
-            }
-          >
+          <Pressable onPress={() => void notes.refetch()}>
             <Text
               style={[
                 styles.retry,
 
                 {
-                  color:
-                    palette.accentStrong,
+                  color: palette.accentStrong,
                 },
               ]}
             >
@@ -1507,33 +967,18 @@ export function PdfNotesPanel({
        * ====================================================
        */}
 
-      {!notes.isLoading &&
-      !notes.error &&
-      !notes.data?.length ? (
-        <View
-          style={
-            styles.empty
-          }
-        >
+      {!notes.isLoading && !notes.error && !notes.data?.length ? (
+        <View style={styles.empty}>
           <View
             style={[
               styles.emptyIcon,
 
               {
-                backgroundColor:
-                  palette.accentSoft,
+                backgroundColor: palette.accentSoft,
               },
             ]}
           >
-            <Ionicons
-              color={
-                palette.accentStrong
-              }
-              name="document-text-outline"
-              size={
-                20
-              }
-            />
+            <Ionicons color={palette.accentStrong} name="document-text-outline" size={20} />
           </View>
 
           <Text
@@ -1541,8 +986,7 @@ export function PdfNotesPanel({
               styles.emptyTitle,
 
               {
-                color:
-                  palette.text,
+                color: palette.text,
               },
             ]}
           >
@@ -1554,8 +998,7 @@ export function PdfNotesPanel({
               styles.emptyText,
 
               {
-                color:
-                  palette.textMuted,
+                color: palette.textMuted,
               },
             ]}
           >
@@ -1569,230 +1012,142 @@ export function PdfNotesPanel({
        * ====================================================
        */}
 
-      {!notes.isLoading &&
-      !notes.error &&
-      Boolean(
-        notes.data?.length,
-      ) ? (
+      {!notes.isLoading && !notes.error && Boolean(notes.data?.length) ? (
         <ScrollView
-          contentContainerStyle={
-            styles.notesList
-          }
+          contentContainerStyle={styles.notesList}
           nestedScrollEnabled
-          showsVerticalScrollIndicator={
-            false
-          }
-          style={
-            styles.notesScroll
-          }
+          showsVerticalScrollIndicator={false}
+          style={styles.notesScroll}
         >
-          {notes.data?.map(
-            (
-              item,
-            ) => {
-              const active =
-                selectedNoteId ===
-                item.id;
+          {notes.data?.map((item) => {
+            const active = selectedNoteId === item.id;
 
-              const itemPage =
-                item.page_number;
+            const itemPage = item.page_number;
 
-              return (
-                <View
-                  key={
-                    item.id
-                  }
-                  style={[
-                    styles.noteRow,
+            return (
+              <View
+                key={item.id}
+                style={[
+                  styles.noteRow,
 
-                    {
-                      backgroundColor:
-                        active
-                          ? palette.accentSoft
-                          : palette.surfaceAlt,
+                  {
+                    backgroundColor: active ? palette.accentSoft : palette.surfaceAlt,
 
-                      borderColor:
-                        active
-                          ? palette.accent
-                          : palette.border,
-                    },
-                  ]}
+                    borderColor: active ? palette.accent : palette.border,
+                  },
+                ]}
+              >
+                {/* NOTE CONTENT */}
+
+                <Pressable
+                  accessibilityLabel={`Edit ${item.title ?? 'note'}`}
+                  accessibilityRole="button"
+                  onPress={() => openNote(item)}
+                  style={styles.noteMain}
                 >
-                  {/* NOTE CONTENT */}
+                  <View style={styles.noteHeading}>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.noteTitle,
 
-                  <Pressable
-                    accessibilityLabel={`Edit ${
-                      item.title ??
-                      'note'
-                    }`}
-                    accessibilityRole="button"
-                    onPress={() =>
-                      openNote(
-                        item,
-                      )
-                    }
-                    style={
-                      styles.noteMain
-                    }
-                  >
+                        {
+                          color: palette.text,
+                        },
+                      ]}
+                    >
+                      {item.title ?? `Page ${itemPage ?? '—'} note`}
+                    </Text>
+
                     <View
-                      style={
-                        styles.noteHeading
-                      }
+                      style={[
+                        styles.pageBadge,
+
+                        {
+                          backgroundColor: palette.surface,
+                        },
+                      ]}
                     >
                       <Text
-                        numberOfLines={
-                          1
-                        }
                         style={[
-                          styles.noteTitle,
+                          styles.pageBadgeText,
 
                           {
-                            color:
-                              palette.text,
+                            color: palette.accentStrong,
                           },
                         ]}
                       >
-                        {item.title ??
-                          `Page ${
-                            itemPage ??
-                            '—'
-                          } note`}
+                        P.
+                        {itemPage ?? '—'}
                       </Text>
-
-                      <View
-                        style={[
-                          styles.pageBadge,
-
-                          {
-                            backgroundColor:
-                              palette.surface,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.pageBadgeText,
-
-                            {
-                              color:
-                                palette.accentStrong,
-                            },
-                          ]}
-                        >
-                          P.
-                          {
-                            itemPage ??
-                            '—'
-                          }
-                        </Text>
-                      </View>
                     </View>
+                  </View>
 
-                    {item.content ? (
-                      <Text
-                        numberOfLines={
-                          2
-                        }
-                        style={[
-                          styles.preview,
+                  {item.content ? (
+                    <Text
+                      numberOfLines={2}
+                      style={[
+                        styles.preview,
 
-                          {
-                            color:
-                              palette.textMuted,
-                          },
-                        ]}
-                      >
                         {
-                          item.content
-                        }
-                      </Text>
-                    ) : null}
-                  </Pressable>
+                          color: palette.textMuted,
+                        },
+                      ]}
+                    >
+                      {item.content}
+                    </Text>
+                  ) : null}
+                </Pressable>
 
-                  {/* ACTIONS */}
+                {/* ACTIONS */}
 
-                  <View
-                    style={
-                      styles.noteActions
-                    }
-                  >
-                    {itemPage ? (
-                      <Pressable
-                        accessibilityLabel={`Go to page ${itemPage}`}
-                        accessibilityRole="button"
-                        onPress={() =>
-                          onJumpToPage(
-                            itemPage,
-                          )
-                        }
-                        style={[
-                          styles.noteAction,
-
-                          {
-                            backgroundColor:
-                              palette.surface,
-
-                            borderColor:
-                              palette.border,
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          color={
-                            palette.accentStrong
-                          }
-                          name="arrow-forward-outline"
-                          size={
-                            16
-                          }
-                        />
-                      </Pressable>
-                    ) : null}
-
+                <View style={styles.noteActions}>
+                  {itemPage ? (
                     <Pressable
-                      accessibilityLabel="Delete note"
+                      accessibilityLabel={`Go to page ${itemPage}`}
                       accessibilityRole="button"
-                      disabled={
-                        deleteMutation.isPending
-                      }
-                      onPress={() =>
-                        confirmDelete(
-                          item,
-                        )
-                      }
+                      onPress={() => onJumpToPage(itemPage)}
                       style={[
                         styles.noteAction,
 
                         {
-                          backgroundColor:
-                            palette.surface,
+                          backgroundColor: palette.surface,
 
-                          borderColor:
-                            palette.border,
-
-                          opacity:
-                            deleteMutation.isPending
-                              ? 0.4
-                              : 1,
+                          borderColor: palette.border,
                         },
                       ]}
                     >
                       <Ionicons
-                        color={
-                          palette.danger
-                        }
-                        name="trash-outline"
-                        size={
-                          16
-                        }
+                        color={palette.accentStrong}
+                        name="arrow-forward-outline"
+                        size={16}
                       />
                     </Pressable>
-                  </View>
+                  ) : null}
+
+                  <Pressable
+                    accessibilityLabel="Delete note"
+                    accessibilityRole="button"
+                    disabled={deleteMutation.isPending}
+                    onPress={() => confirmDelete(item)}
+                    style={[
+                      styles.noteAction,
+
+                      {
+                        backgroundColor: palette.surface,
+
+                        borderColor: palette.border,
+
+                        opacity: deleteMutation.isPending ? 0.4 : 1,
+                      },
+                    ]}
+                  >
+                    <Ionicons color={palette.danger} name="trash-outline" size={16} />
+                  </Pressable>
                 </View>
-              );
-            },
-          )}
+              </View>
+            );
+          })}
         </ScrollView>
       ) : null}
     </View>
@@ -1804,587 +1159,436 @@ export function PdfNotesPanel({
  * ============================================================
  */
 
-const styles =
-  StyleSheet.create({
-    panel: {
-      borderRadius:
-        radii.xl,
+const styles = StyleSheet.create({
+  panel: {
+    borderRadius: radii.xl,
 
-      borderWidth:
-        1,
+    borderWidth: 1,
 
-      gap:
-        spacing.md,
+    gap: spacing.md,
 
-      overflow:
-        'hidden',
+    overflow: 'hidden',
 
-      padding:
-        spacing.md,
+    padding: spacing.md,
 
-      width:
-        '100%',
-    },
+    width: '100%',
+  },
 
-    /* HEADER */
+  /* HEADER */
 
-    header: {
-      alignItems:
-        'flex-start',
+  header: {
+    alignItems: 'flex-start',
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        spacing.md,
+    gap: spacing.md,
 
-      justifyContent:
-        'space-between',
-    },
+    justifyContent: 'space-between',
+  },
 
-    headerCopy: {
-      flex:
-        1,
+  headerCopy: {
+    flex: 1,
 
-      gap:
-        4,
+    gap: 4,
 
-      minWidth:
-        0,
-    },
+    minWidth: 0,
+  },
 
-    titleRow: {
-      alignItems:
-        'center',
+  titleRow: {
+    alignItems: 'center',
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        8,
-    },
+    gap: 8,
+  },
 
-    headerIcon: {
-      alignItems:
-        'center',
+  headerIcon: {
+    alignItems: 'center',
 
-      borderRadius:
-        11,
+    borderRadius: 11,
 
-      height:
-        34,
+    height: 34,
 
-      justifyContent:
-        'center',
+    justifyContent: 'center',
 
-      width:
-        34,
-    },
+    width: 34,
+  },
 
-    heading: {
-      ...typography.sectionTitle,
+  heading: {
+    ...typography.sectionTitle,
 
-      fontSize:
-        18,
+    fontSize: 18,
 
-      lineHeight:
-        23,
-    },
+    lineHeight: 23,
+  },
 
-    description: {
-      ...typography.caption,
+  description: {
+    ...typography.caption,
 
-      fontSize:
-        10,
+    fontSize: 10,
 
-      lineHeight:
-        15,
-    },
+    lineHeight: 15,
+  },
 
-    newButton: {
-      alignItems:
-        'center',
+  newButton: {
+    alignItems: 'center',
 
-      borderRadius:
-        radii.pill,
+    borderRadius: radii.pill,
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        4,
+    gap: 4,
 
-      minHeight:
-        34,
+    minHeight: 34,
 
-      paddingHorizontal:
-        11,
-    },
+    paddingHorizontal: 11,
+  },
 
-    newButtonText: {
-      ...typography.caption,
+  newButtonText: {
+    ...typography.caption,
 
-      fontSize:
-        10,
+    fontSize: 10,
 
-      fontWeight:
-        '800',
-    },
+    fontWeight: '800',
+  },
 
-    /* COMPOSER */
+  /* COMPOSER */
 
-    composer: {
-      borderRadius:
-        18,
+  composer: {
+    borderRadius: 18,
 
-      borderWidth:
-        1,
+    borderWidth: 1,
 
-      gap:
-        9,
+    gap: 9,
 
-      padding:
-        12,
-    },
+    padding: 12,
+  },
 
-    composerTop: {
-      alignItems:
-        'center',
+  composerTop: {
+    alignItems: 'center',
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        8,
+    gap: 8,
 
-      justifyContent:
-        'space-between',
-    },
+    justifyContent: 'space-between',
+  },
 
-    pageControl: {
-      alignItems:
-        'center',
+  pageControl: {
+    alignItems: 'center',
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        7,
-    },
+    gap: 7,
+  },
 
-    pageLabel: {
-      ...typography.label,
+  pageLabel: {
+    ...typography.label,
 
-      fontSize:
-        8,
-    },
+    fontSize: 8,
+  },
 
-    pageStepper: {
-      alignItems:
-        'center',
+  pageStepper: {
+    alignItems: 'center',
 
-      borderRadius:
-        radii.pill,
+    borderRadius: radii.pill,
 
-      borderWidth:
-        1,
+    borderWidth: 1,
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        10,
+    gap: 10,
 
-      minHeight:
-        31,
+    minHeight: 31,
 
-      paddingHorizontal:
-        10,
-    },
+    paddingHorizontal: 10,
+  },
 
-    pageNumber: {
-      ...typography.caption,
+  pageNumber: {
+    ...typography.caption,
 
-      fontSize:
-        10,
+    fontSize: 10,
 
-      fontWeight:
-        '800',
+    fontWeight: '800',
 
-      minWidth:
-        18,
+    minWidth: 18,
 
-      textAlign:
-        'center',
-    },
+    textAlign: 'center',
+  },
 
-    editingBadge: {
-      borderRadius:
-        radii.pill,
+  editingBadge: {
+    borderRadius: radii.pill,
 
-      paddingHorizontal:
-        8,
+    paddingHorizontal: 8,
 
-      paddingVertical:
-        5,
-    },
+    paddingVertical: 5,
+  },
 
-    editingText: {
-      ...typography.label,
+  editingText: {
+    ...typography.label,
 
-      fontSize:
-        7,
-    },
+    fontSize: 7,
+  },
 
-    titleInput: {
-      ...typography.body,
+  titleInput: {
+    ...typography.body,
 
-      borderRadius:
-        12,
+    borderRadius: 12,
 
-      borderWidth:
-        1,
+    borderWidth: 1,
 
-      fontSize:
-        13,
+    fontSize: 13,
 
-      minHeight:
-        41,
+    minHeight: 41,
 
-      paddingHorizontal:
-        11,
+    paddingHorizontal: 11,
 
-      paddingVertical:
-        8,
-    },
+    paddingVertical: 8,
+  },
 
-    contentInput: {
-      ...typography.body,
+  contentInput: {
+    ...typography.body,
 
-      borderRadius:
-        12,
+    borderRadius: 12,
 
-      borderWidth:
-        1,
+    borderWidth: 1,
 
-      fontSize:
-        13,
+    fontSize: 13,
 
-      lineHeight:
-        19,
+    lineHeight: 19,
 
-      minHeight:
-        125,
+    minHeight: 125,
 
-      padding:
-        11,
-    },
+    padding: 11,
+  },
 
-    composerFooter: {
-      alignItems:
-        'center',
+  composerFooter: {
+    alignItems: 'center',
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        10,
+    gap: 10,
 
-      justifyContent:
-        'space-between',
-    },
+    justifyContent: 'space-between',
+  },
 
-    saveState: {
-      alignItems:
-        'center',
+  saveState: {
+    alignItems: 'center',
 
-      flex:
-        1,
+    flex: 1,
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        5,
+    gap: 5,
 
-      minWidth:
-        0,
-    },
+    minWidth: 0,
+  },
 
-    saveStateText: {
-      ...typography.caption,
+  saveStateText: {
+    ...typography.caption,
 
-      flex:
-        1,
+    flex: 1,
 
-      fontSize:
-        9,
+    fontSize: 9,
 
-      lineHeight:
-        13,
-    },
+    lineHeight: 13,
+  },
 
-    saveButton: {
-      alignItems:
-        'center',
+  saveButton: {
+    alignItems: 'center',
 
-      borderRadius:
-        radii.pill,
+    borderRadius: radii.pill,
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        5,
+    gap: 5,
 
-      minHeight:
-        34,
+    minHeight: 34,
 
-      paddingHorizontal:
-        14,
-    },
+    paddingHorizontal: 14,
+  },
 
-    saveButtonText: {
-      ...typography.caption,
+  saveButtonText: {
+    ...typography.caption,
 
-      color:
-        '#FFFFFF',
+    color: '#FFFFFF',
 
-      fontSize:
-        10,
+    fontSize: 10,
 
-      fontWeight:
-        '800',
-    },
+    fontWeight: '800',
+  },
 
-    /* LIST HEADER */
+  /* LIST HEADER */
 
-    listHeader: {
-      alignItems:
-        'center',
+  listHeader: {
+    alignItems: 'center',
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      justifyContent:
-        'space-between',
-    },
+    justifyContent: 'space-between',
+  },
 
-    listTitle: {
-      ...typography.sectionTitle,
+  listTitle: {
+    ...typography.sectionTitle,
 
-      fontSize:
-        15,
+    fontSize: 15,
 
-      lineHeight:
-        20,
-    },
+    lineHeight: 20,
+  },
 
-    count: {
-      ...typography.caption,
+  count: {
+    ...typography.caption,
 
-      fontSize:
-        9,
+    fontSize: 9,
 
-      fontWeight:
-        '700',
-    },
+    fontWeight: '700',
+  },
 
-    /* NOTE LIST */
+  /* NOTE LIST */
 
-    notesScroll: {
-      maxHeight:
-        360,
-    },
+  notesScroll: {
+    maxHeight: 360,
+  },
 
-    notesList: {
-      gap:
-        7,
+  notesList: {
+    gap: 7,
 
-      paddingBottom:
-        4,
-    },
+    paddingBottom: 4,
+  },
 
-    noteRow: {
-      alignItems:
-        'center',
+  noteRow: {
+    alignItems: 'center',
 
-      borderRadius:
-        14,
+    borderRadius: 14,
 
-      borderWidth:
-        1,
+    borderWidth: 1,
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        8,
+    gap: 8,
 
-      padding:
-        10,
-    },
+    padding: 10,
+  },
 
-    noteMain: {
-      flex:
-        1,
+  noteMain: {
+    flex: 1,
 
-      gap:
-        4,
+    gap: 4,
 
-      minWidth:
-        0,
-    },
+    minWidth: 0,
+  },
 
-    noteHeading: {
-      alignItems:
-        'center',
+  noteHeading: {
+    alignItems: 'center',
 
-      flexDirection:
-        'row',
+    flexDirection: 'row',
 
-      gap:
-        6,
-    },
+    gap: 6,
+  },
 
-    noteTitle: {
-      ...typography.body,
+  noteTitle: {
+    ...typography.body,
 
-      flex:
-        1,
+    flex: 1,
 
-      fontSize:
-        12,
+    fontSize: 12,
 
-      fontWeight:
-        '700',
+    fontWeight: '700',
 
-      lineHeight:
-        16,
-    },
+    lineHeight: 16,
+  },
 
-    pageBadge: {
-      borderRadius:
-        radii.pill,
+  pageBadge: {
+    borderRadius: radii.pill,
 
-      paddingHorizontal:
-        7,
+    paddingHorizontal: 7,
 
-      paddingVertical:
-        3,
-    },
+    paddingVertical: 3,
+  },
 
-    pageBadgeText: {
-      ...typography.label,
+  pageBadgeText: {
+    ...typography.label,
 
-      fontSize:
-        7,
-    },
+    fontSize: 7,
+  },
 
-    preview: {
-      ...typography.caption,
+  preview: {
+    ...typography.caption,
 
-      fontSize:
-        9,
+    fontSize: 9,
 
-      lineHeight:
-        14,
-    },
+    lineHeight: 14,
+  },
 
-    noteActions: {
-      flexDirection:
-        'row',
+  noteActions: {
+    flexDirection: 'row',
 
-      gap:
-        5,
-    },
+    gap: 5,
+  },
 
-    noteAction: {
-      alignItems:
-        'center',
+  noteAction: {
+    alignItems: 'center',
 
-      borderRadius:
-        radii.pill,
+    borderRadius: radii.pill,
 
-      borderWidth:
-        1,
+    borderWidth: 1,
 
-      height:
-        32,
+    height: 32,
 
-      justifyContent:
-        'center',
+    justifyContent: 'center',
 
-      width:
-        32,
-    },
+    width: 32,
+  },
 
-    /* EMPTY / ERROR */
+  /* EMPTY / ERROR */
 
-    empty: {
-      alignItems:
-        'center',
+  empty: {
+    alignItems: 'center',
 
-      gap:
-        6,
+    gap: 6,
 
-      paddingHorizontal:
-        20,
+    paddingHorizontal: 20,
 
-      paddingVertical:
-        24,
-    },
+    paddingVertical: 24,
+  },
 
-    emptyIcon: {
-      alignItems:
-        'center',
+  emptyIcon: {
+    alignItems: 'center',
 
-      borderRadius:
-        radii.pill,
+    borderRadius: radii.pill,
 
-      height:
-        42,
+    height: 42,
 
-      justifyContent:
-        'center',
+    justifyContent: 'center',
 
-      width:
-        42,
-    },
+    width: 42,
+  },
 
-    emptyTitle: {
-      ...typography.sectionTitle,
+  emptyTitle: {
+    ...typography.sectionTitle,
 
-      fontSize:
-        14,
+    fontSize: 14,
 
-      lineHeight:
-        18,
-    },
+    lineHeight: 18,
+  },
 
-    emptyText: {
-      ...typography.caption,
+  emptyText: {
+    ...typography.caption,
 
-      fontSize:
-        10,
+    fontSize: 10,
 
-      lineHeight:
-        15,
+    lineHeight: 15,
 
-      maxWidth:
-        330,
+    maxWidth: 330,
 
-      textAlign:
-        'center',
-    },
+    textAlign: 'center',
+  },
 
-    retry: {
-      ...typography.caption,
+  retry: {
+    ...typography.caption,
 
-      fontSize:
-        10,
+    fontSize: 10,
 
-      fontWeight:
-        '800',
-    },
-  });
+    fontWeight: '800',
+  },
+});

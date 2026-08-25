@@ -22,13 +22,17 @@ export function mergeLocalDateTimePart(currentIso: string, part: DateTimePart, v
   if (part === 'date') {
     const match = /^(\d{4,})-(\d{2})-(\d{2})$/.exec(value);
     if (!match) return null;
-    const year = Number(match[1]); const month = Number(match[2]); const day = Number(match[3]);
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
     next.setFullYear(year, month - 1, day);
-    if (next.getFullYear() !== year || next.getMonth() !== month - 1 || next.getDate() !== day) return null;
+    if (next.getFullYear() !== year || next.getMonth() !== month - 1 || next.getDate() !== day)
+      return null;
   } else {
     const match = /^(\d{2}):(\d{2})$/.exec(value);
     if (!match) return null;
-    const hours = Number(match[1]); const minutes = Number(match[2]);
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
     if (hours > 23 || minutes > 59) return null;
     next.setHours(hours, minutes, 0, 0);
   }

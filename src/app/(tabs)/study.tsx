@@ -1,20 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  useMutation,
-} from '@tanstack/react-query';
-import {
-  format,
-} from 'date-fns';
-import {
-  useRouter,
-} from 'expo-router';
-import {
-  useMemo,
-  useState,
-} from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
   Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,67 +14,37 @@ import {
   View,
 } from 'react-native';
 
-import {
-  AppButton,
-} from '@/components/ui/AppButton';
-import {
-  EntityCard,
-} from '@/components/ui/EntityCard';
-import {
-  EntityList,
-} from '@/components/ui/EntityList';
-import {
-  FeedbackState,
-} from '@/components/ui/FeedbackState';
-import {
-  MotionIcon,
-} from '@/components/ui/MotionIcon';
+import { AppButton } from '@/components/ui/AppButton';
+import { EntityCard } from '@/components/ui/EntityCard';
+import { EntityList } from '@/components/ui/EntityList';
+import { FeedbackState } from '@/components/ui/FeedbackState';
+import { MotionIcon } from '@/components/ui/MotionIcon';
 
-import {
-  radii,
-  spacing,
-  typography,
-} from '@/constants/theme';
+import { radii, spacing, typography } from '@/constants/theme';
 
 import {
   useMaterials,
   useNotes,
   useSessions,
+  useSubjectMap,
   useSubjects,
 } from '@/hooks/useStudyData';
 
-import {
-  useAppTheme,
-} from '@/hooks/useAppTheme';
-import {
-  getErrorMessage,
-} from '@/lib/errors';
-import {
-  pdfReadingProgress,
-} from '@/lib/pdf/progress';
+import { useAppTheme } from '@/hooks/useAppTheme';
+import { confirmDestructive } from '@/lib/confirm';
+import { getErrorMessage } from '@/lib/errors';
+import { pdfReadingProgress } from '@/lib/pdf/progress';
 
-import {
-  deleteMaterial as deleteMaterialService,
-  deleteRecord,
-} from '@/services';
+import { deleteMaterial as deleteMaterialService, deleteRecord } from '@/services';
 
-type LibraryFilter =
-  | 'ALL'
-  | 'MATERIALS'
-  | 'NOTES';
+type LibraryFilter = 'ALL' | 'MATERIALS' | 'NOTES';
 
 export default function StudyScreen() {
-  const router =
-    useRouter();
+  const router = useRouter();
 
-  const palette =
-    useAppTheme();
+  const palette = useAppTheme();
 
-  const {
-    width,
-    height,
-  } =
-    useWindowDimensions();
+  const { width, height } = useWindowDimensions();
 
   /*
    * IMPORTANT:
@@ -93,274 +53,115 @@ export default function StudyScreen() {
    * iPad portrait will NOT accidentally
    * use desktop sidebar layout anymore.
    */
-  const landscape =
-    width >
-    height;
+  const landscape = width > height;
 
-  const splitLandscape =
-    landscape &&
-    width >=
-      1024 &&
-    height >=
-      600;
+  const splitLandscape = landscape && width >= 1024 && height >= 600;
 
-  const shortLandscape =
-    landscape &&
-    height <
-      600;
+  const shortLandscape = landscape && height < 600;
 
-  const compact =
-    !splitLandscape &&
-    (width <
-      900 ||
-      shortLandscape);
+  const compact = !splitLandscape && (width < 900 || shortLandscape);
 
-  const phone =
-    width <
-    600;
+  const phone = width < 600;
 
-  const materials =
-    useMaterials();
+  const materials = useMaterials();
 
-  const notes =
-    useNotes();
+  const notes = useNotes();
 
-  const sessions =
-    useSessions();
+  const sessions = useSessions();
 
-  const subjects =
-    useSubjects();
+  const subjects = useSubjects();
 
-  const [
-    selectedSubjectId,
-    setSelectedSubjectId,
-  ] =
-    useState<
-      string | null
-    >(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
 
-  const [
-    filter,
-    setFilter,
-  ] =
-    useState<LibraryFilter>(
-      'ALL',
-    );
+  const [filter, setFilter] = useState<LibraryFilter>('ALL');
 
-  const [
-    search,
-    setSearch,
-  ] =
-    useState('');
+  const [search, setSearch] = useState('');
 
-  const bySubject =
-    useMemo(
-      () =>
-        new Map(
-          subjects.data?.map(
-            (
-              subject,
-            ) => [
-              subject.id,
-              subject,
-            ],
-          ) ??
-            [],
-        ),
-
-      [
-        subjects.data,
-      ],
-    );
+  const bySubject = useSubjectMap();
 
   const loading =
-    materials.isLoading ||
-    notes.isLoading ||
-    sessions.isLoading ||
-    subjects.isLoading;
+    materials.isLoading || notes.isLoading || sessions.isLoading || subjects.isLoading;
 
-  const continueMaterial =
-    useMemo(
-      () =>
-        materials.data
-          ?.filter(
-            (
-              item,
-            ) =>
-              item.type ===
-                'PDF' &&
-              item.file_url &&
-              item.last_opened_at &&
-              !item.completed,
-          )
-          .sort(
-            (
-              a,
-              b,
-            ) =>
-              new Date(
-                b.last_opened_at!,
-              ).getTime() -
-              new Date(
-                a.last_opened_at!,
-              ).getTime(),
-          )[0],
-
-      [
-        materials.data,
-      ],
-    );
-
-  const plannedSessions =
-    useMemo(
-      () =>
-        sessions.data
-          ?.filter(
-            (
-              item,
-            ) =>
-              item.status ===
-                'PLANNED' ||
-              item.status ===
-                'IN_PROGRESS',
-          )
-          .slice(
-            0,
-            4,
-          ) ??
-        [],
-
-      [
-        sessions.data,
-      ],
-    );
-
-  const selectedSubject =
-    selectedSubjectId
-      ? bySubject.get(
-          selectedSubjectId,
+  const continueMaterial = useMemo(
+    () =>
+      materials.data
+        ?.filter(
+          (item) => item.type === 'PDF' && item.file_url && item.last_opened_at && !item.completed,
         )
-      : undefined;
+        .sort(
+          (a, b) => new Date(b.last_opened_at!).getTime() - new Date(a.last_opened_at!).getTime(),
+        )[0],
 
-  const removeMaterial =
-    useMutation({
-      mutationFn:
-        ({
-          id,
-          path,
-        }: {
-          id:
-            string;
+    [materials.data],
+  );
 
-          path?:
-            | string
-            | null;
-        }) =>
-          deleteMaterialService(
-            id,
-            path,
-          ),
+  const plannedSessions = useMemo(
+    () =>
+      sessions.data
+        ?.filter((item) => item.status === 'PLANNED' || item.status === 'IN_PROGRESS')
+        .slice(0, 4) ?? [],
 
-      onSuccess:
-        async () => {
-          await Promise.all([
-            materials.refetch(),
-            notes.refetch(),
-          ]);
-        },
+    [sessions.data],
+  );
 
-      onError:
-        (
-          error,
-        ) => {
-          Alert.alert(
-            'Could not delete material',
-            getErrorMessage(
-              error,
-            ),
-          );
-        },
-    });
+  const selectedSubject = selectedSubjectId ? bySubject.get(selectedSubjectId) : undefined;
 
-  const removeNote =
-    useMutation({
-      mutationFn:
-        (
-          id:
-            string,
-        ) =>
-          deleteRecord(
-            'notes',
-            id,
-          ),
+  const removeMaterial = useMutation({
+    mutationFn: ({
+      id,
+      path,
+    }: {
+      id: string;
 
-      onSuccess:
-        async () => {
-          await notes.refetch();
-        },
+      path?: string | null;
+    }) => deleteMaterialService(id, path),
 
-      onError:
-        (
-          error,
-        ) => {
-          Alert.alert(
-            'Could not delete note',
-            getErrorMessage(
-              error,
-            ),
-          );
-        },
-    });
+    onSuccess: async () => {
+      await Promise.all([materials.refetch(), notes.refetch()]);
+    },
 
-  const openMaterial = (
-    item: NonNullable<
-      typeof materials.data
-    >[number],
-  ) => {
-    if (
-      item.type ===
-        'PDF' &&
-      item.file_url
-    ) {
-      router.push(
-        `/materials/${item.id}/reader` as never,
-      );
+    onError: (error) => {
+      Alert.alert('Could not delete material', getErrorMessage(error));
+    },
+  });
+
+  const removeNote = useMutation({
+    mutationFn: (id: string) => deleteRecord('notes', id),
+
+    onSuccess: async () => {
+      await notes.refetch();
+    },
+
+    onError: (error) => {
+      Alert.alert('Could not delete note', getErrorMessage(error));
+    },
+  });
+
+  const openMaterial = (item: NonNullable<typeof materials.data>[number]) => {
+    if (item.type === 'PDF' && item.file_url) {
+      router.push(`/materials/${item.id}/reader` as never);
 
       return;
     }
 
     router.push({
-      pathname:
-        '/materials/[id]',
+      pathname: '/materials/[id]',
 
       params: {
-        id:
-          item.id,
+        id: item.id,
       },
     });
   };
 
-  const openNote = (
-    item: NonNullable<
-      typeof notes.data
-    >[number],
-  ) => {
-    if (
-      item.material_id &&
-      item.page_number
-    ) {
+  const openNote = (item: NonNullable<typeof notes.data>[number]) => {
+    if (item.material_id && item.page_number) {
       router.push({
-        pathname:
-          '/materials/[id]/reader',
+        pathname: '/materials/[id]/reader',
 
         params: {
-          id:
-            item.material_id,
+          id: item.material_id,
 
-          page:
-            String(
-              item.page_number,
-            ),
+          page: String(item.page_number),
         },
       });
 
@@ -368,1007 +169,578 @@ export default function StudyScreen() {
     }
 
     router.push({
-      pathname:
-        '/notes/[id]',
+      pathname: '/notes/[id]',
 
       params: {
-        id:
-          item.id,
+        id: item.id,
       },
     });
   };
 
-  const confirmDeleteMaterial = (
-    item: NonNullable<
-      typeof materials.data
-    >[number],
-  ) => {
-    const performDelete =
-      () => {
-        removeMaterial.mutate({
-          id:
-            item.id,
-
-          path:
-            item.file_url,
-        });
-      };
-
-    const message =
-      `Delete "${item.title}"? This cannot be undone.`;
-
-    if (
-      Platform.OS ===
-        'web' &&
-      typeof window !==
-        'undefined'
-    ) {
-      if (
-        window.confirm(
-          message,
-        )
-      ) {
-        performDelete();
-      }
-
-      return;
-    }
-
-    Alert.alert(
-      'Delete material?',
-      message,
-      [
-        {
-          style:
-            'cancel',
-          text:
-            'Cancel',
-        },
-        {
-          onPress:
-            performDelete,
-          style:
-            'destructive',
-          text:
-            'Delete',
-        },
-      ],
+  const confirmDeleteMaterial = (item: NonNullable<typeof materials.data>[number]) => {
+    confirmDestructive('Delete material?', `"${item.title}" will be permanently removed.`, () =>
+      removeMaterial.mutate({ id: item.id, path: item.file_url }),
     );
   };
 
-  const confirmDeleteNote = (
-    item: NonNullable<
-      typeof notes.data
-    >[number],
-  ) => {
-    const title =
-      item.title ??
-      `Page ${
-        item.page_number ??
-        '—'
-      } note`;
+  const confirmDeleteNote = (item: NonNullable<typeof notes.data>[number]) => {
+    const title = item.title ?? `Page ${item.page_number ?? '—'} note`;
 
-    const performDelete =
-      () => {
-        removeNote.mutate(
-          item.id,
-        );
-      };
-
-    const message =
-      `Delete "${title}"? This cannot be undone.`;
-
-    if (
-      Platform.OS ===
-        'web' &&
-      typeof window !==
-        'undefined'
-    ) {
-      if (
-        window.confirm(
-          message,
-        )
-      ) {
-        performDelete();
-      }
-
-      return;
-    }
-
-    Alert.alert(
-      'Delete note?',
-      message,
-      [
-        {
-          style:
-            'cancel',
-          text:
-            'Cancel',
-        },
-        {
-          onPress:
-            performDelete,
-          style:
-            'destructive',
-          text:
-            'Delete',
-        },
-      ],
+    confirmDestructive('Delete note?', `"${title}" will be permanently removed.`, () =>
+      removeNote.mutate(item.id),
     );
   };
 
-  const openFolder = (
-    subjectId:
-      string,
-  ) => {
-    setSelectedSubjectId(
-      subjectId,
-    );
+  const openFolder = (subjectId: string) => {
+    setSelectedSubjectId(subjectId);
 
-    setFilter(
-      'ALL',
-    );
+    setFilter('ALL');
 
     setSearch('');
   };
 
-  const closeFolder =
-    () => {
-      setSelectedSubjectId(
-        null,
-      );
+  const closeFolder = () => {
+    setSelectedSubjectId(null);
 
-      setFilter(
-        'ALL',
-      );
+    setFilter('ALL');
 
-      setSearch('');
-    };
+    setSearch('');
+  };
 
-  const getFolderCounts = (
-    subjectId:
-      string,
-  ) => {
+  const getFolderCounts = (subjectId: string) => {
     const materialCount =
-      materials.data?.filter(
-        (
-          item,
-        ) =>
-          item.subject_id ===
-          subjectId,
-      ).length ??
-      0;
+      materials.data?.filter((item) => item.subject_id === subjectId).length ?? 0;
 
-    const noteCount =
-      notes.data?.filter(
-        (
-          item,
-        ) =>
-          item.subject_id ===
-          subjectId,
-      ).length ??
-      0;
+    const noteCount = notes.data?.filter((item) => item.subject_id === subjectId).length ?? 0;
 
     return {
       materialCount,
       noteCount,
 
-      total:
-        materialCount +
-        noteCount,
+      total: materialCount + noteCount,
     };
   };
 
-  const folderMaterials =
-    useMemo(
-      () =>
-        selectedSubjectId
-          ? materials.data?.filter(
-              (
-                item,
-              ) =>
-                item.subject_id ===
-                selectedSubjectId,
-            ) ??
-            []
-          : [],
+  const folderMaterials = useMemo(
+    () =>
+      selectedSubjectId
+        ? (materials.data?.filter((item) => item.subject_id === selectedSubjectId) ?? [])
+        : [],
 
-      [
-        materials.data,
-        selectedSubjectId,
-      ],
-    );
+    [materials.data, selectedSubjectId],
+  );
 
-  const folderNotes =
-    useMemo(
-      () =>
-        selectedSubjectId
-          ? notes.data?.filter(
-              (
-                item,
-              ) =>
-                item.subject_id ===
-                selectedSubjectId,
-            ) ??
-            []
-          : [],
+  const folderNotes = useMemo(
+    () =>
+      selectedSubjectId
+        ? (notes.data?.filter((item) => item.subject_id === selectedSubjectId) ?? [])
+        : [],
 
-      [
-        notes.data,
-        selectedSubjectId,
-      ],
-    );
+    [notes.data, selectedSubjectId],
+  );
 
-  const normalizedSearch =
-    search
-      .trim()
-      .toLowerCase();
+  const normalizedSearch = search.trim().toLowerCase();
 
-  const filteredMaterials =
-    folderMaterials.filter(
-      (
-        item,
-      ) => {
-        if (
-          filter ===
-          'NOTES'
-        ) {
-          return false;
-        }
+  const filteredMaterials = folderMaterials.filter((item) => {
+    if (filter === 'NOTES') {
+      return false;
+    }
 
-        if (
-          !normalizedSearch
-        ) {
-          return true;
-        }
+    if (!normalizedSearch) {
+      return true;
+    }
 
-        return [
-          item.title,
-          item.description,
-          item.file_name,
-          item.type,
-        ]
-          .filter(
-            Boolean,
-          )
-          .join(
-            ' ',
-          )
-          .toLowerCase()
-          .includes(
-            normalizedSearch,
-          );
-      },
-    );
+    return [item.title, item.description, item.file_name, item.type]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(normalizedSearch);
+  });
 
-  const filteredNotes =
-    folderNotes.filter(
-      (
-        item,
-      ) => {
-        if (
-          filter ===
-          'MATERIALS'
-        ) {
-          return false;
-        }
+  const filteredNotes = folderNotes.filter((item) => {
+    if (filter === 'MATERIALS') {
+      return false;
+    }
 
-        if (
-          !normalizedSearch
-        ) {
-          return true;
-        }
+    if (!normalizedSearch) {
+      return true;
+    }
 
-        return [
-          item.title,
-          item.content,
-        ]
-          .filter(
-            Boolean,
-          )
-          .join(
-            ' ',
-          )
-          .toLowerCase()
-          .includes(
-            normalizedSearch,
-          );
-      },
-    );
+    return [item.title, item.content]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(normalizedSearch);
+  });
 
-  const resultCount =
-    filteredMaterials.length +
-    filteredNotes.length;
+  const resultCount = filteredMaterials.length + filteredNotes.length;
 
-  const renderSidebar =
-    () => (
-      <View
+  const renderSidebar = () => (
+    <View
+      style={[
+        styles.sidebar,
+        {
+          backgroundColor: palette.surface,
+
+          borderColor: palette.border,
+        },
+      ]}
+    >
+      <View style={styles.sidebarHeader}>
+        <View
+          style={[
+            styles.sidebarIcon,
+            {
+              backgroundColor: palette.accentSoft,
+            },
+          ]}
+        >
+          <Ionicons color={palette.accentStrong} name="folder-open-outline" size={18} />
+        </View>
+
+        <View style={styles.sidebarHeaderCopy}>
+          <Text
+            style={[
+              styles.sidebarTitle,
+              {
+                color: palette.text,
+              },
+            ]}
+          >
+            Folders
+          </Text>
+
+          <Text
+            style={[
+              styles.sidebarCaption,
+              {
+                color: palette.textMuted,
+              },
+            ]}
+          >
+            {subjects.data?.length ?? 0} subjects
+          </Text>
+        </View>
+      </View>
+
+      <Pressable
+        onPress={closeFolder}
         style={[
-          styles.sidebar,
+          styles.sidebarRow,
           {
-            backgroundColor:
-              palette.surface,
-
-            borderColor:
-              palette.border,
+            backgroundColor: !selectedSubjectId ? palette.accentSoft : 'transparent',
           },
         ]}
       >
-        <View
-          style={
-            styles.sidebarHeader
-          }
-        >
-          <View
-            style={[
-              styles.sidebarIcon,
-              {
-                backgroundColor:
-                  palette.accentSoft,
-              },
-            ]}
-          >
-            <Ionicons
-              color={
-                palette.accentStrong
-              }
-              name="folder-open-outline"
-              size={
-                18
-              }
-            />
-          </View>
+        <Ionicons
+          color={!selectedSubjectId ? palette.accentStrong : palette.textMuted}
+          name="grid-outline"
+          size={17}
+        />
 
-          <View
-            style={
-              styles.sidebarHeaderCopy
-            }
-          >
-            <Text
-              style={[
-                styles.sidebarTitle,
-                {
-                  color:
-                    palette.text,
-                },
-              ]}
-            >
-              Folders
-            </Text>
-
-            <Text
-              style={[
-                styles.sidebarCaption,
-                {
-                  color:
-                    palette.textMuted,
-                },
-              ]}
-            >
-              {
-                subjects.data
-                  ?.length ??
-                0
-              }{' '}
-              subjects
-            </Text>
-          </View>
-        </View>
-
-        <Pressable
-          onPress={
-            closeFolder
-          }
+        <Text
+          numberOfLines={1}
           style={[
-            styles.sidebarRow,
+            styles.sidebarRowText,
             {
-              backgroundColor:
-                !selectedSubjectId
-                  ? palette.accentSoft
-                  : 'transparent',
+              color: !selectedSubjectId ? palette.accentStrong : palette.text,
             },
           ]}
         >
-          <Ionicons
-            color={
-              !selectedSubjectId
-                ? palette.accentStrong
-                : palette.textMuted
-            }
-            name="grid-outline"
-            size={
-              17
-            }
-          />
+          Overview
+        </Text>
+      </Pressable>
 
-          <Text
-            numberOfLines={
-              1
-            }
-            style={[
-              styles.sidebarRowText,
-              {
-                color:
-                  !selectedSubjectId
-                    ? palette.accentStrong
-                    : palette.text,
-              },
-            ]}
-          >
-            Overview
-          </Text>
-        </Pressable>
-
-        <ScrollView
-          contentContainerStyle={
-            styles.sidebarFolders
-          }
-          nestedScrollEnabled
-          showsVerticalScrollIndicator={
-            false
-          }
-        >
-          {subjects.data?.map(
-            (
-              subject,
-            ) => {
-              const active =
-                selectedSubjectId ===
-                subject.id;
-
-              const counts =
-                getFolderCounts(
-                  subject.id,
-                );
-
-              return (
-                <Pressable
-                  key={
-                    subject.id
-                  }
-                  onPress={() =>
-                    openFolder(
-                      subject.id,
-                    )
-                  }
-                  style={[
-                    styles.sidebarRow,
-                    {
-                      backgroundColor:
-                        active
-                          ? palette.accentSoft
-                          : 'transparent',
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.folderDot,
-                      {
-                        backgroundColor:
-                          subject.color ??
-                          palette.accent,
-                      },
-                    ]}
-                  />
-
-                  <Text
-                    numberOfLines={
-                      1
-                    }
-                    style={[
-                      styles.sidebarRowText,
-                      {
-                        color:
-                          active
-                            ? palette.accentStrong
-                            : palette.text,
-                      },
-                    ]}
-                  >
-                    {
-                      subject.name
-                    }
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.sidebarCount,
-                      {
-                        color:
-                          palette.textMuted,
-                      },
-                    ]}
-                  >
-                    {
-                      counts.total
-                    }
-                  </Text>
-                </Pressable>
-              );
-            },
-          )}
-        </ScrollView>
-
-        <Pressable
-          onPress={() =>
-            router.push(
-              '/subjects',
-            )
-          }
-          style={[
-            styles.manageFolders,
-            {
-              borderTopColor:
-                palette.border,
-            },
-          ]}
-        >
-          <Ionicons
-            color={
-              palette.textMuted
-            }
-            name="settings-outline"
-            size={
-              15
-            }
-          />
-
-          <Text
-            style={[
-              styles.manageFoldersText,
-              {
-                color:
-                  palette.textMuted,
-              },
-            ]}
-          >
-            Manage subjects
-          </Text>
-        </Pressable>
-      </View>
-    );
-
-  const renderMobileFolders =
-    () => (
       <ScrollView
-        contentContainerStyle={
-          styles.mobileFolders
-        }
-        horizontal
-        showsHorizontalScrollIndicator={
-          false
-        }
+        contentContainerStyle={styles.sidebarFolders}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          onPress={
-            closeFolder
-          }
-          style={[
-            styles.mobileFolderChip,
+        {subjects.data?.map((subject) => {
+          const active = selectedSubjectId === subject.id;
 
-            compact &&
-              styles.mobileFolderChipCompact,
+          const counts = getFolderCounts(subject.id);
 
-            {
-              backgroundColor:
-                !selectedSubjectId
-                  ? palette.accentSoft
-                  : palette.surface,
-
-              borderColor:
-                !selectedSubjectId
-                  ? palette.accent
-                  : palette.border,
-            },
-          ]}
-        >
-          <Ionicons
-            color={
-              !selectedSubjectId
-                ? palette.accentStrong
-                : palette.textMuted
-            }
-            name="grid-outline"
-            size={
-              15
-            }
-          />
-
-          <Text
-            style={[
-              styles.mobileFolderText,
-              {
-                color:
-                  !selectedSubjectId
-                    ? palette.accentStrong
-                    : palette.text,
-              },
-            ]}
-          >
-            Overview
-          </Text>
-        </Pressable>
-
-        {subjects.data?.map(
-          (
-            subject,
-          ) => {
-            const active =
-              selectedSubjectId ===
-              subject.id;
-
-            const counts =
-              getFolderCounts(
-                subject.id,
-              );
-
-            return (
-              <Pressable
-                key={
-                  subject.id
-                }
-                onPress={() =>
-                  openFolder(
-                    subject.id,
-                  )
-                }
+          return (
+            <Pressable
+              key={subject.id}
+              onPress={() => openFolder(subject.id)}
+              style={[
+                styles.sidebarRow,
+                {
+                  backgroundColor: active ? palette.accentSoft : 'transparent',
+                },
+              ]}
+            >
+              <View
                 style={[
-                  styles.mobileFolderChip,
-
-                  compact &&
-                    styles.mobileFolderChipCompact,
-
+                  styles.folderDot,
                   {
-                    backgroundColor:
-                      active
-                        ? palette.accentSoft
-                        : palette.surface,
+                    backgroundColor: subject.color ?? palette.accent,
+                  },
+                ]}
+              />
 
-                    borderColor:
-                      active
-                        ? palette.accent
-                        : palette.border,
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.sidebarRowText,
+                  {
+                    color: active ? palette.accentStrong : palette.text,
                   },
                 ]}
               >
-                <View
-                  style={[
-                    styles.folderDot,
-                    {
-                      backgroundColor:
-                        subject.color ??
-                        palette.accent,
-                    },
-                  ]}
+                {subject.name}
+              </Text>
+
+              <Text
+                style={[
+                  styles.sidebarCount,
+                  {
+                    color: palette.textMuted,
+                  },
+                ]}
+              >
+                {counts.total}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <Pressable
+        onPress={() => router.push('/subjects')}
+        style={[
+          styles.manageFolders,
+          {
+            borderTopColor: palette.border,
+          },
+        ]}
+      >
+        <Ionicons color={palette.textMuted} name="settings-outline" size={15} />
+
+        <Text
+          style={[
+            styles.manageFoldersText,
+            {
+              color: palette.textMuted,
+            },
+          ]}
+        >
+          Manage subjects
+        </Text>
+      </Pressable>
+    </View>
+  );
+
+  const renderMobileFolders = () => (
+    <ScrollView
+      contentContainerStyle={styles.mobileFolders}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+    >
+      <Pressable
+        onPress={closeFolder}
+        style={[
+          styles.mobileFolderChip,
+
+          compact && styles.mobileFolderChipCompact,
+
+          {
+            backgroundColor: !selectedSubjectId ? palette.accentSoft : palette.surface,
+
+            borderColor: !selectedSubjectId ? palette.accent : palette.border,
+          },
+        ]}
+      >
+        <Ionicons
+          color={!selectedSubjectId ? palette.accentStrong : palette.textMuted}
+          name="grid-outline"
+          size={15}
+        />
+
+        <Text
+          style={[
+            styles.mobileFolderText,
+            {
+              color: !selectedSubjectId ? palette.accentStrong : palette.text,
+            },
+          ]}
+        >
+          Overview
+        </Text>
+      </Pressable>
+
+      {subjects.data?.map((subject) => {
+        const active = selectedSubjectId === subject.id;
+
+        const counts = getFolderCounts(subject.id);
+
+        return (
+          <Pressable
+            key={subject.id}
+            onPress={() => openFolder(subject.id)}
+            style={[
+              styles.mobileFolderChip,
+
+              compact && styles.mobileFolderChipCompact,
+
+              {
+                backgroundColor: active ? palette.accentSoft : palette.surface,
+
+                borderColor: active ? palette.accent : palette.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.folderDot,
+                {
+                  backgroundColor: subject.color ?? palette.accent,
+                },
+              ]}
+            />
+
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.mobileFolderText,
+                {
+                  color: active ? palette.accentStrong : palette.text,
+                },
+              ]}
+            >
+              {subject.name}
+            </Text>
+
+            <Text
+              style={[
+                styles.mobileFolderCount,
+                {
+                  color: palette.textMuted,
+                },
+              ]}
+            >
+              {counts.total}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+
+  const renderOverview = () => {
+    const continuePct = continueMaterial
+      ? pdfReadingProgress(continueMaterial.last_read_page, continueMaterial.page_count ?? 0)
+      : 0;
+
+    const sortedSubjects = [...(subjects.data ?? [])].sort(
+      (a, b) => getFolderCounts(b.id).total - getFolderCounts(a.id).total,
+    );
+
+    return (
+      <View style={styles.overview}>
+        {/* CONTINUE STUDYING — hero */}
+
+        <View
+          style={[
+            styles.hero,
+            compact && styles.heroCompact,
+            { backgroundColor: palette.lavenderSoft, borderColor: palette.border },
+          ]}
+        >
+          <Ionicons
+            color={palette.lavender}
+            name="heart"
+            size={20}
+            style={styles.heroHeartAccent}
+          />
+
+          {continueMaterial ? (
+            <>
+              <View style={styles.heroTop}>
+                <Text style={[styles.heroLabel, { color: palette.textMuted }]}>
+                  Continue studying
+                </Text>
+                <Text style={[styles.heroPct, { color: palette.text }]}>{continuePct}%</Text>
+              </View>
+
+              <View style={styles.heroMain}>
+                <MotionIcon
+                  backgroundColor={palette.surface}
+                  color={palette.lavender}
+                  iconSize={18}
+                  name="document-text-outline"
+                  size={40}
                 />
 
-                <Text
-                  numberOfLines={
-                    1
-                  }
-                  style={[
-                    styles.mobileFolderText,
-                    {
-                      color:
-                        active
-                          ? palette.accentStrong
-                          : palette.text,
-                    },
-                  ]}
-                >
-                  {
-                    subject.name
-                  }
-                </Text>
+                <View style={styles.heroCopy}>
+                  <Text numberOfLines={1} style={[styles.heroTitle, { color: palette.text }]}>
+                    {continueMaterial.title}
+                  </Text>
+                  <Text style={[styles.heroMeta, { color: palette.textMuted }]}>
+                    Page {continueMaterial.last_read_page} of {continueMaterial.page_count ?? '?'} ·{' '}
+                    {bySubject.get(continueMaterial.subject_id)?.name}
+                  </Text>
+                </View>
+              </View>
 
-                <Text
-                  style={[
-                    styles.mobileFolderCount,
-                    {
-                      color:
-                        palette.textMuted,
-                    },
-                  ]}
-                >
-                  {
-                    counts.total
-                  }
-                </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => openMaterial(continueMaterial)}
+                style={styles.heroBottom}
+              >
+                <View style={styles.heroBar}>
+                  <View
+                    style={[
+                      styles.heroBarFill,
+                      { backgroundColor: palette.lavender, width: `${continuePct}%` },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.heroResume}>
+                  <Text style={[styles.heroResumeText, { color: palette.textMuted }]}>Resume</Text>
+                  <Ionicons color={palette.textMuted} name="chevron-forward" size={13} />
+                </View>
               </Pressable>
-            );
-          },
-        )}
-      </ScrollView>
-    );
-
-  const renderOverview =
-    () => (
-      <View
-        style={
-          styles.overview
-        }
-      >
-        {/* RITUAL */}
-
-        <View
-          style={[
-            styles.ritual,
-
-            compact &&
-              styles.ritualCompact,
-
-            {
-              backgroundColor:
-                palette.lavenderSoft,
-
-              borderColor:
-                palette.border,
-            },
-          ]}
-        >
-          <View
-            style={
-              styles.ritualHeading
-            }
-          >
-            <MotionIcon
-              backgroundColor={
-                palette.surface
-              }
-              color={
-                palette.accent
-              }
-              iconSize={
-                compact
-                  ? 17
-                  : 20
-              }
-              loop
-              name="ribbon-outline"
-              size={
-                compact
-                  ? 38
-                  : 44
-              }
+            </>
+          ) : (
+            <FeedbackState
+              message="Open a PDF and its reading progress will appear here."
+              title="Nothing in progress"
             />
+          )}
+        </View>
 
-            <View
-              style={
-                styles.ritualCopy
-              }
-            >
-              <Text
-                style={[
-                  styles.ritualEyebrow,
-                  {
-                    color:
-                      palette.accentStrong,
-                  },
-                ]}
-              >
-                YOUR STUDY SPACE
-              </Text>
+        {/* QUICK ACTIONS */}
 
-              <Text
-                style={[
-                  styles.ritualTitle,
+        <View style={styles.quickActions}>
+          <AppButton
+            icon="document-text-outline"
+            label="New note"
+            onPress={() => router.push('/notes/create')}
+            style={styles.quickAction}
+            variant="secondary"
+          />
 
-                  compact &&
-                    styles.ritualTitleCompact,
-
-                  {
-                    color:
-                      palette.text,
-                  },
-                ]}
-              >
-                Make space to focus
-              </Text>
-            </View>
-
-            <Ionicons
-              color={
-                palette.lavender
-              }
-              name="sparkles-outline"
-              size={
-                18
-              }
-            />
-          </View>
-
-          <Text
-            style={[
-              styles.ritualDescription,
-
-              compact &&
-                styles.ritualDescriptionCompact,
-
-              {
-                color:
-                  palette.textMuted,
-              },
-            ]}
-          >
-            Open a material, capture a thought, or plan what comes next.
-          </Text>
-
-          <View
-            style={[
-              styles.actions,
-
-              phone &&
-                styles.actionsPhone,
-            ]}
-          >
-            <AppButton
-              icon="document-text-outline"
-              label="New note"
-              onPress={() =>
-                router.push(
-                  '/notes/create',
-                )
-              }
-              style={
-                styles.action
-              }
-              variant="secondary"
-            />
-
-            <AppButton
-              icon="cloud-upload-outline"
-              label="Add material"
-              onPress={() =>
-                router.push(
-                  '/materials/create',
-                )
-              }
-              style={
-                styles.action
-              }
-              variant="secondary"
-            />
-          </View>
+          <AppButton
+            icon="cloud-upload-outline"
+            label="Add material"
+            onPress={() => router.push('/materials/create')}
+            style={styles.quickAction}
+            variant="primary"
+          />
         </View>
 
         {/* YOUR FOLDERS */}
 
-        <SectionTitle
-          color={
-            palette.text
-          }
-          title="Your folders"
-        />
+        <SectionTitle color={palette.text} title="Your folders" />
 
-        <View
-          style={
-            styles.folderGrid
-          }
-        >
-          {subjects.data?.map(
-            (
-              subject,
-            ) => {
-              const counts =
-                getFolderCounts(
-                  subject.id,
-                );
+        <View style={styles.folderGrid}>
+          {sortedSubjects.map((subject, index) => {
+            const counts = getFolderCounts(subject.id);
+            const wide = index === 0 && counts.total > 0;
 
-              return (
-                <Pressable
-                  key={
-                    subject.id
-                  }
-                  onPress={() =>
-                    openFolder(
-                      subject.id,
-                    )
-                  }
-                  style={({ pressed }) => [
-                    styles.folderCard,
-
-                    splitLandscape &&
-                      styles.folderCardLandscape,
-
-                    compact &&
-                      styles.folderCardCompact,
-
-                    phone &&
-                      styles.folderCardPhone,
-
-                    {
-                      backgroundColor:
-                        palette.surface,
-
-                      borderColor:
-                        palette.border,
-
-                      opacity:
-                        pressed
-                          ? 0.72
-                          : 1,
-                    },
-                  ]}
-                >
-                  <View
-                    style={
-                      styles.folderCardTop
-                    }
-                  >
-                    <View
-                      style={[
-                        styles.folderIcon,
-                        {
-                          backgroundColor:
-                            palette.accentSoft,
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        color={
-                          subject.color ??
-                          palette.accentStrong
-                        }
-                        name="folder-outline"
-                        size={
-                          compact
-                            ? 19
-                            : 22
-                        }
-                      />
+            return (
+              <Pressable
+                key={subject.id}
+                onPress={() => openFolder(subject.id)}
+                style={({ pressed }) => [
+                  styles.folderCard,
+                  wide && styles.folderCardWide,
+                  !wide && splitLandscape && styles.folderCardLandscape,
+                  !wide && compact && styles.folderCardCompact,
+                  !wide && phone && styles.folderCardPhone,
+                  {
+                    backgroundColor: palette.surface,
+                    borderColor: palette.border,
+                    opacity: pressed ? 0.72 : 1,
+                  },
+                ]}
+              >
+                {wide ? (
+                  <>
+                    <View style={[styles.folderAvatar, { backgroundColor: palette.surfaceAlt }]}>
+                      <Text
+                        style={[
+                          styles.folderAvatarLetter,
+                          { color: subject.color ?? palette.accentStrong },
+                        ]}
+                      >
+                        {subject.name.charAt(0).toUpperCase()}
+                      </Text>
                     </View>
 
-                    <Ionicons
-                      color={
-                        palette.textMuted
-                      }
-                      name="chevron-forward"
-                      size={
-                        16
-                      }
-                    />
-                  </View>
+                    <View style={styles.folderWideCopy}>
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.folderCardTitle, { color: palette.text }]}
+                      >
+                        {subject.name}
+                      </Text>
+                      <Text style={[styles.folderMeta, { color: palette.textMuted }]}>
+                        {counts.materialCount} materials · {counts.noteCount} notes
+                      </Text>
+                    </View>
 
-                  <Text
-                    numberOfLines={
-                      2
-                    }
-                    style={[
-                      styles.folderCardTitle,
+                    <Text
+                      style={[
+                        styles.folderCountPill,
+                        { backgroundColor: palette.accentSoft, color: palette.accentStrong },
+                      ]}
+                    >
+                      {counts.total}
+                    </Text>
 
-                      compact &&
-                        styles.folderCardTitleCompact,
+                    <Ionicons color={palette.textMuted} name="chevron-forward" size={15} />
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.folderCardTop}>
+                      <View
+                        style={[
+                          styles.folderDot,
+                          { backgroundColor: subject.color ?? palette.accent },
+                        ]}
+                      />
+                      <Ionicons color={palette.textMuted} name="chevron-forward" size={13} />
+                    </View>
 
-                      {
-                        color:
-                          palette.text,
-                      },
-                    ]}
-                  >
-                    {
-                      subject.name
-                    }
-                  </Text>
+                    <View>
+                      <Text
+                        numberOfLines={2}
+                        style={[
+                          styles.folderCardTitle,
+                          styles.folderCardTitleCompact,
+                          { color: palette.text },
+                        ]}
+                      >
+                        {subject.name}
+                      </Text>
 
-                  <Text
-                    style={[
-                      styles.folderMeta,
-                      {
-                        color:
-                          palette.textMuted,
-                      },
-                    ]}
-                  >
-                    {counts.materialCount}{' '}
-                    materials ·{' '}
-                    {counts.noteCount}{' '}
-                    notes
-                  </Text>
-                </Pressable>
-              );
-            },
-          )}
+                      <Text style={[styles.folderMeta, { color: palette.textMuted }]}>
+                        {counts.materialCount} materials · {counts.noteCount} notes
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </Pressable>
+            );
+          })}
+
+          {subjects.data?.length ? (
+            <Pressable
+              onPress={() => router.push('/subjects/create')}
+              style={({ pressed }) => [
+                styles.folderAddTile,
+                { borderColor: palette.border, opacity: pressed ? 0.6 : 1 },
+              ]}
+            >
+              <Ionicons color={palette.textMuted} name="add" size={15} />
+              <Text style={[styles.folderAddText, { color: palette.textMuted }]}>Add subject</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {!subjects.data?.length ? (
@@ -1378,130 +750,44 @@ export default function StudyScreen() {
           />
         ) : null}
 
-        {/* CONTINUE */}
-
-        <SectionTitle
-          color={
-            palette.text
-          }
-          title="Continue studying"
-        />
-
-        {continueMaterial ? (
-          <EntityCard
-            accent={
-              bySubject.get(
-                continueMaterial.subject_id,
-              )?.color
-            }
-            badge={`${pdfReadingProgress(
-              continueMaterial.last_read_page,
-              continueMaterial.page_count ??
-                0,
-            )}%`}
-            metadata={`Page ${
-              continueMaterial.last_read_page
-            } of ${
-              continueMaterial.page_count ??
-              '?'
-            } · ${format(
-              new Date(
-                continueMaterial.last_opened_at!,
-              ),
-              'MMM d · h:mm a',
-            )}`}
-            onPress={() =>
-              openMaterial(
-                continueMaterial,
-              )
-            }
-            subtitle={
-              bySubject.get(
-                continueMaterial.subject_id,
-              )?.name
-            }
-            title={
-              continueMaterial.title
-            }
-          />
-        ) : (
-          <FeedbackState
-            message="Open a PDF and its reading progress will appear here."
-            title="Nothing in progress"
-          />
-        )}
-
         {/* SESSIONS */}
 
-        <SectionTitle
-          color={
-            palette.text
-          }
-          title="Next sessions"
-        />
+        <SectionTitle color={palette.text} title="Next sessions" />
 
-        <View
-          style={
-            styles.sessionGrid
-          }
-        >
-          {plannedSessions.map(
-            (
-              item,
-            ) => {
-              const subject =
-                bySubject.get(
-                  item.subject_id,
-                );
+        <View style={styles.sessionGrid}>
+          {plannedSessions.map((item) => {
+            const subject = bySubject.get(item.subject_id);
 
-              return (
-                <View
-                  key={
-                    item.id
+            return (
+              <View
+                key={item.id}
+                style={[
+                  styles.sessionItem,
+
+                  splitLandscape && styles.sessionItemLandscape,
+
+                  phone && styles.sessionItemPhone,
+                ]}
+              >
+                <EntityCard
+                  accent={subject?.color}
+                  badge={`${item.planned_duration} MIN`}
+                  metadata={format(new Date(item.planned_at), 'MMM d · h:mm a')}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/sessions/[id]',
+
+                      params: {
+                        id: item.id,
+                      },
+                    })
                   }
-                  style={[
-                    styles.sessionItem,
-
-                    splitLandscape &&
-                      styles.sessionItemLandscape,
-
-                    phone &&
-                      styles.sessionItemPhone,
-                  ]}
-                >
-                  <EntityCard
-                    accent={
-                      subject?.color
-                    }
-                    badge={`${item.planned_duration} MIN`}
-                    metadata={format(
-                      new Date(
-                        item.planned_at,
-                      ),
-                      'MMM d · h:mm a',
-                    )}
-                    onPress={() =>
-                      router.push({
-                        pathname:
-                          '/sessions/[id]',
-
-                        params: {
-                          id:
-                            item.id,
-                        },
-                      })
-                    }
-                    subtitle={
-                      subject?.name
-                    }
-                    title={
-                      item.topic
-                    }
-                  />
-                </View>
-              );
-            },
-          )}
+                  subtitle={subject?.name}
+                  title={item.topic}
+                />
+              </View>
+            );
+          })}
         </View>
 
         {!plannedSessions.length ? (
@@ -1512,908 +798,551 @@ export default function StudyScreen() {
         ) : null}
       </View>
     );
+  };
 
-  const renderFolder =
-    () => (
-      <View
-        style={
-          styles.folderView
-        }
-      >
-        {/* FOLDER HEADER */}
+  const renderFolder = () => (
+    <View style={styles.folderView}>
+      {/* FOLDER HEADER */}
 
-        <View
-          style={[
-            styles.folderHeader,
-
-            compact &&
-              styles.folderHeaderCompact,
-          ]}
-        >
-          {!splitLandscape ? (
-            <Pressable
-              accessibilityLabel="Back to study overview"
-              onPress={
-                closeFolder
-              }
-              style={[
-                styles.backButton,
-                {
-                  backgroundColor:
-                    palette.surface,
-
-                  borderColor:
-                    palette.border,
-                },
-              ]}
-            >
-              <Ionicons
-                color={
-                  palette.text
-                }
-                name="arrow-back"
-                size={
-                  18
-                }
-              />
-            </Pressable>
-          ) : null}
-
-          <View
-            style={[
-              styles.bigFolderIcon,
-              {
-                backgroundColor:
-                  palette.accentSoft,
-              },
-            ]}
-          >
-            <Ionicons
-              color={
-                selectedSubject
-                  ?.color ??
-                palette.accentStrong
-              }
-              name="folder-open-outline"
-              size={
-                compact
-                  ? 22
-                  : 26
-              }
-            />
-          </View>
-
-          <View
-            style={
-              styles.folderHeaderCopy
-            }
-          >
-            <Text
-              numberOfLines={
-                2
-              }
-              style={[
-                styles.folderTitle,
-
-                compact &&
-                  styles.folderTitleCompact,
-
-                {
-                  color:
-                    palette.text,
-                },
-              ]}
-            >
-              {
-                selectedSubject?.name ??
-                'Subject'
-              }
-            </Text>
-
-            <Text
-              style={[
-                styles.folderSubtitle,
-                {
-                  color:
-                    palette.textMuted,
-                },
-              ]}
-            >
-              {folderMaterials.length}{' '}
-              materials ·{' '}
-              {folderNotes.length}{' '}
-              notes
-            </Text>
-          </View>
-
+      <View style={[styles.folderHeader, compact && styles.folderHeaderCompact]}>
+        {!splitLandscape ? (
           <Pressable
-            onPress={() =>
-              router.push(
-                '/materials/create',
-              )
-            }
+            accessibilityLabel="Back to study overview"
+            onPress={closeFolder}
             style={[
-              styles.addHeaderButton,
+              styles.backButton,
               {
-                backgroundColor:
-                  palette.accentSolid,
+                backgroundColor: palette.surface,
+
+                borderColor: palette.border,
               },
             ]}
           >
-            <Ionicons
-              color="#FFFFFF"
-              name="add"
-              size={
-                18
-              }
-            />
-
-            {!phone ? (
-              <Text
-                style={
-                  styles.addHeaderText
-                }
-              >
-                Add
-              </Text>
-            ) : null}
+            <Ionicons color={palette.text} name="arrow-back" size={18} />
           </Pressable>
-        </View>
-
-        {/* SEARCH */}
+        ) : null}
 
         <View
           style={[
-            styles.searchBox,
-
-            compact &&
-              styles.searchBoxCompact,
-
+            styles.bigFolderIcon,
             {
-              backgroundColor:
-                palette.surface,
-
-              borderColor:
-                palette.border,
+              backgroundColor: palette.accentSoft,
             },
           ]}
         >
           <Ionicons
-            color={
-              palette.textMuted
-            }
-            name="search-outline"
-            size={
-              17
-            }
+            color={selectedSubject?.color ?? palette.accentStrong}
+            name="folder-open-outline"
+            size={compact ? 22 : 26}
           />
-
-          <TextInput
-            onChangeText={
-              setSearch
-            }
-            placeholder="Search this folder"
-            placeholderTextColor={
-              palette.textMuted
-            }
-            selectionColor={
-              palette.accent
-            }
-            style={[
-              styles.searchInput,
-              {
-                color:
-                  palette.text,
-              },
-            ]}
-            value={
-              search
-            }
-          />
-
-          {search ? (
-            <Pressable
-              accessibilityLabel="Clear search"
-              onPress={() =>
-                setSearch('')
-              }
-            >
-              <Ionicons
-                color={
-                  palette.textMuted
-                }
-                name="close-circle"
-                size={
-                  17
-                }
-              />
-            </Pressable>
-          ) : null}
         </View>
 
-        {/* FILTERS */}
+        <View style={styles.folderHeaderCopy}>
+          <Text
+            numberOfLines={2}
+            style={[
+              styles.folderTitle,
 
-        <ScrollView
-          contentContainerStyle={
-            styles.filters
-          }
-          horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-        >
-          {(
-            [
-              {
-                label:
-                  'All',
-                value:
-                  'ALL',
-              },
+              compact && styles.folderTitleCompact,
 
               {
-                label:
-                  'Materials',
-                value:
-                  'MATERIALS',
+                color: palette.text,
               },
-
-              {
-                label:
-                  'Notes',
-                value:
-                  'NOTES',
-              },
-            ] as {
-              label:
-                string;
-
-              value:
-                LibraryFilter;
-            }[]
-          ).map(
-            (
-              option,
-            ) => {
-              const active =
-                filter ===
-                option.value;
-
-              return (
-                <Pressable
-                  key={
-                    option.value
-                  }
-                  onPress={() =>
-                    setFilter(
-                      option.value,
-                    )
-                  }
-                  style={[
-                    styles.filterButton,
-                    {
-                      backgroundColor:
-                        active
-                          ? palette.accentSoft
-                          : palette.surface,
-
-                      borderColor:
-                        active
-                          ? palette.accent
-                          : palette.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.filterText,
-                      {
-                        color:
-                          active
-                            ? palette.accentStrong
-                            : palette.textMuted,
-                      },
-                    ]}
-                  >
-                    {
-                      option.label
-                    }
-                  </Text>
-                </Pressable>
-              );
-            },
-          )}
-        </ScrollView>
-
-        {/* FILE GRID */}
-
-        {resultCount ? (
-          <View
-            style={
-              styles.fileGrid
-            }
+            ]}
           >
-            {filteredMaterials.map(
-              (
-                item,
-              ) => {
-                const progress =
-                  item.type ===
-                    'PDF' &&
-                  item.page_count
-                    ? pdfReadingProgress(
-                        item.last_read_page,
-                        item.page_count,
-                      )
-                    : null;
+            {selectedSubject?.name ?? 'Subject'}
+          </Text>
 
-                return (
-                  <View
-                    key={
-                      item.id
-                    }
-                    style={[
-                      styles.fileTile,
-
-                      splitLandscape &&
-                        styles.fileTileLandscape,
-
-                      compact &&
-                        styles.fileTileCompact,
-
-                      phone &&
-                        styles.fileTilePhone,
-
-                      {
-                        backgroundColor:
-                          palette.surface,
-
-                        borderColor:
-                          palette.border,
-                      },
-                    ]}
-                  >
-                    <Pressable
-                      onPress={() =>
-                        openMaterial(
-                          item,
-                        )
-                      }
-                      style={
-                        styles.fileMain
-                      }
-                    >
-                      <View
-                        style={[
-                          styles.filePreview,
-
-                          compact &&
-                            styles.filePreviewCompact,
-
-                          {
-                            backgroundColor:
-                              item.type ===
-                              'PDF'
-                                ? palette.accentSoft
-                                : palette.lavenderSoft,
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          color={
-                            item.type ===
-                            'PDF'
-                              ? palette.accentStrong
-                              : palette.lavender
-                          }
-                          name={
-                            item.type ===
-                            'PDF'
-                              ? 'document-text-outline'
-                              : 'link-outline'
-                          }
-                          size={
-                            compact
-                              ? 25
-                              : 30
-                          }
-                        />
-
-                        {progress !==
-                        null ? (
-                          <View
-                            style={[
-                              styles.progressBadge,
-                              {
-                                backgroundColor:
-                                  palette.surface,
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.progressBadgeText,
-                                {
-                                  color:
-                                    palette.accentStrong,
-                                },
-                              ]}
-                            >
-                              {
-                                progress
-                              }%
-                            </Text>
-                          </View>
-                        ) : null}
-                      </View>
-
-                      <View
-                        style={
-                          styles.fileCopy
-                        }
-                      >
-                        <Text
-                          numberOfLines={
-                            2
-                          }
-                          style={[
-                            styles.fileTitle,
-                            {
-                              color:
-                                palette.text,
-                            },
-                          ]}
-                        >
-                          {
-                            item.title
-                          }
-                        </Text>
-
-                        <Text
-                          numberOfLines={
-                            1
-                          }
-                          style={[
-                            styles.fileMeta,
-                            {
-                              color:
-                                palette.textMuted,
-                            },
-                          ]}
-                        >
-                          {item.type ===
-                          'PDF'
-                            ? item.page_count
-                              ? `${item.page_count} pages`
-                              : 'PDF'
-                            : item.type}
-                        </Text>
-                      </View>
-                    </Pressable>
-
-                    <Pressable
-                      accessibilityLabel={`Delete ${item.title}`}
-                      disabled={
-                        removeMaterial.isPending
-                      }
-                      onPress={() =>
-                        confirmDeleteMaterial(
-                          item,
-                        )
-                      }
-                      style={
-                        styles.tileDelete
-                      }
-                    >
-                      <Ionicons
-                        color={
-                          palette.danger
-                        }
-                        name="trash-outline"
-                        size={
-                          15
-                        }
-                      />
-                    </Pressable>
-                  </View>
-                );
+          <Text
+            style={[
+              styles.folderSubtitle,
+              {
+                color: palette.textMuted,
               },
-            )}
+            ]}
+          >
+            {folderMaterials.length} materials · {folderNotes.length} notes
+          </Text>
+        </View>
 
-            {filteredNotes.map(
-              (
-                item,
-              ) => (
-                <View
-                  key={
-                    item.id
-                  }
-                  style={[
-                    styles.fileTile,
+        <Pressable
+          onPress={() => router.push('/materials/create')}
+          style={[
+            styles.addHeaderButton,
+            {
+              backgroundColor: palette.accentSolid,
+            },
+          ]}
+        >
+          <Ionicons color="#FFFFFF" name="add" size={18} />
 
-                    splitLandscape &&
-                      styles.fileTileLandscape,
+          {!phone ? <Text style={styles.addHeaderText}>Add</Text> : null}
+        </Pressable>
+      </View>
 
-                    compact &&
-                      styles.fileTileCompact,
+      {/* SEARCH */}
 
-                    phone &&
-                      styles.fileTilePhone,
+      <View
+        style={[
+          styles.searchBox,
 
-                    {
-                      backgroundColor:
-                        palette.surface,
+          compact && styles.searchBoxCompact,
 
-                      borderColor:
-                        palette.border,
-                    },
-                  ]}
-                >
-                  <Pressable
-                    onPress={() =>
-                      openNote(
-                        item,
-                      )
-                    }
-                    style={
-                      styles.fileMain
-                    }
-                  >
-                    <View
-                      style={[
-                        styles.filePreview,
+          {
+            backgroundColor: palette.surface,
 
-                        compact &&
-                          styles.filePreviewCompact,
+            borderColor: palette.border,
+          },
+        ]}
+      >
+        <Ionicons color={palette.textMuted} name="search-outline" size={17} />
 
-                        {
-                          backgroundColor:
-                            palette.lavenderSoft,
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        color={
-                          palette.lavender
-                        }
-                        name="create-outline"
-                        size={
-                          compact
-                            ? 25
-                            : 30
-                        }
-                      />
+        <TextInput
+          onChangeText={setSearch}
+          placeholder="Search this folder"
+          placeholderTextColor={palette.textMuted}
+          selectionColor={palette.accent}
+          style={[
+            styles.searchInput,
+            {
+              color: palette.text,
+            },
+          ]}
+          value={search}
+        />
 
-                      {item.page_number ? (
-                        <View
-                          style={[
-                            styles.progressBadge,
-                            {
-                              backgroundColor:
-                                palette.surface,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.progressBadgeText,
-                              {
-                                color:
-                                  palette.accentStrong,
-                              },
-                            ]}
-                          >
-                            P.
-                            {
-                              item.page_number
-                            }
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
+        {search ? (
+          <Pressable accessibilityLabel="Clear search" onPress={() => setSearch('')}>
+            <Ionicons color={palette.textMuted} name="close-circle" size={17} />
+          </Pressable>
+        ) : null}
+      </View>
 
-                    <View
-                      style={
-                        styles.fileCopy
-                      }
-                    >
-                      <Text
-                        numberOfLines={
-                          2
-                        }
-                        style={[
-                          styles.fileTitle,
-                          {
-                            color:
-                              palette.text,
-                          },
-                        ]}
-                      >
-                        {item.title ??
-                          `Page ${
-                            item.page_number ??
-                            '—'
-                          } note`}
-                      </Text>
+      {/* FILTERS */}
 
-                      <Text
-                        numberOfLines={
-                          1
-                        }
-                        style={[
-                          styles.fileMeta,
-                          {
-                            color:
-                              palette.textMuted,
-                          },
-                        ]}
-                      >
-                        Note ·{' '}
-                        {format(
-                          new Date(
-                            item.updated_at,
-                          ),
-                          'MMM d',
-                        )}
-                      </Text>
-                    </View>
-                  </Pressable>
+      <ScrollView
+        contentContainerStyle={styles.filters}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+      >
+        {(
+          [
+            {
+              label: 'All',
+              value: 'ALL',
+            },
 
-                  <Pressable
-                    accessibilityLabel="Delete note"
-                    disabled={
-                      removeNote.isPending
-                    }
-                    onPress={() =>
-                      confirmDeleteNote(
-                        item,
-                      )
-                    }
-                    style={
-                      styles.tileDelete
-                    }
-                  >
-                    <Ionicons
-                      color={
-                        palette.danger
-                      }
-                      name="trash-outline"
-                      size={
-                        15
-                      }
-                    />
-                  </Pressable>
-                </View>
-              ),
-            )}
+            {
+              label: 'Materials',
+              value: 'MATERIALS',
+            },
 
-            {/* CREATE TILE */}
+            {
+              label: 'Notes',
+              value: 'NOTES',
+            },
+          ] as {
+            label: string;
 
+            value: LibraryFilter;
+          }[]
+        ).map((option) => {
+          const active = filter === option.value;
+
+          return (
             <Pressable
-              onPress={() =>
-                router.push(
-                  '/materials/create',
-                )
-              }
-              style={({ pressed }) => [
-                styles.createTile,
-
-                splitLandscape &&
-                  styles.fileTileLandscape,
-
-                compact &&
-                  styles.fileTileCompact,
-
-                phone &&
-                  styles.fileTilePhone,
-
+              key={option.value}
+              onPress={() => setFilter(option.value)}
+              style={[
+                styles.filterButton,
                 {
-                  backgroundColor:
-                    palette.surfaceAlt,
+                  backgroundColor: active ? palette.accentSoft : palette.surface,
 
-                  borderColor:
-                    palette.border,
-
-                  opacity:
-                    pressed
-                      ? 0.7
-                      : 1,
+                  borderColor: active ? palette.accent : palette.border,
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.createIcon,
-                  {
-                    backgroundColor:
-                      palette.accentSoft,
-                  },
-                ]}
-              >
-                <Ionicons
-                  color={
-                    palette.accentStrong
-                  }
-                  name="add"
-                  size={
-                    22
-                  }
-                />
-              </View>
-
               <Text
                 style={[
-                  styles.createTitle,
+                  styles.filterText,
                   {
-                    color:
-                      palette.text,
+                    color: active ? palette.accentStrong : palette.textMuted,
                   },
                 ]}
               >
-                Add material
-              </Text>
-
-              <Text
-                style={[
-                  styles.createCaption,
-                  {
-                    color:
-                      palette.textMuted,
-                  },
-                ]}
-              >
-                PDF or study resource
+                {option.label}
               </Text>
             </Pressable>
-          </View>
-        ) : (
-          <View
-            style={[
-              styles.emptyFolder,
+          );
+        })}
+      </ScrollView>
 
-              compact &&
-                styles.emptyFolderCompact,
+      {/* FILE GRID */}
+
+      {resultCount ? (
+        <View style={styles.fileGrid}>
+          {filteredMaterials.map((item) => {
+            const progress =
+              item.type === 'PDF' && item.page_count
+                ? pdfReadingProgress(item.last_read_page, item.page_count)
+                : null;
+
+            return (
+              <View
+                key={item.id}
+                style={[
+                  styles.fileTile,
+
+                  splitLandscape && styles.fileTileLandscape,
+
+                  compact && styles.fileTileCompact,
+
+                  phone && styles.fileTilePhone,
+
+                  {
+                    backgroundColor: palette.surface,
+
+                    borderColor: palette.border,
+                  },
+                ]}
+              >
+                <Pressable onPress={() => openMaterial(item)} style={styles.fileMain}>
+                  <View
+                    style={[
+                      styles.filePreview,
+
+                      compact && styles.filePreviewCompact,
+
+                      {
+                        backgroundColor:
+                          item.type === 'PDF' ? palette.accentSoft : palette.lavenderSoft,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      color={item.type === 'PDF' ? palette.accentStrong : palette.lavender}
+                      name={item.type === 'PDF' ? 'document-text-outline' : 'link-outline'}
+                      size={compact ? 25 : 30}
+                    />
+
+                    {progress !== null ? (
+                      <View
+                        style={[
+                          styles.progressBadge,
+                          {
+                            backgroundColor: palette.surface,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.progressBadgeText,
+                            {
+                              color: palette.accentStrong,
+                            },
+                          ]}
+                        >
+                          {progress}%
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.fileCopy}>
+                    <Text
+                      numberOfLines={2}
+                      style={[
+                        styles.fileTitle,
+                        {
+                          color: palette.text,
+                        },
+                      ]}
+                    >
+                      {item.title}
+                    </Text>
+
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.fileMeta,
+                        {
+                          color: palette.textMuted,
+                        },
+                      ]}
+                    >
+                      {item.type === 'PDF'
+                        ? item.page_count
+                          ? `${item.page_count} pages`
+                          : 'PDF'
+                        : item.type}
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  accessibilityLabel={`Delete ${item.title}`}
+                  disabled={removeMaterial.isPending}
+                  onPress={() => confirmDeleteMaterial(item)}
+                  style={styles.tileDelete}
+                >
+                  <Ionicons color={palette.danger} name="trash-outline" size={15} />
+                </Pressable>
+              </View>
+            );
+          })}
+
+          {filteredNotes.map((item) => (
+            <View
+              key={item.id}
+              style={[
+                styles.fileTile,
+
+                splitLandscape && styles.fileTileLandscape,
+
+                compact && styles.fileTileCompact,
+
+                phone && styles.fileTilePhone,
+
+                {
+                  backgroundColor: palette.surface,
+
+                  borderColor: palette.border,
+                },
+              ]}
+            >
+              <Pressable onPress={() => openNote(item)} style={styles.fileMain}>
+                <View
+                  style={[
+                    styles.filePreview,
+
+                    compact && styles.filePreviewCompact,
+
+                    {
+                      backgroundColor: palette.lavenderSoft,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    color={palette.lavender}
+                    name="create-outline"
+                    size={compact ? 25 : 30}
+                  />
+
+                  {item.page_number ? (
+                    <View
+                      style={[
+                        styles.progressBadge,
+                        {
+                          backgroundColor: palette.surface,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.progressBadgeText,
+                          {
+                            color: palette.accentStrong,
+                          },
+                        ]}
+                      >
+                        P.
+                        {item.page_number}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <View style={styles.fileCopy}>
+                  <Text
+                    numberOfLines={2}
+                    style={[
+                      styles.fileTitle,
+                      {
+                        color: palette.text,
+                      },
+                    ]}
+                  >
+                    {item.title ?? `Page ${item.page_number ?? '—'} note`}
+                  </Text>
+
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.fileMeta,
+                      {
+                        color: palette.textMuted,
+                      },
+                    ]}
+                  >
+                    Note · {format(new Date(item.updated_at), 'MMM d')}
+                  </Text>
+                </View>
+              </Pressable>
+
+              <Pressable
+                accessibilityLabel="Delete note"
+                disabled={removeNote.isPending}
+                onPress={() => confirmDeleteNote(item)}
+                style={styles.tileDelete}
+              >
+                <Ionicons color={palette.danger} name="trash-outline" size={15} />
+              </Pressable>
+            </View>
+          ))}
+
+          {/* CREATE TILE */}
+
+          <Pressable
+            onPress={() => router.push('/materials/create')}
+            style={({ pressed }) => [
+              styles.createTile,
+
+              splitLandscape && styles.fileTileLandscape,
+
+              compact && styles.fileTileCompact,
+
+              phone && styles.fileTilePhone,
 
               {
-                backgroundColor:
-                  palette.surface,
+                backgroundColor: palette.surfaceAlt,
 
-                borderColor:
-                  palette.border,
+                borderColor: palette.border,
+
+                opacity: pressed ? 0.7 : 1,
               },
             ]}
           >
             <View
               style={[
-                styles.emptyFolderIcon,
-
-                compact &&
-                  styles.emptyFolderIconCompact,
-
+                styles.createIcon,
                 {
-                  backgroundColor:
-                    palette.accentSoft,
+                  backgroundColor: palette.accentSoft,
                 },
               ]}
             >
-              <Ionicons
-                color={
-                  palette.text
-                }
-                name="folder-outline"
-                size={
-                  compact
-                    ? 20
-                    : 23
-                }
-              />
+              <Ionicons color={palette.accentStrong} name="add" size={22} />
             </View>
 
             <Text
               style={[
-                styles.emptyFolderTitle,
-
-                compact &&
-                  styles.emptyFolderTitleCompact,
-
+                styles.createTitle,
                 {
-                  color:
-                    palette.text,
+                  color: palette.text,
                 },
               ]}
             >
-              {normalizedSearch
-                ? 'No matching files'
-                : 'This folder is empty'}
+              Add material
             </Text>
 
             <Text
               style={[
-                styles.emptyFolderDescription,
-
-                compact &&
-                  styles.emptyFolderDescriptionCompact,
-
+                styles.createCaption,
                 {
-                  color:
-                    palette.textMuted,
+                  color: palette.textMuted,
                 },
               ]}
             >
-              {normalizedSearch
-                ? 'Try another search or filter.'
-                : 'Add a PDF, material or note to this folder.'}
+              PDF or study resource
             </Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.emptyFolder,
 
-            {!normalizedSearch ? (
-              <Pressable
-                onPress={() =>
-                  router.push(
-                    '/materials/create',
-                  )
-                }
+            compact && styles.emptyFolderCompact,
+
+            {
+              backgroundColor: palette.surface,
+
+              borderColor: palette.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.emptyFolderIcon,
+
+              compact && styles.emptyFolderIconCompact,
+
+              {
+                backgroundColor: palette.accentSoft,
+              },
+            ]}
+          >
+            <Ionicons color={palette.text} name="folder-outline" size={compact ? 20 : 23} />
+          </View>
+
+          <Text
+            style={[
+              styles.emptyFolderTitle,
+
+              compact && styles.emptyFolderTitleCompact,
+
+              {
+                color: palette.text,
+              },
+            ]}
+          >
+            {normalizedSearch ? 'No matching files' : 'This folder is empty'}
+          </Text>
+
+          <Text
+            style={[
+              styles.emptyFolderDescription,
+
+              compact && styles.emptyFolderDescriptionCompact,
+
+              {
+                color: palette.textMuted,
+              },
+            ]}
+          >
+            {normalizedSearch
+              ? 'Try another search or filter.'
+              : 'Add a PDF, material or note to this folder.'}
+          </Text>
+
+          {!normalizedSearch ? (
+            <Pressable
+              onPress={() => router.push('/materials/create')}
+              style={[
+                styles.emptyAdd,
+
+                compact && styles.emptyAddCompact,
+
+                {
+                  backgroundColor: palette.accentSoft,
+                },
+              ]}
+            >
+              <Ionicons color={palette.accentStrong} name="add" size={14} />
+
+              <Text
                 style={[
-                  styles.emptyAdd,
-
-                  compact &&
-                    styles.emptyAddCompact,
-
+                  styles.emptyAddText,
                   {
-                    backgroundColor:
-                      palette.accentSoft,
+                    color: palette.accentStrong,
                   },
                 ]}
               >
-                <Ionicons
-                  color={
-                    palette.accentStrong
-                  }
-                  name="add"
-                  size={
-                    14
-                  }
-                />
-
-                <Text
-                  style={[
-                    styles.emptyAddText,
-                    {
-                      color:
-                        palette.accentStrong,
-                    },
-                  ]}
-                >
-                  Add material
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-        )}
-      </View>
-    );
+                Add material
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <EntityList
-      addLabel="Add material"
       description="Your materials, notes and study sessions in one place."
-      empty={
-        false
-      }
+      empty={false}
       emptyMessage=""
-      error={
-        materials.error ??
-        notes.error ??
-        sessions.error ??
-        subjects.error
-      }
-      loading={
-        loading
-      }
-      onAdd={() =>
-        router.push(
-          '/materials/create',
-        )
-      }
+      error={materials.error ?? notes.error ?? sessions.error ?? subjects.error}
+      loading={loading}
       onRefresh={() =>
         void Promise.all([
           materials.refetch(),
@@ -2430,51 +1359,26 @@ export default function StudyScreen() {
       }
       title="Study"
     >
-      {!splitLandscape
-        ? renderMobileFolders()
-        : null}
+      {/*
+       * The folder grid on Overview already lets you jump into a
+       * subject (with counts and color, which these chips don't
+       * show). Once inside a folder, the grid is gone, so the
+       * chips take over as the compact way to switch to another one.
+       */}
+      {!splitLandscape && selectedSubjectId ? renderMobileFolders() : null}
 
-      <View
-        style={[
-          styles.shell,
+      <View style={[styles.shell, splitLandscape && styles.shellLandscape]}>
+        {splitLandscape ? renderSidebar() : null}
 
-          splitLandscape &&
-            styles.shellLandscape,
-        ]}
-      >
-        {splitLandscape
-          ? renderSidebar()
-          : null}
-
-        <View
-          style={
-            styles.main
-          }
-        >
-          {selectedSubjectId
-            ? renderFolder()
-            : renderOverview()}
-        </View>
+        <View style={styles.main}>{selectedSubjectId ? renderFolder() : renderOverview()}</View>
       </View>
     </EntityList>
   );
 }
 
-function SectionTitle({
-  color,
-  title,
-}: {
-  color:
-    string;
-  title:
-    string;
-}) {
+function SectionTitle({ color, title }: { color: string; title: string }) {
   return (
-    <View
-      style={
-        styles.sectionHeading
-      }
-    >
+    <View style={styles.sectionHeading}>
       <Text
         style={[
           styles.section,
@@ -2490,8 +1394,7 @@ function SectionTitle({
         style={[
           styles.sectionRule,
           {
-            backgroundColor:
-              color,
+            backgroundColor: color,
           },
         ]}
       />
@@ -2499,960 +1402,736 @@ function SectionTitle({
   );
 }
 
-const styles =
-  StyleSheet.create({
-    shell: {
-      width:
-        '100%',
-    },
-
-    shellLandscape: {
-      alignItems:
-        'flex-start',
-      flexDirection:
-        'row',
-      gap:
-        18,
-    },
-
-    main: {
-      flex:
-        1,
-      minWidth:
-        0,
-    },
-
-    /*
-     * LANDSCAPE SIDEBAR
-     */
-
-    sidebar: {
-      borderRadius:
-        20,
-      borderWidth:
-        1,
-      maxHeight:
-        680,
-      minWidth:
-        220,
-      overflow:
-        'hidden',
-      width:
-        230,
-    },
-
-    sidebarHeader: {
-      alignItems:
-        'center',
-      flexDirection:
-        'row',
-      gap:
-        9,
-      padding:
-        14,
-    },
-
-    sidebarIcon: {
-      alignItems:
-        'center',
-      borderRadius:
-        11,
-      height:
-        35,
-      justifyContent:
-        'center',
-      width:
-        35,
-    },
-
-    sidebarHeaderCopy: {
-      flex:
-        1,
-      gap:
-        1,
-    },
-
-    sidebarTitle: {
-      ...typography.sectionTitle,
-      fontSize:
-        15,
-      lineHeight:
-        19,
-    },
-
-    sidebarCaption: {
-      ...typography.caption,
-      fontSize:
-        9,
-    },
-
-    sidebarFolders: {
-      gap:
-        3,
-      paddingHorizontal:
-        8,
-      paddingBottom:
-        10,
-    },
-
-    sidebarRow: {
-      alignItems:
-        'center',
-      borderRadius:
-        12,
-      flexDirection:
-        'row',
-      gap:
-        8,
-      minHeight:
-        40,
-      paddingHorizontal:
-        10,
-    },
-
-    sidebarRowText: {
-      ...typography.body,
-      flex:
-        1,
-      fontSize:
-        11,
-      fontWeight:
-        '700',
-    },
-
-    sidebarCount: {
-      ...typography.caption,
-      fontSize:
-        8,
-      fontWeight:
-        '700',
-    },
-
-    folderDot: {
-      borderRadius:
-        radii.pill,
-      height:
-        8,
-      width:
-        8,
-    },
-
-    manageFolders: {
-      alignItems:
-        'center',
-      borderTopWidth:
-        1,
-      flexDirection:
-        'row',
-      gap:
-        7,
-      minHeight:
-        44,
-      paddingHorizontal:
-        14,
-    },
-
-    manageFoldersText: {
-      ...typography.caption,
-      fontSize:
-        9,
-      fontWeight:
-        '700',
-    },
-
-    /*
-     * PORTRAIT FOLDERS
-     */
-
-    mobileFolders: {
-      gap:
-        7,
-      paddingBottom:
-        10,
-    },
-
-    mobileFolderChip: {
-      alignItems:
-        'center',
-      borderRadius:
-        radii.pill,
-      borderWidth:
-        1,
-      flexDirection:
-        'row',
-      gap:
-        7,
-      height:
-        39,
-      maxWidth:
-        190,
-      paddingHorizontal:
-        12,
-    },
-
-    mobileFolderChipCompact: {
-      gap:
-        5,
-      height:
-        34,
-      maxWidth:
-        155,
-      paddingHorizontal:
-        9,
-    },
-
-    mobileFolderText: {
-      ...typography.caption,
-      flexShrink:
-        1,
-      fontSize:
-        10,
-      fontWeight:
-        '700',
-    },
-
-    mobileFolderCount: {
-      ...typography.caption,
-      fontSize:
-        8,
-      fontWeight:
-        '700',
-    },
-
-    /*
-     * OVERVIEW
-     */
-
-    overview: {
-      gap:
-        12,
-      width:
-        '100%',
-    },
-
-    ritual: {
-      borderRadius:
-        radii.xl,
-      borderWidth:
-        1,
-      gap:
-        spacing.md,
-      overflow:
-        'hidden',
-      padding:
-        spacing.lg,
-    },
-
-    ritualCompact: {
-      borderRadius:
-        16,
-      gap:
-        9,
-      padding:
-        13,
-    },
-
-    ritualHeading: {
-      alignItems:
-        'center',
-      flexDirection:
-        'row',
-      gap:
-        spacing.md,
-    },
-
-    ritualCopy: {
-      flex:
-        1,
-      gap:
-        2,
-    },
-
-    ritualEyebrow: {
-      ...typography.label,
-      fontSize:
-        8,
-    },
-
-    ritualTitle: {
-      ...typography.sectionTitle,
-      fontSize:
-        21,
-      lineHeight:
-        27,
-    },
-
-    ritualTitleCompact: {
-      fontSize:
-        17,
-      lineHeight:
-        21,
-    },
-
-    ritualDescription: {
-      ...typography.body,
-      fontSize:
-        13,
-      lineHeight:
-        19,
-    },
-
-    ritualDescriptionCompact: {
-      fontSize:
-        11,
-      lineHeight:
-        16,
-    },
-
-    actions: {
-      flexDirection:
-        'row',
-      gap:
-        spacing.sm,
-    },
-
-    actionsPhone: {
-      flexDirection:
-        'column',
-    },
-
-    action: {
-      flex:
-        1,
-    },
-
-    sectionHeading: {
-      alignItems:
-        'center',
-      flexDirection:
-        'row',
-      gap:
-        spacing.sm,
-      marginTop:
-        7,
-    },
-
-    section: {
-      ...typography.sectionTitle,
-      fontSize:
-        17,
-      lineHeight:
-        22,
-    },
-
-    sectionRule: {
-      flex:
-        1,
-      height:
-        1,
-      marginLeft:
-        3,
-      opacity:
-        0.13,
-    },
-
-    folderGrid: {
-      flexDirection:
-        'row',
-      flexWrap:
-        'wrap',
-      gap:
-        10,
-    },
-
-    folderCard: {
-      borderRadius:
-        17,
-      borderWidth:
-        1,
-      gap:
-        8,
-      minHeight:
-        108,
-      padding:
-        13,
-      width:
-        '48.5%',
-    },
-
-    folderCardLandscape: {
-      minHeight:
-        105,
-      width:
-        '31.5%',
-    },
-
-    folderCardCompact: {
-      borderRadius:
-        13,
-      gap:
-        7,
-      minHeight:
-        82,
-      padding:
-        10,
-      width:
-        '48%',
-    },
-
-    folderCardPhone: {
-      width:
-        '100%',
-    },
-
-    folderCardTop: {
-      alignItems:
-        'center',
-      flexDirection:
-        'row',
-      justifyContent:
-        'space-between',
-    },
-
-    folderIcon: {
-      alignItems:
-        'center',
-      borderRadius:
-        11,
-      height:
-        37,
-      justifyContent:
-        'center',
-      width:
-        37,
-    },
-
-    folderCardTitle: {
-      ...typography.sectionTitle,
-      fontSize:
-        15,
-      lineHeight:
-        20,
-    },
-
-    folderCardTitleCompact: {
-      fontSize:
-        13,
-      lineHeight:
-        17,
-    },
-
-    folderMeta: {
-      ...typography.caption,
-      fontSize:
-        8,
-      lineHeight:
-        12,
-    },
-
-    sessionGrid: {
-      flexDirection:
-        'row',
-      flexWrap:
-        'wrap',
-      gap:
-        10,
-    },
-
-    sessionItem: {
-      width:
-        '100%',
-    },
-
-    sessionItemLandscape: {
-      width:
-        '48.5%',
-    },
-
-    sessionItemPhone: {
-      width:
-        '100%',
-    },
-
-    /*
-     * FOLDER VIEW
-     */
-
-    folderView: {
-      gap:
-        12,
-      width:
-        '100%',
-    },
-
-    folderHeader: {
-      alignItems:
-        'center',
-      flexDirection:
-        'row',
-      gap:
-        11,
-      paddingVertical:
-        4,
-    },
-
-    folderHeaderCompact: {
-      gap:
-        8,
-    },
-
-    backButton: {
-      alignItems:
-        'center',
-      borderRadius:
-        radii.pill,
-      borderWidth:
-        1,
-      height:
-        38,
-      justifyContent:
-        'center',
-      width:
-        38,
-    },
-
-    bigFolderIcon: {
-      alignItems:
-        'center',
-      borderRadius:
-        14,
-      height:
-        48,
-      justifyContent:
-        'center',
-      width:
-        48,
-    },
-
-    folderHeaderCopy: {
-      flex:
-        1,
-      gap:
-        2,
-      minWidth:
-        0,
-    },
-
-    folderTitle: {
-      ...typography.sectionTitle,
-      fontSize:
-        22,
-      lineHeight:
-        28,
-    },
-
-    folderTitleCompact: {
-      fontSize:
-        18,
-      lineHeight:
-        23,
-    },
-
-    folderSubtitle: {
-      ...typography.caption,
-      fontSize:
-        9,
-    },
-
-    addHeaderButton: {
-      alignItems:
-        'center',
-      borderRadius:
-        radii.pill,
-      flexDirection:
-        'row',
-      gap:
-        5,
-      minHeight:
-        38,
-      paddingHorizontal:
-        13,
-    },
-
-    addHeaderText: {
-      ...typography.caption,
-      color:
-        '#FFFFFF',
-      fontSize:
-        9,
-      fontWeight:
-        '800',
-    },
-
-    searchBox: {
-      alignItems:
-        'center',
-      borderRadius:
-        14,
-      borderWidth:
-        1,
-      flexDirection:
-        'row',
-      gap:
-        8,
-      minHeight:
-        43,
-      paddingHorizontal:
-        12,
-    },
-
-    searchBoxCompact: {
-      borderRadius:
-        11,
-      gap:
-        7,
-      minHeight:
-        38,
-      paddingHorizontal:
-        10,
-    },
-
-    searchInput: {
-      ...typography.body,
-      flex:
-        1,
-      fontSize:
-        12,
-      lineHeight:
-        18,
-      minWidth:
-        0,
-      paddingVertical:
-        8,
-    },
-
-    filters: {
-      gap:
-        7,
-    },
-
-    filterButton: {
-      borderRadius:
-        radii.pill,
-      borderWidth:
-        1,
-      minHeight:
-        32,
-      justifyContent:
-        'center',
-      paddingHorizontal:
-        11,
-    },
-
-    filterText: {
-      ...typography.caption,
-      fontSize:
-        9,
-      fontWeight:
-        '800',
-    },
-
-    /*
-     * FILE GRID
-     */
-
-    fileGrid: {
-      flexDirection:
-        'row',
-      flexWrap:
-        'wrap',
-      gap:
-        10,
-      width:
-        '100%',
-    },
-
-    fileTile: {
-      borderRadius:
-        16,
-      borderWidth:
-        1,
-      overflow:
-        'hidden',
-      position:
-        'relative',
-      width:
-        '48.5%',
-    },
-
-    fileTileLandscape: {
-      width:
-        '31.5%',
-    },
-
-    fileTileCompact: {
-      borderRadius:
-        12,
-      width:
-        '48%',
-    },
-
-    fileTilePhone: {
-      width:
-        '100%',
-    },
-
-    fileMain: {
-      width:
-        '100%',
-    },
-
-    filePreview: {
-      alignItems:
-        'center',
-      height:
-        105,
-      justifyContent:
-        'center',
-      position:
-        'relative',
-    },
-
-    filePreviewCompact: {
-      height:
-        82,
-    },
-
-    progressBadge: {
-      borderRadius:
-        radii.pill,
-      bottom:
-        8,
-      paddingHorizontal:
-        7,
-      paddingVertical:
-        3,
-      position:
-        'absolute',
-      right:
-        8,
-    },
-
-    progressBadgeText: {
-      ...typography.label,
-      fontSize:
-        7,
-    },
-
-    fileCopy: {
-      gap:
-        3,
-      padding:
-        10,
-      paddingRight:
-        37,
-    },
-
-    fileTitle: {
-      ...typography.body,
-      fontSize:
-        11,
-      fontWeight:
-        '700',
-      lineHeight:
-        15,
-    },
-
-    fileMeta: {
-      ...typography.caption,
-      fontSize:
-        8,
-      lineHeight:
-        11,
-    },
-
-    tileDelete: {
-      alignItems:
-        'center',
-      bottom:
-        8,
-      height:
-        28,
-      justifyContent:
-        'center',
-      position:
-        'absolute',
-      right:
-        7,
-      width:
-        28,
-    },
-
-    createTile: {
-      alignItems:
-        'center',
-      borderRadius:
-        16,
-      borderStyle:
-        'dashed',
-      borderWidth:
-        1,
-      gap:
-        5,
-      justifyContent:
-        'center',
-      minHeight:
-        160,
-      padding:
-        14,
-      width:
-        '48.5%',
-    },
-
-    createIcon: {
-      alignItems:
-        'center',
-      borderRadius:
-        radii.pill,
-      height:
-        40,
-      justifyContent:
-        'center',
-      width:
-        40,
-    },
-
-    createTitle: {
-      ...typography.body,
-      fontSize:
-        11,
-      fontWeight:
-        '700',
-    },
-
-    createCaption: {
-      ...typography.caption,
-      fontSize:
-        8,
-      textAlign:
-        'center',
-    },
-
-    /*
-     * EMPTY FOLDER
-     */
-
-    emptyFolder: {
-      alignItems:
-        'center',
-      borderRadius:
-        22,
-      borderWidth:
-        1,
-      gap:
-        7,
-      justifyContent:
-        'center',
-      minHeight:
-        160,
-      paddingHorizontal:
-        22,
-      paddingVertical:
-        20,
-      width:
-        '100%',
-    },
-
-    emptyFolderCompact: {
-      borderRadius:
-        16,
-      gap:
-        4,
-      minHeight:
-        112,
-      paddingHorizontal:
-        14,
-      paddingVertical:
-        13,
-    },
-
-    emptyFolderIcon: {
-      alignItems:
-        'center',
-      borderRadius:
-        radii.pill,
-      height:
-        50,
-      justifyContent:
-        'center',
-      marginBottom:
-        1,
-      width:
-        50,
-    },
-
-    emptyFolderIconCompact: {
-      height:
-        40,
-      width:
-        40,
-    },
-
-    emptyFolderTitle: {
-      ...typography.sectionTitle,
-      fontSize:
-        17,
-      lineHeight:
-        22,
-      textAlign:
-        'center',
-    },
-
-    emptyFolderTitleCompact: {
-      fontSize:
-        14,
-      lineHeight:
-        18,
-    },
-
-    emptyFolderDescription: {
-      ...typography.body,
-      fontSize:
-        13,
-      lineHeight:
-        18,
-      textAlign:
-        'center',
-    },
-
-    emptyFolderDescriptionCompact: {
-      fontSize:
-        11,
-      lineHeight:
-        15,
-    },
-
-    emptyAdd: {
-      alignItems:
-        'center',
-      borderRadius:
-        radii.pill,
-      flexDirection:
-        'row',
-      gap:
-        4,
-      marginTop:
-        4,
-      minHeight:
-        32,
-      paddingHorizontal:
-        10,
-    },
-
-    emptyAddCompact: {
-      marginTop:
-        2,
-      minHeight:
-        28,
-      paddingHorizontal:
-        8,
-    },
-
-    emptyAddText: {
-      ...typography.caption,
-      fontSize:
-        9,
-      fontWeight:
-        '700',
-    },
-  });
+const styles = StyleSheet.create({
+  shell: {
+    width: '100%',
+  },
+
+  shellLandscape: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 18,
+  },
+
+  main: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  /*
+   * LANDSCAPE SIDEBAR
+   */
+
+  sidebar: {
+    borderRadius: 20,
+    borderWidth: 1,
+    maxHeight: 680,
+    minWidth: 220,
+    overflow: 'hidden',
+    width: 230,
+  },
+
+  sidebarHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 9,
+    padding: 14,
+  },
+
+  sidebarIcon: {
+    alignItems: 'center',
+    borderRadius: 11,
+    height: 35,
+    justifyContent: 'center',
+    width: 35,
+  },
+
+  sidebarHeaderCopy: {
+    flex: 1,
+    gap: 1,
+  },
+
+  sidebarTitle: {
+    ...typography.sectionTitle,
+    fontSize: 15,
+    lineHeight: 19,
+  },
+
+  sidebarCaption: {
+    ...typography.caption,
+    fontSize: 9,
+  },
+
+  sidebarFolders: {
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingBottom: 10,
+  },
+
+  sidebarRow: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 40,
+    paddingHorizontal: 10,
+  },
+
+  sidebarRowText: {
+    ...typography.body,
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  sidebarCount: {
+    ...typography.caption,
+    fontSize: 8,
+    fontWeight: '700',
+  },
+
+  folderDot: {
+    borderRadius: radii.pill,
+    height: 8,
+    width: 8,
+  },
+
+  manageFolders: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 7,
+    minHeight: 44,
+    paddingHorizontal: 14,
+  },
+
+  manageFoldersText: {
+    ...typography.caption,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+
+  /*
+   * PORTRAIT FOLDERS
+   */
+
+  mobileFolders: {
+    gap: 7,
+    paddingBottom: 10,
+  },
+
+  mobileFolderChip: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 7,
+    height: 39,
+    maxWidth: 190,
+    paddingHorizontal: 12,
+  },
+
+  mobileFolderChipCompact: {
+    gap: 5,
+    height: 34,
+    maxWidth: 155,
+    paddingHorizontal: 9,
+  },
+
+  mobileFolderText: {
+    ...typography.caption,
+    flexShrink: 1,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+
+  mobileFolderCount: {
+    ...typography.caption,
+    fontSize: 8,
+    fontWeight: '700',
+  },
+
+  /*
+   * OVERVIEW
+   */
+
+  overview: {
+    gap: 12,
+    width: '100%',
+  },
+
+  hero: {
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    boxShadow: '0 14px 30px rgba(14, 27, 72, 0.08)',
+    gap: spacing.sm,
+    overflow: 'hidden',
+    padding: spacing.lg,
+    position: 'relative',
+  },
+
+  heroCompact: {
+    borderRadius: 16,
+    gap: 7,
+    padding: 13,
+  },
+
+  heroHeartAccent: {
+    opacity: 0.28,
+    position: 'absolute',
+    right: 14,
+    top: 12,
+    transform: [{ rotate: '18deg' }],
+  },
+
+  heroTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+
+  heroLabel: {
+    ...typography.label,
+    fontSize: 10,
+  },
+
+  heroPct: {
+    ...typography.sectionTitle,
+    fontSize: 20,
+  },
+
+  heroMain: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+
+  heroCopy: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+
+  heroTitle: {
+    ...typography.sectionTitle,
+    fontSize: 15.5,
+  },
+
+  heroMeta: {
+    ...typography.caption,
+    fontSize: 11.5,
+  },
+
+  heroBottom: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+
+  heroBar: {
+    borderRadius: radii.pill,
+    flex: 1,
+    height: 6,
+    overflow: 'hidden',
+  },
+
+  heroBarFill: {
+    borderRadius: radii.pill,
+    height: '100%',
+  },
+
+  heroResume: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 2,
+  },
+
+  heroResumeText: {
+    ...typography.label,
+    fontSize: 10,
+  },
+
+  quickActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+
+  quickAction: {
+    flex: 1,
+  },
+
+  sectionHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: 7,
+  },
+
+  section: {
+    ...typography.sectionTitle,
+    fontSize: 17,
+    lineHeight: 22,
+  },
+
+  sectionRule: {
+    flex: 1,
+    height: 1,
+    marginLeft: 3,
+    opacity: 0.13,
+  },
+
+  folderGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+
+  folderCard: {
+    borderRadius: 17,
+    borderWidth: 1,
+    boxShadow: '0 8px 20px rgba(14, 27, 72, 0.05)',
+    gap: 8,
+    minHeight: 108,
+    justifyContent: 'space-between',
+    padding: 13,
+    width: '48.5%',
+  },
+
+  folderCardLandscape: {
+    minHeight: 105,
+    width: '31.5%',
+  },
+
+  folderCardCompact: {
+    borderRadius: 13,
+    gap: 7,
+    minHeight: 82,
+    padding: 10,
+    width: '48%',
+  },
+
+  folderCardPhone: {
+    width: '100%',
+  },
+
+  folderCardWide: {
+    alignItems: 'center',
+    boxShadow: '0 10px 24px rgba(14, 27, 72, 0.06)',
+    flexDirection: 'row',
+    minHeight: 0,
+    width: '100%',
+  },
+
+  folderAvatar: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    boxShadow: '0 3px 8px rgba(14, 27, 72, 0.10)',
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+
+  folderAvatarLetter: {
+    ...typography.sectionTitle,
+    fontSize: 13,
+  },
+
+  folderWideCopy: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+
+  folderCountPill: {
+    ...typography.label,
+    borderRadius: radii.pill,
+    fontSize: 10,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    transform: [{ rotate: '-4deg' }],
+  },
+
+  folderCardTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+
+  folderCardTitle: {
+    ...typography.sectionTitle,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+
+  folderCardTitleCompact: {
+    fontSize: 13,
+    lineHeight: 17,
+  },
+
+  folderMeta: {
+    ...typography.caption,
+    fontSize: 8,
+    lineHeight: 12,
+  },
+
+  folderAddTile: {
+    alignItems: 'center',
+    borderRadius: 13,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 44,
+    width: '100%',
+  },
+
+  folderAddText: {
+    ...typography.label,
+    fontSize: 11,
+  },
+
+  sessionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+
+  sessionItem: {
+    width: '100%',
+  },
+
+  sessionItemLandscape: {
+    width: '48.5%',
+  },
+
+  sessionItemPhone: {
+    width: '100%',
+  },
+
+  /*
+   * FOLDER VIEW
+   */
+
+  folderView: {
+    gap: 12,
+    width: '100%',
+  },
+
+  folderHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 11,
+    paddingVertical: 4,
+  },
+
+  folderHeaderCompact: {
+    gap: 8,
+  },
+
+  backButton: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+
+  bigFolderIcon: {
+    alignItems: 'center',
+    borderRadius: 14,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+
+  folderHeaderCopy: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+
+  folderTitle: {
+    ...typography.sectionTitle,
+    fontSize: 22,
+    lineHeight: 28,
+  },
+
+  folderTitleCompact: {
+    fontSize: 18,
+    lineHeight: 23,
+  },
+
+  folderSubtitle: {
+    ...typography.caption,
+    fontSize: 9,
+  },
+
+  addHeaderButton: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    gap: 5,
+    minHeight: 38,
+    paddingHorizontal: 13,
+  },
+
+  addHeaderText: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+
+  searchBox: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 43,
+    paddingHorizontal: 12,
+  },
+
+  searchBoxCompact: {
+    borderRadius: 11,
+    gap: 7,
+    minHeight: 38,
+    paddingHorizontal: 10,
+  },
+
+  searchInput: {
+    ...typography.body,
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    minWidth: 0,
+    paddingVertical: 8,
+  },
+
+  filters: {
+    gap: 7,
+  },
+
+  filterButton: {
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: 11,
+  },
+
+  filterText: {
+    ...typography.caption,
+    fontSize: 9,
+    fontWeight: '800',
+  },
+
+  /*
+   * FILE GRID
+   */
+
+  fileGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    width: '100%',
+  },
+
+  fileTile: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    position: 'relative',
+    width: '48.5%',
+  },
+
+  fileTileLandscape: {
+    width: '31.5%',
+  },
+
+  fileTileCompact: {
+    borderRadius: 12,
+    width: '48%',
+  },
+
+  fileTilePhone: {
+    width: '100%',
+  },
+
+  fileMain: {
+    width: '100%',
+  },
+
+  filePreview: {
+    alignItems: 'center',
+    height: 105,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+
+  filePreviewCompact: {
+    height: 82,
+  },
+
+  progressBadge: {
+    borderRadius: radii.pill,
+    bottom: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    position: 'absolute',
+    right: 8,
+  },
+
+  progressBadgeText: {
+    ...typography.label,
+    fontSize: 7,
+  },
+
+  fileCopy: {
+    gap: 3,
+    padding: 10,
+    paddingRight: 37,
+  },
+
+  fileTitle: {
+    ...typography.body,
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
+
+  fileMeta: {
+    ...typography.caption,
+    fontSize: 8,
+    lineHeight: 11,
+  },
+
+  tileDelete: {
+    alignItems: 'center',
+    bottom: 8,
+    height: 28,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 7,
+    width: 28,
+  },
+
+  createTile: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    gap: 5,
+    justifyContent: 'center',
+    minHeight: 160,
+    padding: 14,
+    width: '48.5%',
+  },
+
+  createIcon: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+
+  createTitle: {
+    ...typography.body,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  createCaption: {
+    ...typography.caption,
+    fontSize: 8,
+    textAlign: 'center',
+  },
+
+  /*
+   * EMPTY FOLDER
+   */
+
+  emptyFolder: {
+    alignItems: 'center',
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 7,
+    justifyContent: 'center',
+    minHeight: 160,
+    paddingHorizontal: 22,
+    paddingVertical: 20,
+    width: '100%',
+  },
+
+  emptyFolderCompact: {
+    borderRadius: 16,
+    gap: 4,
+    minHeight: 112,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+
+  emptyFolderIcon: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    height: 50,
+    justifyContent: 'center',
+    marginBottom: 1,
+    width: 50,
+  },
+
+  emptyFolderIconCompact: {
+    height: 40,
+    width: 40,
+  },
+
+  emptyFolderTitle: {
+    ...typography.sectionTitle,
+    fontSize: 17,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+
+  emptyFolderTitleCompact: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+
+  emptyFolderDescription: {
+    ...typography.body,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+
+  emptyFolderDescriptionCompact: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+
+  emptyAdd: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 4,
+    minHeight: 32,
+    paddingHorizontal: 10,
+  },
+
+  emptyAddCompact: {
+    marginTop: 2,
+    minHeight: 28,
+    paddingHorizontal: 8,
+  },
+
+  emptyAddText: {
+    ...typography.caption,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+});

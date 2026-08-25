@@ -8,7 +8,9 @@ describe('createClientUuid', () => {
   it('creates a UUID v4 without requiring crypto.randomUUID', () => {
     const provider = {
       getRandomValues(bytes: Uint8Array<ArrayBuffer>) {
-        bytes.forEach((_, index) => { bytes[index] = index; });
+        bytes.forEach((_, index) => {
+          bytes[index] = index;
+        });
         return bytes;
       },
     };

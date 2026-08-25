@@ -12,7 +12,14 @@ type Props = {
   size?: number;
 };
 
-export function MotionIcon({ backgroundColor, color, iconSize = 20, loop = false, name, size = 42 }: Props) {
+export function MotionIcon({
+  backgroundColor,
+  color,
+  iconSize = 20,
+  loop = false,
+  name,
+  size = 42,
+}: Props) {
   const [progress] = useState(() => new Animated.Value(0));
   const useNativeDriver = Platform.OS !== 'web';
 
@@ -26,22 +33,62 @@ export function MotionIcon({ backgroundColor, color, iconSize = 20, loop = false
         return;
       }
       if (loop) {
-        animation = Animated.loop(Animated.sequence([
-          Animated.timing(progress, { duration: 1500, easing: Easing.inOut(Easing.sin), toValue: 1, useNativeDriver }),
-          Animated.timing(progress, { duration: 1500, easing: Easing.inOut(Easing.sin), toValue: 0, useNativeDriver }),
-        ]));
+        animation = Animated.loop(
+          Animated.sequence([
+            Animated.timing(progress, {
+              duration: 1500,
+              easing: Easing.inOut(Easing.sin),
+              toValue: 1,
+              useNativeDriver,
+            }),
+            Animated.timing(progress, {
+              duration: 1500,
+              easing: Easing.inOut(Easing.sin),
+              toValue: 0,
+              useNativeDriver,
+            }),
+          ]),
+        );
       } else {
-        animation = Animated.spring(progress, { damping: 9, mass: 0.65, stiffness: 150, toValue: 1, useNativeDriver });
+        animation = Animated.spring(progress, {
+          damping: 9,
+          mass: 0.65,
+          stiffness: 150,
+          toValue: 1,
+          useNativeDriver,
+        });
       }
       animation.start();
     });
-    return () => { mounted = false; animation?.stop(); };
+    return () => {
+      mounted = false;
+      animation?.stop();
+    };
   }, [loop, progress, useNativeDriver]);
 
-  const scale = loop ? progress.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) : progress.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
-  const translateY = loop ? progress.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) : progress.interpolate({ inputRange: [0, 1], outputRange: [5, 0] });
+  const scale = loop
+    ? progress.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] })
+    : progress.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
+  const translateY = loop
+    ? progress.interpolate({ inputRange: [0, 1], outputRange: [0, -4] })
+    : progress.interpolate({ inputRange: [0, 1], outputRange: [5, 0] });
 
-  return <Animated.View style={[styles.icon, { backgroundColor, height: size, opacity: loop ? 1 : progress, transform: [{ translateY }, { scale }], width: size }]}><Ionicons color={color} name={name} size={iconSize} /></Animated.View>;
+  return (
+    <Animated.View
+      style={[
+        styles.icon,
+        {
+          backgroundColor,
+          height: size,
+          opacity: loop ? 1 : progress,
+          transform: [{ translateY }, { scale }],
+          width: size,
+        },
+      ]}
+    >
+      <Ionicons color={color} name={name} size={iconSize} />
+    </Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({

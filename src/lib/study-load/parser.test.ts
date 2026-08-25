@@ -33,11 +33,27 @@ describe('parseStudyLoadText', () => {
     const result = parseStudyLoadText(sample);
 
     expect(result.subjects).toHaveLength(8);
-    expect(result.subjects.reduce((total, subject) => total + subject.schedules.length, 0)).toBe(18);
-    expect(result.subjects[0]).toMatchObject({ code: 'PATHFit 3', name: 'Menu of Dance, Sports, Martial Arts, Group Exercise, Outdoor and Adventure Activities 1', room: 'ORH', units: 2 });
+    expect(result.subjects.reduce((total, subject) => total + subject.schedules.length, 0)).toBe(
+      18,
+    );
+    expect(result.subjects[0]).toMatchObject({
+      code: 'PATHFit 3',
+      name: 'Menu of Dance, Sports, Martial Arts, Group Exercise, Outdoor and Adventure Activities 1',
+      room: 'ORH',
+      units: 2,
+    });
     expect(result.subjects[1].schedules.map((meeting) => meeting.day_of_week)).toEqual([2, 4]);
-    expect(result.subjects[2].schedules[0]).toMatchObject({ day_of_week: 1, start_time: '12:30', end_time: '13:30', room: '501A' });
-    expect(result.subjects[6]).toMatchObject({ code: 'FIT', name: 'Foundation in Information Technology (Lec/Lab)', units: 3 });
+    expect(result.subjects[2].schedules[0]).toMatchObject({
+      day_of_week: 1,
+      start_time: '12:30',
+      end_time: '13:30',
+      room: '501A',
+    });
+    expect(result.subjects[6]).toMatchObject({
+      code: 'FIT',
+      name: 'Foundation in Information Technology (Lec/Lab)',
+      units: 3,
+    });
   });
 
   it('returns an empty review when no schedule rows are present', () => {

@@ -13,10 +13,13 @@ function fillRandomBytes(bytes: Uint8Array<ArrayBuffer>, provider?: RandomValues
   }
 
   // These IDs identify user-owned records; they are not authentication secrets.
-  for (let index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+  for (let index = 0; index < bytes.length; index += 1)
+    bytes[index] = Math.floor(Math.random() * 256);
 }
 
-export function createClientUuid(provider: RandomValuesProvider | undefined = globalThis.crypto): string {
+export function createClientUuid(
+  provider: RandomValuesProvider | undefined = globalThis.crypto,
+): string {
   const bytes = new Uint8Array(16);
   fillRandomBytes(bytes, provider);
   bytes[6] = (bytes[6] & 0x0f) | 0x40;

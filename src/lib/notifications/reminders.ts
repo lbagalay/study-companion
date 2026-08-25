@@ -1,8 +1,7 @@
 import { requireSupabaseClient } from '@/lib/supabase/client';
 import type { NotificationStatus } from './types';
 
-const VAPID_PUBLIC_KEY =
-  process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? '';
+const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
 function supportsWebPush() {
   return (
@@ -15,27 +14,18 @@ function supportsWebPush() {
 }
 
 function urlBase64ToUint8Array(value: string) {
-  const padding =
-    '='.repeat((4 - (value.length % 4)) % 4);
+  const padding = '='.repeat((4 - (value.length % 4)) % 4);
 
-  const base64 = (value + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
 
   const rawData = window.atob(base64);
 
-  return Uint8Array.from(
-    [...rawData].map((character) =>
-      character.charCodeAt(0),
-    ),
-  );
+  return Uint8Array.from([...rawData].map((character) => character.charCodeAt(0)));
 }
 
 async function getRegistration() {
   if (!supportsWebPush()) {
-    throw new Error(
-      'Push notifications are not supported on this browser.',
-    );
+    throw new Error('Push notifications are not supported on this browser.');
   }
 
   await navigator.serviceWorker.register('/sw.js');
@@ -43,39 +33,27 @@ async function getRegistration() {
   return navigator.serviceWorker.ready;
 }
 
-async function saveSubscription(
-  subscription: PushSubscription,
-) {
+async function saveSubscription(subscription: PushSubscription) {
   const json = subscription.toJSON();
 
   const p256dh = json.keys?.p256dh;
   const auth = json.keys?.auth;
 
   if (!p256dh || !auth) {
-    throw new Error(
-      'The browser did not provide valid push encryption keys.',
-    );
+    throw new Error('The browser did not provide valid push encryption keys.');
   }
 
   const supabase = requireSupabaseClient();
 
-  const { error } = await supabase.rpc(
-    'register_web_push_subscription',
-    {
-      p_endpoint: subscription.endpoint,
-      p_p256dh: p256dh,
-      p_auth: auth,
-      p_user_agent:
-        typeof navigator !== 'undefined'
-          ? navigator.userAgent
-          : '',
-    },
-  );
+  const { error } = await supabase.rpc('register_web_push_subscription', {
+    p_endpoint: subscription.endpoint,
+    p_p256dh: p256dh,
+    p_auth: auth,
+    p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+  });
 
   if (error) {
-    throw new Error(
-      'Could not register this device for notifications.',
-    );
+    throw new Error('Could not register this device for notifications.');
   }
 }
 
@@ -84,14 +62,9 @@ export function configureNotifications() {
     return;
   }
 
-  void navigator.serviceWorker
-    .register('/sw.js')
-    .catch((error) => {
-      console.warn(
-        'Could not register notification service worker:',
-        error,
-      );
-    });
+  void navigator.serviceWorker.register('/sw.js').catch((error) => {
+    console.warn('Could not register notification service worker:', error);
+  });
 }
 
 export async function requestNotificationPermission() {
@@ -100,9 +73,7 @@ export async function requestNotificationPermission() {
   }
 
   if (!VAPID_PUBLIC_KEY) {
-    console.error(
-      'EXPO_PUBLIC_VAPID_PUBLIC_KEY is missing.',
-    );
+    console.error('EXPO_PUBLIC_VAPID_PUBLIC_KEY is missing.');
 
     return false;
   }
@@ -110,29 +81,22 @@ export async function requestNotificationPermission() {
   let permission = Notification.permission;
 
   if (permission === 'default') {
-    permission =
-      await Notification.requestPermission();
+    permission = await Notification.requestPermission();
   }
 
   if (permission !== 'granted') {
     return false;
   }
 
-  const registration =
-    await getRegistration();
+  const registration = await getRegistration();
 
-  let subscription =
-    await registration.pushManager.getSubscription();
+  let subscription = await registration.pushManager.getSubscription();
 
   if (!subscription) {
-    subscription =
-      await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey:
-          urlBase64ToUint8Array(
-            VAPID_PUBLIC_KEY,
-          ),
-      });
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
   }
 
   await saveSubscription(subscription);
@@ -143,8 +107,7 @@ export async function requestNotificationPermission() {
 export async function getNotificationStatus(): Promise<NotificationStatus> {
   if (!supportsWebPush()) {
     return {
-      detail:
-        'Push notifications are not supported on this browser.',
+      detail: 'Push notifications are not supported on this browser.',
       permission: 'denied',
       requiresInstall: false,
       subscribed: false,
@@ -154,8 +117,7 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
 
   if (Notification.permission === 'denied') {
     return {
-      detail:
-        'Notifications are blocked. Enable them in your browser settings.',
+      detail: 'Notifications are blocked. Enable them in your browser settings.',
       permission: 'denied',
       requiresInstall: false,
       subscribed: false,
@@ -163,12 +125,9 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
     };
   }
 
-  if (
-    Notification.permission !== 'granted'
-  ) {
+  if (Notification.permission !== 'granted') {
     return {
-      detail:
-        'Enable reminders to receive activity, exam, quiz, and study alerts.',
+      detail: 'Enable reminders to receive activity, exam, quiz, and study alerts.',
       permission: 'default',
       requiresInstall: false,
       subscribed: false,
@@ -177,16 +136,13 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
   }
 
   try {
-    const registration =
-      await getRegistration();
+    const registration = await getRegistration();
 
-    const subscription =
-      await registration.pushManager.getSubscription();
+    const subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
       return {
-        detail:
-          'Notification permission is granted, but this device is not subscribed yet.',
+        detail: 'Notification permission is granted, but this device is not subscribed yet.',
         permission: 'granted',
         requiresInstall: false,
         subscribed: false,
@@ -195,8 +151,7 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
     }
 
     return {
-      detail:
-        'This device is registered for Study Companion reminders.',
+      detail: 'This device is registered for Study Companion reminders.',
       permission: 'granted',
       requiresInstall: false,
       subscribed: true,
@@ -204,8 +159,7 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
     };
   } catch {
     return {
-      detail:
-        'Notification permission is granted, but push registration could not be checked.',
+      detail: 'Notification permission is granted, but push registration could not be checked.',
       permission: 'granted',
       requiresInstall: false,
       subscribed: false,
@@ -214,9 +168,7 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
   }
 }
 
-export async function cancelNotifications(
-  _ids: readonly string[],
-) {
+export async function cancelNotifications(_ids: readonly string[]) {
   /*
    * Web push notifications are scheduled
    * server-side, not with browser timers.
@@ -231,33 +183,24 @@ export async function cancelAllNotifications() {
     return;
   }
 
-  const registration =
-    await getRegistration();
+  const registration = await getRegistration();
 
-  const subscription =
-    await registration.pushManager.getSubscription();
+  const subscription = await registration.pushManager.getSubscription();
 
   if (!subscription) {
     return;
   }
 
-  const endpoint =
-    subscription.endpoint;
+  const endpoint = subscription.endpoint;
 
-  const supabase =
-    requireSupabaseClient();
+  const supabase = requireSupabaseClient();
 
-  const { error } = await supabase.rpc(
-    'unregister_web_push_subscription',
-    {
-      p_endpoint: endpoint,
-    },
-  );
+  const { error } = await supabase.rpc('unregister_web_push_subscription', {
+    p_endpoint: endpoint,
+  });
 
   if (error) {
-    throw new Error(
-      'Could not unregister this device.',
-    );
+    throw new Error('Could not unregister this device.');
   }
 
   await subscription.unsubscribe();
@@ -287,6 +230,4 @@ export async function scheduleExamReminders(
   return [] as string[];
 }
 
-export type {
-  NotificationStatus
-} from './types';
+export type { NotificationStatus } from './types';

@@ -41,7 +41,9 @@ export function PlaceholderScreen({
           <Ionicons color={palette.accent} name={icon} size={28} />
         </View>
         <Text style={[styles.message, { color: palette.text }]}>{message}</Text>
-        <Text style={[styles.helper, { color: palette.textMuted }]}>We’ll build this in the next phase.</Text>
+        <Text style={[styles.helper, { color: palette.textMuted }]}>
+          We’ll build this in the next phase.
+        </Text>
       </View>
     </ScreenContainer>
   );

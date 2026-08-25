@@ -28,10 +28,13 @@ export async function inspectPdf(asset: DocumentPickerAsset): Promise<InspectedP
   const pdfjs = await import('pdfjs-dist');
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   const loadingTask = pdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) });
-  const document = await loadingTask.promise.catch(() => { throw new Error('This PDF is damaged, encrypted, or unsupported.'); });
+  const document = await loadingTask.promise.catch(() => {
+    throw new Error('This PDF is damaged, encrypted, or unsupported.');
+  });
   const pageCount = document.numPages;
   await loadingTask.destroy();
-  if (pageCount < 1 || pageCount > 50000) throw new Error('This PDF has an unsupported page count.');
+  if (pageCount < 1 || pageCount > 50000)
+    throw new Error('This PDF has an unsupported page count.');
 
   return { asset, bytes, fileName: fileName.slice(0, 255), fileSize, pageCount };
 }
