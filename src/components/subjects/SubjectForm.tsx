@@ -1,21 +1,32 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { useEffect } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { confirmDestructive } from '@/lib/confirm';
 import { z } from 'zod';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
 import { FeedbackState } from '@/components/ui/FeedbackState';
+import { FieldRow } from '@/components/ui/FieldRow';
 import { FormField } from '@/components/ui/FormField';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { spacing } from '@/constants/theme';
+import { radii, spacing, typography } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/useAppTheme';
 import { keys } from '@/hooks/useStudyData';
+import { createClientUuid } from '@/lib/ids';
 import { getErrorMessage } from '@/lib/errors';
-import { deleteRecord, getSubject, saveSubject } from '@/services';
+import {
+  deleteRecord,
+  getFolderSkinUrl,
+  getSubject,
+  removeFolderSkin,
+  saveSubject,
+  uploadFolderSkin,
+} from '@/services';
 
 const colors = ['#0E1B48', '#C18DB4', '#E2CAD8', '#87A7D0', '#27425D', '#0E1F2F'] as const;
 const schema = z.object({
@@ -58,6 +69,9 @@ const defaults: Values = {
 export function SubjectForm({ id }: { id?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const palette = useAppTheme();
+  const [skinAsset, setSkinAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [skinCleared, setSkinCleared] = useState(false);
   const subject = useQuery({
     queryKey: ['subject', id],
     queryFn: () => getSubject(id!),
@@ -72,8 +86,45 @@ export function SubjectForm({ id }: { id?: string }) {
   useEffect(() => {
     if (subject.data) reset({ ...subject.data, units: String(subject.data.units) });
   }, [reset, subject.data]);
+  const pickSkin = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      multiple: false,
+      type: 'image/*',
+    });
+    if (result.canceled) return;
+    setSkinAsset(result.assets[0]);
+    setSkinCleared(false);
+  };
+  const clearSkin = () => {
+    setSkinAsset(null);
+    setSkinCleared(true);
+  };
+  const previewUri =
+    skinAsset?.uri ??
+    (!skinCleared && subject.data?.folder_skin_url
+      ? getFolderSkinUrl(subject.data.folder_skin_url)
+      : null);
   const save = useMutation({
-    mutationFn: (values: Values) => saveSubject({ ...values, units: Number(values.units) }, id),
+    mutationFn: async (values: Values) => {
+      const subjectId = id ?? createClientUuid();
+      const previousSkin = subject.data?.folder_skin_url ?? null;
+      let folderSkinUrl = previousSkin;
+      if (skinAsset) folderSkinUrl = await uploadFolderSkin(subjectId, skinAsset);
+      else if (skinCleared) folderSkinUrl = null;
+      const saved = await saveSubject(
+        { ...values, units: Number(values.units), id: subjectId, folder_skin_url: folderSkinUrl },
+        id,
+      );
+      if (previousSkin && previousSkin !== folderSkinUrl) {
+        try {
+          await removeFolderSkin(previousSkin);
+        } catch {
+          // Best-effort cleanup — the subject itself already saved successfully.
+        }
+      }
+      return saved;
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: keys.subjects });
       router.back();
@@ -129,69 +180,75 @@ export function SubjectForm({ id }: { id?: string }) {
             />
           )}
         />
-        <Controller
-          control={control}
-          name="code"
-          render={({ field }) => (
-            <FormField
-              error={errors.code?.message}
-              label="Subject code"
-              onChangeText={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="teacher"
-          render={({ field }) => (
-            <FormField
-              error={errors.teacher?.message}
-              label="Teacher"
-              onChangeText={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="room"
-          render={({ field }) => (
-            <FormField
-              error={errors.room?.message}
-              label="Room"
-              onChangeText={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="units"
-          render={({ field }) => (
-            <FormField
-              error={errors.units?.message}
-              keyboardType="decimal-pad"
-              label="Units"
-              onChangeText={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="semester"
-          render={({ field }) => (
-            <FormField label="Semester" onChangeText={field.onChange} value={field.value} />
-          )}
-        />
-        <Controller
-          control={control}
-          name="academic_year"
-          render={({ field }) => (
-            <FormField label="Academic year" onChangeText={field.onChange} value={field.value} />
-          )}
-        />
+        <FieldRow>
+          <Controller
+            control={control}
+            name="code"
+            render={({ field }) => (
+              <FormField
+                error={errors.code?.message}
+                label="Subject code"
+                onChangeText={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="units"
+            render={({ field }) => (
+              <FormField
+                error={errors.units?.message}
+                keyboardType="decimal-pad"
+                label="Units"
+                onChangeText={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+        </FieldRow>
+        <FieldRow>
+          <Controller
+            control={control}
+            name="teacher"
+            render={({ field }) => (
+              <FormField
+                error={errors.teacher?.message}
+                label="Teacher"
+                onChangeText={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="room"
+            render={({ field }) => (
+              <FormField
+                error={errors.room?.message}
+                label="Room"
+                onChangeText={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+        </FieldRow>
+        <FieldRow>
+          <Controller
+            control={control}
+            name="semester"
+            render={({ field }) => (
+              <FormField label="Semester" onChangeText={field.onChange} value={field.value} />
+            )}
+          />
+          <Controller
+            control={control}
+            name="academic_year"
+            render={({ field }) => (
+              <FormField label="Academic year" onChangeText={field.onChange} value={field.value} />
+            )}
+          />
+        </FieldRow>
         <Controller
           control={control}
           name="description"
@@ -216,6 +273,35 @@ export function SubjectForm({ id }: { id?: string }) {
             />
           )}
         />
+        <View style={styles.skinSection}>
+          <Text style={[styles.skinLabel, { color: palette.text }]}>Folder skin</Text>
+          <Text style={[styles.skinHint, { color: palette.textMuted }]}>
+            Upload an image to use as this folder&apos;s icon instead of a pattern.
+          </Text>
+          {previewUri ? (
+            <Image
+              accessibilityIgnoresInvertColors
+              source={{ uri: previewUri }}
+              style={[styles.skinPreview, { borderColor: palette.border }]}
+            />
+          ) : null}
+          <View style={styles.skinActions}>
+            <AppButton
+              label={previewUri ? 'Choose a different image' : 'Upload image'}
+              onPress={() => void pickSkin()}
+              style={styles.skinButton}
+              variant="secondary"
+            />
+            {previewUri ? (
+              <AppButton
+                label="Remove"
+                onPress={clearSkin}
+                style={styles.skinButton}
+                variant="ghost"
+              />
+            ) : null}
+          </View>
+        </View>
         <AppButton
           label={id ? 'Save changes' : 'Add subject'}
           loading={save.isPending}
@@ -233,4 +319,27 @@ export function SubjectForm({ id }: { id?: string }) {
     </ScreenContainer>
   );
 }
-const styles = StyleSheet.create({ form: { gap: spacing.md, paddingBottom: spacing.xxl } });
+const styles = StyleSheet.create({
+  form: { gap: spacing.md, paddingBottom: spacing.xxl },
+
+  skinSection: { gap: spacing.sm },
+
+  skinLabel: typography.label,
+
+  skinHint: { ...typography.caption, marginTop: -4 },
+
+  skinPreview: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    height: 72,
+    width: 72,
+  },
+
+  skinActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+
+  skinButton: { flexGrow: 1 },
+});

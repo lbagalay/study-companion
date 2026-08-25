@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
 import { FeedbackState } from '@/components/ui/FeedbackState';
+import { FieldRow } from '@/components/ui/FieldRow';
 import { FormField } from '@/components/ui/FormField';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -153,30 +154,32 @@ function ProfileEditor({ profile, userId }: { profile: Profile; userId: string }
             />
           ) : null}
         </View>
-        <Controller
-          control={control}
-          name="fullName"
-          render={({ field }) => (
-            <FormField
-              error={errors.fullName?.message}
-              label="Full name"
-              onChangeText={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="preferredName"
-          render={({ field }) => (
-            <FormField
-              error={errors.preferredName?.message}
-              label="Preferred name"
-              onChangeText={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
+        <FieldRow>
+          <Controller
+            control={control}
+            name="fullName"
+            render={({ field }) => (
+              <FormField
+                error={errors.fullName?.message}
+                label="Full name"
+                onChangeText={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="preferredName"
+            render={({ field }) => (
+              <FormField
+                error={errors.preferredName?.message}
+                label="Preferred name"
+                onChangeText={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+        </FieldRow>
         <Controller
           control={control}
           name="notifications"
@@ -193,8 +196,7 @@ function ProfileEditor({ profile, userId }: { profile: Profile; userId: string }
           )}
         />
         <Text style={[styles.helper, { color: palette.textMuted }]}>
-          Appearance follows your device’s light or dark mode. Times are stored in UTC and shown in
-          your device timezone.
+          Times are stored in UTC and shown in your device timezone.
         </Text>
         <AppButton
           label="Save profile"
@@ -204,6 +206,11 @@ function ProfileEditor({ profile, userId }: { profile: Profile; userId: string }
         <AppButton
           label="Manage subjects"
           onPress={() => router.push('/subjects')}
+          variant="secondary"
+        />
+        <AppButton
+          label="Settings"
+          onPress={() => router.push('/settings')}
           variant="secondary"
         />
         <AppButton

@@ -12,6 +12,7 @@ import { SubjectField } from '@/components/forms/SubjectField';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
 import { FeedbackState } from '@/components/ui/FeedbackState';
+import { FieldRow } from '@/components/ui/FieldRow';
 import { FormField } from '@/components/ui/FormField';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -147,40 +148,42 @@ export function ScheduleForm({ id }: { id?: string }) {
             />
           )}
         />
-        <Controller
-          control={control}
-          name="start"
-          render={({ field }) => (
-            <DateTimeField
-              label="Starts"
-              mode="time"
-              onChange={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="end"
-          render={({ field }) => (
-            <>
+        <FieldRow>
+          <Controller
+            control={control}
+            name="start"
+            render={({ field }) => (
               <DateTimeField
-                label="Ends"
+                label="Starts"
                 mode="time"
                 onChange={field.onChange}
                 value={field.value}
               />
-              {errors.end ? (
-                <FormField
-                  editable={false}
-                  error={errors.end.message}
-                  label="Time check"
-                  value="Please adjust the time"
+            )}
+          />
+          <Controller
+            control={control}
+            name="end"
+            render={({ field }) => (
+              <>
+                <DateTimeField
+                  label="Ends"
+                  mode="time"
+                  onChange={field.onChange}
+                  value={field.value}
                 />
-              ) : null}
-            </>
-          )}
-        />
+                {errors.end ? (
+                  <FormField
+                    editable={false}
+                    error={errors.end.message}
+                    label="Time check"
+                    value="Please adjust the time"
+                  />
+                ) : null}
+              </>
+            )}
+          />
+        </FieldRow>
         <Controller
           control={control}
           name="room"

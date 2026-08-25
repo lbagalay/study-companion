@@ -9,6 +9,8 @@ import {
   Text,
   useWindowDimensions,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { AppButton } from '@/components/ui/AppButton';
 import { EditorialBackdrop } from '@/components/ui/EditorialBackdrop';
@@ -46,6 +48,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const compact = width < 640;
+  const wide = width >= 900;
   const { user } = useAuth();
   const profile = useProfile(user?.id);
   const subjects = useSubjects();
@@ -94,9 +97,6 @@ export default function HomeScreen() {
   ]
     .sort((a, b) => a.score - b.score || a.date.getTime() - b.date.getTime())
     .slice(0, 5);
-  const nextSession = sessions.data?.find(
-    (s) => ['PLANNED', 'IN_PROGRESS'].includes(s.status) && new Date(s.planned_at) >= now,
-  );
   const loading =
     profile.isLoading ||
     subjects.isLoading ||
@@ -205,69 +205,61 @@ export default function HomeScreen() {
             textColor={palette.text}
           />
         </View>
-        <Section color={palette.text} index="01" tint={palette.lavenderSoft} title="Today">
-          {todayClasses.map((item) => {
-            const subject = bySubject.get(item.subject_id);
-            const current = isClassCurrent(item.start_time, item.end_time, now);
-            return (
+        <View style={wide ? styles.sectionRow : styles.sectionStack}>
+          <Section
+            color={palette.text}
+            index="01"
+            style={wide ? styles.sectionHalf : undefined}
+            tint={palette.lavenderSoft}
+            title="Today"
+          >
+            {todayClasses.map((item) => {
+              const subject = bySubject.get(item.subject_id);
+              const current = isClassCurrent(item.start_time, item.end_time, now);
+              return (
+                <EntityCard
+                  accent={subject?.color}
+                  badge={current ? 'NOW' : clock(item.start_time)}
+                  key={item.id}
+                  metadata={item.room || subject?.room}
+                  onPress={() =>
+                    router.push({ pathname: '/schedule/[id]', params: { id: item.id } })
+                  }
+                  subtitle={`${clock(item.start_time)}–${clock(item.end_time)}`}
+                  title={subject?.name ?? 'Class'}
+                />
+              );
+            })}
+            {!todayClasses.length ? (
+              <FeedbackState message="No classes are scheduled today." title="A clear day" />
+            ) : null}
+          </Section>
+          <Section
+            color={palette.text}
+            index="02"
+            style={wide ? styles.sectionHalf : undefined}
+            tint={palette.peachSoft}
+            title="Coming up"
+          >
+            {upcoming.map((item) => (
               <EntityCard
-                accent={subject?.color}
-                badge={current ? 'NOW' : clock(item.start_time)}
-                key={item.id}
-                metadata={item.room || subject?.room}
-                onPress={() => router.push({ pathname: '/schedule/[id]', params: { id: item.id } })}
-                subtitle={`${clock(item.start_time)}–${clock(item.end_time)}`}
-                title={subject?.name ?? 'Class'}
+                accent={item.accent}
+                badge={item.badge}
+                key={`${item.href}-${item.id}`}
+                onPress={() => router.push({ pathname: item.href, params: { id: item.id } })}
+                subtitle={item.subtitle}
+                title={item.title}
               />
-            );
-          })}
-          {!todayClasses.length ? (
-            <FeedbackState message="No classes are scheduled today." title="A clear day" />
-          ) : null}
-        </Section>
-        <Section color={palette.text} index="02" tint={palette.peachSoft} title="Coming up">
-          {upcoming.map((item) => (
-            <EntityCard
-              accent={item.accent}
-              badge={item.badge}
-              key={`${item.href}-${item.id}`}
-              onPress={() => router.push({ pathname: item.href, params: { id: item.id } })}
-              subtitle={item.subtitle}
-              title={item.title}
-            />
-          ))}
-          {!upcoming.length ? (
-            <FeedbackState
-              message="Everything currently recorded is complete."
-              title="You’re caught up"
-            />
-          ) : null}
-        </Section>
-        <Section
-          color={palette.text}
-          index="03"
-          tint={palette.accentSoft}
-          title="Continue studying"
-        >
-          {nextSession ? (
-            <EntityCard
-              accent={bySubject.get(nextSession.subject_id)?.color}
-              badge={`${nextSession.planned_duration} MIN`}
-              metadata={format(new Date(nextSession.planned_at), 'MMM d · h:mm a')}
-              onPress={() =>
-                router.push({ pathname: '/sessions/[id]', params: { id: nextSession.id } })
-              }
-              subtitle={bySubject.get(nextSession.subject_id)?.name}
-              title={nextSession.topic}
-            />
-          ) : (
-            <FeedbackState
-              message="Generate a study plan from an upcoming exam."
-              title="No active session"
-            />
-          )}
-        </Section>
-        <Section color={palette.text} index="04" tint={palette.lavenderSoft} title="This week">
+            ))}
+            {!upcoming.length ? (
+              <FeedbackState
+                message="Everything currently recorded is complete."
+                title="You’re caught up"
+              />
+            ) : null}
+          </Section>
+        </View>
+        <Section color={palette.text} index="03" tint={palette.lavenderSoft} title="This week">
           <View style={styles.stats}>
             <Stat
               color={palette.text}
@@ -324,11 +316,18 @@ function Section({
   children,
   color,
   index,
+  style,
   tint,
   title,
-}: React.PropsWithChildren<{ color: string; index: string; tint: string; title: string }>) {
+}: React.PropsWithChildren<{
+  color: string;
+  index: string;
+  style?: StyleProp<ViewStyle>;
+  tint: string;
+  title: string;
+}>) {
   return (
-    <View style={[styles.section, { backgroundColor: tint }]}>
+    <View style={[styles.section, { backgroundColor: tint }, style]}>
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionIndex, { color }]}>{index}</Text>
         <Text style={[styles.sectionTitle, { color }]}>{title}</Text>
@@ -410,7 +409,7 @@ const styles = StyleSheet.create({
   content: {
     alignSelf: 'center',
     gap: spacing.xl,
-    maxWidth: 920,
+    maxWidth: 1200,
     paddingBottom: 124,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
@@ -473,6 +472,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   quickActions: { flexDirection: 'row', gap: spacing.sm },
+  sectionStack: { gap: spacing.xl },
+  sectionRow: { flexDirection: 'row', gap: spacing.lg },
+  sectionHalf: { flex: 1, minWidth: 0 },
   quickAction: {
     alignItems: 'center',
     borderRadius: radii.lg,

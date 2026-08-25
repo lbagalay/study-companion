@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps, PropsWithChildren } from 'react';
+import type { ComponentProps, PropsWithChildren, ReactNode } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { AppButton } from '@/components/ui/AppButton';
 import { EditorialBackdrop } from '@/components/ui/EditorialBackdrop';
@@ -14,6 +14,7 @@ type Props = PropsWithChildren<{
   empty: boolean;
   emptyMessage: string;
   error?: Error | null;
+  headerActions?: ReactNode;
   loading: boolean;
   onAdd?: () => void;
   onRefresh: () => void;
@@ -30,6 +31,7 @@ export function EntityList({
   empty,
   emptyMessage,
   error,
+  headerActions,
   loading,
   onAdd,
   onRefresh,
@@ -53,7 +55,9 @@ export function EntityList({
           />
         }
       >
-        <ScreenHeader description={description} title={title} />
+        <ScreenHeader description={description} title={title}>
+          {headerActions}
+        </ScreenHeader>
         {onAdd && addLabel ? (
           <View style={styles.actions}>
             <AppButton icon="add-circle-outline" label={addLabel} onPress={onAdd} />
@@ -92,7 +96,7 @@ const styles = StyleSheet.create({
   content: {
     alignSelf: 'center',
     flexGrow: 1,
-    maxWidth: 900,
+    maxWidth: 1200,
     paddingBottom: 124,
     paddingHorizontal: spacing.lg,
     width: '100%',

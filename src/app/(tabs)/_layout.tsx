@@ -3,11 +3,13 @@ import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-import { brand, colors, typography } from '@/constants/theme';
+import { typography } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 export default function TabLayout() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const palette = useAppTheme();
   const tabBarWidth = Math.min(width - 32, 720);
   const tabBarBottom = Math.max(10, insets.bottom);
 
@@ -16,17 +18,17 @@ export default function TabLayout() {
       initialRouteName="home"
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: colors.light.background },
+        sceneStyle: { backgroundColor: palette.background },
         tabBarActiveBackgroundColor: 'transparent',
-        tabBarActiveTintColor: brand.ink,
+        tabBarActiveTintColor: palette.tabBarActiveTint,
         tabBarAllowFontScaling: false,
         tabBarHideOnKeyboard: true,
         tabBarIconStyle: { height: 30, marginTop: 1 },
-        tabBarInactiveTintColor: brand.slate,
+        tabBarInactiveTintColor: palette.tabBarInactiveTint,
         tabBarLabelPosition: 'below-icon',
         tabBarStyle: {
-          backgroundColor: brand.blush,
-          borderColor: 'rgba(193, 141, 180, 0.65)',
+          backgroundColor: palette.tabBarBackground,
+          borderColor: palette.tabBarBorder,
           borderRadius: 24,
           borderWidth: 1,
           bottom: tabBarBottom,
@@ -55,7 +57,13 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused, size }) => (
-            <TabBarIcon color={color} focused={focused} name="home" size={size} />
+            <TabBarIcon
+              activeColor={palette.tabBarActiveBackground}
+              color={color}
+              focused={focused}
+              name="home"
+              size={size}
+            />
           ),
         }}
       />
@@ -64,7 +72,13 @@ export default function TabLayout() {
         options={{
           title: 'Schedule',
           tabBarIcon: ({ color, focused, size }) => (
-            <TabBarIcon color={color} focused={focused} name="calendar" size={size} />
+            <TabBarIcon
+              activeColor={palette.tabBarActiveBackground}
+              color={color}
+              focused={focused}
+              name="calendar"
+              size={size}
+            />
           ),
         }}
       />
@@ -73,7 +87,13 @@ export default function TabLayout() {
         options={{
           title: 'Tasks',
           tabBarIcon: ({ color, focused, size }) => (
-            <TabBarIcon color={color} focused={focused} name="checkbox" size={size} />
+            <TabBarIcon
+              activeColor={palette.tabBarActiveBackground}
+              color={color}
+              focused={focused}
+              name="checkbox"
+              size={size}
+            />
           ),
         }}
       />
@@ -82,7 +102,13 @@ export default function TabLayout() {
         options={{
           title: 'Study',
           tabBarIcon: ({ color, focused, size }) => (
-            <TabBarIcon color={color} focused={focused} name="book" size={size} />
+            <TabBarIcon
+              activeColor={palette.tabBarActiveBackground}
+              color={color}
+              focused={focused}
+              name="book"
+              size={size}
+            />
           ),
         }}
       />
@@ -91,7 +117,13 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused, size }) => (
-            <TabBarIcon color={color} focused={focused} name="person" size={size} />
+            <TabBarIcon
+              activeColor={palette.tabBarActiveBackground}
+              color={color}
+              focused={focused}
+              name="person"
+              size={size}
+            />
           ),
         }}
       />

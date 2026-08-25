@@ -3,18 +3,17 @@ import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
 import { Animated, Platform, StyleSheet } from 'react-native';
 
-import { brand } from '@/constants/theme';
-
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 type TabBarIconProps = {
+  activeColor: string;
   color: ComponentProps<typeof Ionicons>['color'];
   focused: boolean;
   name: IoniconName;
   size: number;
 };
 
-export function TabBarIcon({ color, focused, name, size }: TabBarIconProps) {
+export function TabBarIcon({ activeColor, color, focused, name, size }: TabBarIconProps) {
   const [scale] = useState(() => new Animated.Value(1));
   const [lift] = useState(() => new Animated.Value(0));
   useEffect(() => {
@@ -37,7 +36,7 @@ export function TabBarIcon({ color, focused, name, size }: TabBarIconProps) {
         styles.wrap,
         focused && styles.focused,
         {
-          backgroundColor: focused ? brand.mauve : 'transparent',
+          backgroundColor: focused ? activeColor : 'transparent',
           transform: [{ translateY: lift }, { scale }],
         },
       ]}

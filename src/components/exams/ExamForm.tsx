@@ -12,6 +12,7 @@ import { SubjectField } from '@/components/forms/SubjectField';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
 import { FeedbackState } from '@/components/ui/FeedbackState';
+import { FieldRow } from '@/components/ui/FieldRow';
 import { FormField } from '@/components/ui/FormField';
 import { MultiChoiceField } from '@/components/ui/MultiChoiceField';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -279,18 +280,28 @@ export function ExamForm({ id }: { id?: string }) {
           )}
         />
 
-        <Controller
-          control={control}
-          name="type"
-          render={({ field }) => (
-            <ChoiceField
-              choices={types}
-              label="Type"
-              onChange={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
+        <FieldRow>
+          <Controller
+            control={control}
+            name="type"
+            render={({ field }) => (
+              <ChoiceField
+                choices={types}
+                label="Type"
+                onChange={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="room"
+            render={({ field }) => (
+              <FormField label="Room" onChangeText={field.onChange} value={field.value} />
+            )}
+          />
+        </FieldRow>
 
         <Controller
           control={control}
@@ -302,14 +313,6 @@ export function ExamForm({ id }: { id?: string }) {
               onChange={field.onChange}
               value={field.value}
             />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="room"
-          render={({ field }) => (
-            <FormField label="Room" onChangeText={field.onChange} value={field.value} />
           )}
         />
 

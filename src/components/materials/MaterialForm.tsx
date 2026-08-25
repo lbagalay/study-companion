@@ -11,6 +11,7 @@ import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
 import { FeedbackState } from '@/components/ui/FeedbackState';
 import { FormField } from '@/components/ui/FormField';
+import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { spacing, typography } from '@/constants/theme';
@@ -198,76 +199,42 @@ export function MaterialForm({ id }: { id?: string }) {
   if (id && item.isLoading)
     return <FeedbackState loading message="Loading material." title="One moment" />;
   return (
-    <ScreenContainer>
-      <ScreenHeader
-        back
-        description="Files stay in a private, user-scoped bucket."
-        title={id ? 'Material details' : 'Add material'}
-      />
-      <View style={styles.form}>
-        <Controller
-          control={control}
-          name="subject_id"
-          render={({ field }) => (
-            <SubjectField
-              error={errors.subject_id?.message}
-              onChange={(value) => {
-                setFormError(null);
-                field.onChange(value);
-              }}
-              value={field.value}
-            />
-          )}
+    <>
+      <ScreenContainer>
+        <ScreenHeader
+          back
+          description="Files stay in a private, user-scoped bucket."
+          title={id ? 'Material details' : 'Add material'}
         />
-        {!subjects.isLoading && !subjects.data?.length ? (
-          <AppButton
-            label="Create a subject first"
-            onPress={() => router.push('/subjects/create')}
-            variant="secondary"
-          />
-        ) : null}
-        <Controller
-          control={control}
-          name="title"
-          render={({ field }) => (
-            <FormField
-              error={errors.title?.message}
-              label="Title"
-              onChangeText={(value) => {
-                setFormError(null);
-                field.onChange(value);
-              }}
-              value={field.value}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="type"
-          render={({ field }) => (
-            <ChoiceField
-              choices={materialTypes}
-              label="Type"
-              onChange={(value) => {
-                setFormError(null);
-                field.onChange(value);
-                setAsset(null);
-                setInspectedPdf(null);
-              }}
-              value={field.value}
-            />
-          )}
-        />
-        {['LINK', 'VIDEO_LINK'].includes(type) ? (
+        <View style={styles.form}>
           <Controller
             control={control}
-            name="external_url"
+            name="subject_id"
+            render={({ field }) => (
+              <SubjectField
+                error={errors.subject_id?.message}
+                onChange={(value) => {
+                  setFormError(null);
+                  field.onChange(value);
+                }}
+                value={field.value}
+              />
+            )}
+          />
+          {!subjects.isLoading && !subjects.data?.length ? (
+            <AppButton
+              label="Create a subject first"
+              onPress={() => router.push('/subjects/create')}
+              variant="secondary"
+            />
+          ) : null}
+          <Controller
+            control={control}
+            name="title"
             render={({ field }) => (
               <FormField
-                autoCapitalize="none"
-                error={errors.external_url?.message}
-                keyboardType="url"
-                label="URL"
+                error={errors.title?.message}
+                label="Title"
                 onChangeText={(value) => {
                   setFormError(null);
                   field.onChange(value);
@@ -276,152 +243,197 @@ export function MaterialForm({ id }: { id?: string }) {
               />
             )}
           />
-        ) : type !== 'NOTE' ? (
-          <>
+          <Controller
+            control={control}
+            name="type"
+            render={({ field }) => (
+              <ChoiceField
+                choices={materialTypes}
+                label="Type"
+                onChange={(value) => {
+                  setFormError(null);
+                  field.onChange(value);
+                  setAsset(null);
+                  setInspectedPdf(null);
+                }}
+                value={field.value}
+              />
+            )}
+          />
+          {['LINK', 'VIDEO_LINK'].includes(type) ? (
+            <Controller
+              control={control}
+              name="external_url"
+              render={({ field }) => (
+                <FormField
+                  autoCapitalize="none"
+                  error={errors.external_url?.message}
+                  keyboardType="url"
+                  label="URL"
+                  onChangeText={(value) => {
+                    setFormError(null);
+                    field.onChange(value);
+                  }}
+                  value={field.value}
+                />
+              )}
+            />
+          ) : type !== 'NOTE' ? (
+            <>
+              <AppButton
+                label={
+                  inspecting
+                    ? 'Checking PDF'
+                    : asset
+                      ? 'Choose a different file'
+                      : type === 'PDF'
+                        ? 'Choose PDF'
+                        : 'Choose file'
+                }
+                loading={inspecting}
+                onPress={() => void pick()}
+                variant="secondary"
+              />
+              {inspectedPdf ? (
+                <Text style={[styles.file, { color: palette.textMuted }]}>
+                  {inspectedPdf.fileName} · {inspectedPdf.pageCount} pages ·{' '}
+                  {formatFileSize(inspectedPdf.fileSize)}
+                </Text>
+              ) : asset ? (
+                <Text style={[styles.file, { color: palette.textMuted }]}>{asset.name}</Text>
+              ) : item.data?.file_url ? (
+                <Text style={[styles.file, { color: palette.textMuted }]}>
+                  {item.data.file_name
+                    ? `${item.data.file_name}${item.data.page_count ? ` · ${item.data.page_count} pages` : ''}`
+                    : 'Existing upload will be kept.'}
+                </Text>
+              ) : null}
+            </>
+          ) : null}
+          <Controller
+            control={control}
+            name="description"
+            render={({ field }) => (
+              <FormField
+                label={type === 'NOTE' ? 'Content' : 'Description'}
+                multiline
+                onChangeText={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="favorite"
+            render={({ field }) => (
+              <ChoiceField
+                choices={[
+                  { label: 'Standard', value: false },
+                  { label: 'Favorite', value: true },
+                ]}
+                label="Favorite"
+                onChange={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="completed"
+            render={({ field }) => (
+              <ChoiceField
+                choices={[
+                  { label: 'To review', value: false },
+                  { label: 'Completed', value: true },
+                ]}
+                label="Progress"
+                onChange={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+          {formError ? (
+            <Text
+              accessibilityRole="alert"
+              style={[
+                styles.error,
+                {
+                  backgroundColor: palette.accentSoft,
+                  borderColor: palette.border,
+                  color: palette.danger,
+                },
+              ]}
+            >
+              {formError}
+            </Text>
+          ) : null}
+          <AppButton
+            disabled={inspecting || (!id && !subjects.data?.length)}
+            label={
+              type === 'PDF'
+                ? id
+                  ? 'Save and open PDF'
+                  : 'Upload and open PDF'
+                : id
+                  ? 'Save changes'
+                  : 'Add material'
+            }
+            loading={save.isPending}
+            onPress={handleSubmit(
+              (v) => save.mutate(v),
+              (invalid) =>
+                setFormError(
+                  invalid.subject_id?.message ??
+                    invalid.title?.message ??
+                    invalid.external_url?.message ??
+                    'Review the highlighted fields and try again.',
+                ),
+            )}
+          />
+          {id && (item.data?.file_url || item.data?.external_url) ? (
             <AppButton
-              label={
-                inspecting
-                  ? 'Checking PDF'
-                  : asset
-                    ? 'Choose a different file'
-                    : type === 'PDF'
-                      ? 'Choose PDF'
-                      : 'Choose file'
+              label={item.data.type === 'PDF' ? 'Open PDF reader' : 'Open material'}
+              onPress={() =>
+                item.data?.type === 'PDF'
+                  ? router.push(`/materials/${id}/reader` as never)
+                  : void (async () => {
+                      try {
+                        const url = item.data?.file_url
+                          ? await getMaterialUrl(item.data.file_url)
+                          : item.data?.external_url;
+                        if (url) await Linking.openURL(url);
+                      } catch (error) {
+                        Alert.alert('Could not open material', getErrorMessage(error));
+                      }
+                    })()
               }
-              loading={inspecting}
-              onPress={() => void pick()}
               variant="secondary"
             />
-            {inspectedPdf ? (
-              <Text style={[styles.file, { color: palette.textMuted }]}>
-                {inspectedPdf.fileName} · {inspectedPdf.pageCount} pages ·{' '}
-                {formatFileSize(inspectedPdf.fileSize)}
-              </Text>
-            ) : asset ? (
-              <Text style={[styles.file, { color: palette.textMuted }]}>{asset.name}</Text>
-            ) : item.data?.file_url ? (
-              <Text style={[styles.file, { color: palette.textMuted }]}>
-                {item.data.file_name
-                  ? `${item.data.file_name}${item.data.page_count ? ` · ${item.data.page_count} pages` : ''}`
-                  : 'Existing upload will be kept.'}
-              </Text>
-            ) : null}
-          </>
-        ) : null}
-        <Controller
-          control={control}
-          name="description"
-          render={({ field }) => (
-            <FormField
-              label={type === 'NOTE' ? 'Content' : 'Description'}
-              multiline
-              onChangeText={field.onChange}
-              value={field.value}
+          ) : null}
+          {id ? (
+            <AppButton
+              label="Delete material"
+              loading={remove.isPending}
+              onPress={() =>
+                confirmDestructive(
+                  'Delete material?',
+                  'The stored file will also be removed.',
+                  () => remove.mutate(),
+                )
+              }
+              variant="danger"
             />
-          )}
-        />
-        <Controller
-          control={control}
-          name="favorite"
-          render={({ field }) => (
-            <ChoiceField
-              choices={[
-                { label: 'Standard', value: false },
-                { label: 'Favorite', value: true },
-              ]}
-              label="Favorite"
-              onChange={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="completed"
-          render={({ field }) => (
-            <ChoiceField
-              choices={[
-                { label: 'To review', value: false },
-                { label: 'Completed', value: true },
-              ]}
-              label="Progress"
-              onChange={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
-        {formError ? (
-          <Text
-            accessibilityRole="alert"
-            style={[
-              styles.error,
-              {
-                backgroundColor: palette.accentSoft,
-                borderColor: palette.border,
-                color: palette.danger,
-              },
-            ]}
-          >
-            {formError}
-          </Text>
-        ) : null}
-        <AppButton
-          disabled={inspecting || (!id && !subjects.data?.length)}
-          label={
-            type === 'PDF'
-              ? id
-                ? 'Save and open PDF'
-                : 'Upload and open PDF'
-              : id
-                ? 'Save changes'
-                : 'Add material'
-          }
-          loading={save.isPending}
-          onPress={handleSubmit(
-            (v) => save.mutate(v),
-            (invalid) =>
-              setFormError(
-                invalid.subject_id?.message ??
-                  invalid.title?.message ??
-                  invalid.external_url?.message ??
-                  'Review the highlighted fields and try again.',
-              ),
-          )}
-        />
-        {id && (item.data?.file_url || item.data?.external_url) ? (
-          <AppButton
-            label={item.data.type === 'PDF' ? 'Open PDF reader' : 'Open material'}
-            onPress={() =>
-              item.data?.type === 'PDF'
-                ? router.push(`/materials/${id}/reader` as never)
-                : void (async () => {
-                    try {
-                      const url = item.data?.file_url
-                        ? await getMaterialUrl(item.data.file_url)
-                        : item.data?.external_url;
-                      if (url) await Linking.openURL(url);
-                    } catch (error) {
-                      Alert.alert('Could not open material', getErrorMessage(error));
-                    }
-                  })()
-            }
-            variant="secondary"
-          />
-        ) : null}
-        {id ? (
-          <AppButton
-            label="Delete material"
-            loading={remove.isPending}
-            onPress={() =>
-              confirmDestructive('Delete material?', 'The stored file will also be removed.', () =>
-                remove.mutate(),
-              )
-            }
-            variant="danger"
-          />
-        ) : null}
-      </View>
-    </ScreenContainer>
+          ) : null}
+        </View>
+      </ScreenContainer>
+
+      <LoadingOverlay
+        icon={type === 'PDF' ? 'document-text-outline' : 'cloud-upload-outline'}
+        message="This only takes a moment."
+        title={type === 'PDF' ? 'Uploading your PDF' : 'Saving your material'}
+        visible={save.isPending}
+      />
+    </>
   );
 }
 const styles = StyleSheet.create({

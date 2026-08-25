@@ -1,11 +1,15 @@
 import { useRouter } from 'expo-router';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { EntityCard } from '@/components/ui/EntityCard';
 import { EntityList } from '@/components/ui/EntityList';
+import { spacing } from '@/constants/theme';
 import { useSubjects } from '@/hooks/useStudyData';
 
 export default function SubjectsScreen() {
   const router = useRouter();
   const query = useSubjects();
+  const { width } = useWindowDimensions();
+  const twoColumn = width >= 760;
   return (
     <EntityList
       addLabel="Add subject manually"
@@ -21,18 +25,26 @@ export default function SubjectsScreen() {
       secondaryAddLabel="Import study load"
       title="Subjects"
     >
-      {query.data?.map((item) => (
-        <EntityCard
-          accent={item.color}
-          key={item.id}
-          metadata={[item.units ? `${item.units} units` : '', item.teacher, item.room]
-            .filter(Boolean)
-            .join(' · ')}
-          onPress={() => router.push({ pathname: '/subjects/[id]', params: { id: item.id } })}
-          subtitle={item.code}
-          title={item.name}
-        />
-      ))}
+      <View style={styles.grid}>
+        {query.data?.map((item) => (
+          <View key={item.id} style={twoColumn ? styles.cardHalf : styles.cardFull}>
+            <EntityCard
+              accent={item.color}
+              metadata={[item.units ? `${item.units} units` : '', item.teacher, item.room]
+                .filter(Boolean)
+                .join(' · ')}
+              onPress={() => router.push({ pathname: '/subjects/[id]', params: { id: item.id } })}
+              subtitle={item.code}
+              title={item.name}
+            />
+          </View>
+        ))}
+      </View>
     </EntityList>
   );
 }
+const styles = StyleSheet.create({
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, width: '100%' },
+  cardHalf: { width: '48.5%' },
+  cardFull: { width: '100%' },
+});

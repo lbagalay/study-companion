@@ -1,10 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { radii, spacing, typography } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 type Choice<T extends string | number | boolean> = { label: string; value: T };
 type Props<T extends string | number | boolean> = {
   choices: readonly Choice<T>[];
+  containerStyle?: StyleProp<ViewStyle>;
   label: string;
   onChange: (value: T) => void;
   value: T;
@@ -12,13 +13,14 @@ type Props<T extends string | number | boolean> = {
 
 export function ChoiceField<T extends string | number | boolean>({
   choices,
+  containerStyle,
   label,
   onChange,
   value,
 }: Props<T>) {
   const palette = useAppTheme();
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, containerStyle]}>
       <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
       <View style={styles.choices}>
         {choices.map((choice) => {

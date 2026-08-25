@@ -18,10 +18,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { FeedbackState } from '@/components/ui/FeedbackState';
 import { LaunchAnimation } from '@/components/ui/LaunchAnimation';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
-import { colors } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/useAppTheme';
 import { configureNotifications } from '@/lib/notifications';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
+import { ThemeProvider, useTheme } from '@/providers/ThemeProvider';
 
 configureNotifications();
 
@@ -54,18 +55,20 @@ export default function RootLayout() {
     // so the tab bar and screen content sit flush under the notch /
     // status bar and behind the home indicator.
     <SafeAreaProvider>
-      <AuthProvider>
-        <View style={styles.root}>
-          <AppProviders />
+      <ThemeProvider>
+        <AuthProvider>
+          <View style={styles.root}>
+            <AppProviders />
 
-          {/*
-           * Kept outside the user-keyed QueryProvider so that
-           * signing in does not remount the splash and replay
-           * it over — and block taps on — the home screen.
-           */}
-          <LaunchAnimation />
-        </View>
-      </AuthProvider>
+            {/*
+             * Kept outside the user-keyed QueryProvider so that
+             * signing in does not remount the splash and replay
+             * it over — and block taps on — the home screen.
+             */}
+            <LaunchAnimation />
+          </View>
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
@@ -87,6 +90,8 @@ function AppProviders() {
 
 function RootNavigator() {
   const { loading, session } = useAuth();
+  const palette = useAppTheme();
+  const { scheme } = useTheme();
 
   if (loading) {
     return (
@@ -105,7 +110,7 @@ function RootNavigator() {
       <Stack
         screenOptions={{
           contentStyle: {
-            backgroundColor: colors.light.background,
+            backgroundColor: palette.background,
           },
           headerShown: false,
         }}
@@ -120,6 +125,9 @@ function RootNavigator() {
         <Stack.Protected guard={Boolean(session)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="subjects" />
+          <Stack.Screen name="settings/index" />
+          <Stack.Screen name="settings/themes" />
+          <Stack.Screen name="settings/folder-designs" />
           <Stack.Screen name="schedule/create" />
           <Stack.Screen name="schedule/[id]" />
           <Stack.Screen name="assignments/create" />
@@ -137,7 +145,7 @@ function RootNavigator() {
         </Stack.Protected>
       </Stack>
 
-      <StatusBar style="dark" />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </>
   );
 }

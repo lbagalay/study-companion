@@ -10,6 +10,7 @@ import { DateTimeField } from '@/components/forms/DateTimeField';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
 import { FeedbackState } from '@/components/ui/FeedbackState';
+import { FieldRow } from '@/components/ui/FieldRow';
 import { FormField } from '@/components/ui/FormField';
 import { MultiChoiceField } from '@/components/ui/MultiChoiceField';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -169,31 +170,33 @@ export default function CreatePlanScreen() {
             value="Choose a day"
           />
         ) : null}
-        <Controller
-          control={control}
-          name="duration"
-          render={({ field }) => (
-            <FormField
-              error={errors.duration?.message}
-              keyboardType="number-pad"
-              label="Session duration (minutes)"
-              onChangeText={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="time"
-          render={({ field }) => (
-            <DateTimeField
-              label="Preferred time"
-              mode="time"
-              onChange={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
+        <FieldRow>
+          <Controller
+            control={control}
+            name="duration"
+            render={({ field }) => (
+              <FormField
+                error={errors.duration?.message}
+                keyboardType="number-pad"
+                label="Session duration (minutes)"
+                onChangeText={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="time"
+            render={({ field }) => (
+              <DateTimeField
+                label="Preferred time"
+                mode="time"
+                onChange={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+        </FieldRow>
         <AppButton
           label="Generate sessions"
           loading={create.isPending}

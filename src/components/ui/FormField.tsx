@@ -1,14 +1,26 @@
 import type { ComponentProps } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 import { radii, spacing, typography } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
-type Props = ComponentProps<typeof TextInput> & { error?: string; label: string };
+type Props = ComponentProps<typeof TextInput> & {
+  containerStyle?: StyleProp<ViewStyle>;
+  error?: string;
+  label: string;
+};
 
-export function FormField({ accessibilityLabel, error, label, multiline, style, ...props }: Props) {
+export function FormField({
+  accessibilityLabel,
+  containerStyle,
+  error,
+  label,
+  multiline,
+  style,
+  ...props
+}: Props) {
   const palette = useAppTheme();
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, containerStyle]}>
       <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
       <TextInput
         accessibilityLabel={accessibilityLabel ?? label}

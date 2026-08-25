@@ -29,6 +29,7 @@ export type Subject = Timestamps & {
   semester: string;
   academic_year: string;
   units: number;
+  folder_skin_url: string | null;
 };
 
 export type ClassSchedule = Timestamps & {

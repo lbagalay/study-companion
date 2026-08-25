@@ -50,6 +50,29 @@ export async function saveSubject(input: InsertOf<'subjects'>, id?: string) {
   check(error);
   return data;
 }
+export async function uploadFolderSkin(subjectId: string, asset: DocumentPickerAsset) {
+  const supabase = requireSupabaseClient();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  check(userError);
+  if (!userData.user) throw new Error('Your session has expired. Please sign in again.');
+  const safeName = asset.name.replace(/[^a-zA-Z0-9._-]/g, '-');
+  const path = `${userData.user.id}/${subjectId}/${Date.now()}-${safeName}`;
+  const bytes = asset.file
+    ? await asset.file.arrayBuffer()
+    : await new File(asset.uri).arrayBuffer();
+  const { error } = await supabase.storage
+    .from('folder-skins')
+    .upload(path, bytes, { contentType: asset.mimeType ?? 'image/jpeg', upsert: false });
+  check(error);
+  return path;
+}
+export function getFolderSkinUrl(path: string) {
+  return requireSupabaseClient().storage.from('folder-skins').getPublicUrl(path).data.publicUrl;
+}
+export async function removeFolderSkin(path: string) {
+  const { error } = await requireSupabaseClient().storage.from('folder-skins').remove([path]);
+  check(error);
+}
 export async function extractStudyLoad(
   asset: DocumentPickerAsset,
   onProgress?: (progress: StudyLoadProgress) => void,
@@ -244,12 +267,10 @@ export async function uploadMaterialFile(subjectId: string, asset: DocumentPicke
   const bytes = asset.file
     ? await asset.file.arrayBuffer()
     : await new File(asset.uri).arrayBuffer();
-  const { error } = await supabase.storage
-    .from('study-materials')
-    .upload(path, bytes, {
-      contentType: asset.mimeType ?? 'application/octet-stream',
-      upsert: false,
-    });
+  const { error } = await supabase.storage.from('study-materials').upload(path, bytes, {
+    contentType: asset.mimeType ?? 'application/octet-stream',
+    upsert: false,
+  });
   check(error);
   return path;
 }

@@ -12,6 +12,7 @@ import { SubjectField } from '@/components/forms/SubjectField';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
 import { FeedbackState } from '@/components/ui/FeedbackState';
+import { FieldRow } from '@/components/ui/FieldRow';
 import { FormField } from '@/components/ui/FormField';
 import { MultiChoiceField } from '@/components/ui/MultiChoiceField';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -304,31 +305,33 @@ export function AssignmentForm({ id }: { id?: string }) {
           )}
         />
 
-        <Controller
-          control={control}
-          name="priority"
-          render={({ field }) => (
-            <ChoiceField
-              choices={priorities}
-              label="Priority"
-              onChange={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
+        <FieldRow>
+          <Controller
+            control={control}
+            name="priority"
+            render={({ field }) => (
+              <ChoiceField
+                choices={priorities}
+                label="Priority"
+                onChange={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
 
-        <Controller
-          control={control}
-          name="status"
-          render={({ field }) => (
-            <ChoiceField
-              choices={statuses}
-              label="Status"
-              onChange={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
+          <Controller
+            control={control}
+            name="status"
+            render={({ field }) => (
+              <ChoiceField
+                choices={statuses}
+                label="Status"
+                onChange={field.onChange}
+                value={field.value}
+              />
+            )}
+          />
+        </FieldRow>
 
         <Controller
           control={control}

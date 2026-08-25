@@ -15,10 +15,9 @@ import {
 } from 'react-native';
 
 import { AppButton } from '@/components/ui/AppButton';
-import { EntityCard } from '@/components/ui/EntityCard';
 import { EntityList } from '@/components/ui/EntityList';
 import { FeedbackState } from '@/components/ui/FeedbackState';
-import { MotionIcon } from '@/components/ui/MotionIcon';
+import { FolderIcon } from '@/components/ui/FolderIcon';
 
 import { radii, spacing, typography } from '@/constants/theme';
 
@@ -34,15 +33,24 @@ import { useAppTheme } from '@/hooks/useAppTheme';
 import { confirmDestructive } from '@/lib/confirm';
 import { getErrorMessage } from '@/lib/errors';
 import { pdfReadingProgress } from '@/lib/pdf/progress';
+import { useTheme } from '@/providers/ThemeProvider';
 
-import { deleteMaterial as deleteMaterialService, deleteRecord } from '@/services';
+import {
+  deleteMaterial as deleteMaterialService,
+  deleteRecord,
+  getFolderSkinUrl,
+} from '@/services';
 
 type LibraryFilter = 'ALL' | 'MATERIALS' | 'NOTES';
+
+const UNFILED_ID = '__unfiled__';
 
 export default function StudyScreen() {
   const router = useRouter();
 
   const palette = useAppTheme();
+
+  const { folderPack } = useTheme();
 
   const { width, height } = useWindowDimensions();
 
@@ -81,28 +89,6 @@ export default function StudyScreen() {
 
   const loading =
     materials.isLoading || notes.isLoading || sessions.isLoading || subjects.isLoading;
-
-  const continueMaterial = useMemo(
-    () =>
-      materials.data
-        ?.filter(
-          (item) => item.type === 'PDF' && item.file_url && item.last_opened_at && !item.completed,
-        )
-        .sort(
-          (a, b) => new Date(b.last_opened_at!).getTime() - new Date(a.last_opened_at!).getTime(),
-        )[0],
-
-    [materials.data],
-  );
-
-  const plannedSessions = useMemo(
-    () =>
-      sessions.data
-        ?.filter((item) => item.status === 'PLANNED' || item.status === 'IN_PROGRESS')
-        .slice(0, 4) ?? [],
-
-    [sessions.data],
-  );
 
   const selectedSubject = selectedSubjectId ? bySubject.get(selectedSubjectId) : undefined;
 
@@ -221,23 +207,33 @@ export default function StudyScreen() {
     };
   };
 
-  const folderMaterials = useMemo(
-    () =>
-      selectedSubjectId
-        ? (materials.data?.filter((item) => item.subject_id === selectedSubjectId) ?? [])
-        : [],
+  const unfiledMaterials = useMemo(
+    () => materials.data?.filter((item) => !bySubject.get(item.subject_id)) ?? [],
 
-    [materials.data, selectedSubjectId],
+    [materials.data, bySubject],
   );
 
-  const folderNotes = useMemo(
-    () =>
-      selectedSubjectId
-        ? (notes.data?.filter((item) => item.subject_id === selectedSubjectId) ?? [])
-        : [],
+  const unfiledNotes = useMemo(
+    () => notes.data?.filter((item) => !bySubject.get(item.subject_id)) ?? [],
 
-    [notes.data, selectedSubjectId],
+    [notes.data, bySubject],
   );
+
+  const folderMaterials = useMemo(() => {
+    if (selectedSubjectId === UNFILED_ID) return unfiledMaterials;
+
+    return selectedSubjectId
+      ? (materials.data?.filter((item) => item.subject_id === selectedSubjectId) ?? [])
+      : [];
+  }, [materials.data, selectedSubjectId, unfiledMaterials]);
+
+  const folderNotes = useMemo(() => {
+    if (selectedSubjectId === UNFILED_ID) return unfiledNotes;
+
+    return selectedSubjectId
+      ? (notes.data?.filter((item) => item.subject_id === selectedSubjectId) ?? [])
+      : [];
+  }, [notes.data, selectedSubjectId, unfiledNotes]);
 
   const normalizedSearch = search.trim().toLowerCase();
 
@@ -348,6 +344,34 @@ export default function StudyScreen() {
           ]}
         >
           Overview
+        </Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => openFolder(UNFILED_ID)}
+        style={[
+          styles.sidebarRow,
+          {
+            backgroundColor: selectedSubjectId === UNFILED_ID ? palette.accentSoft : 'transparent',
+          },
+        ]}
+      >
+        <View style={[styles.folderDot, { backgroundColor: palette.textMuted }]} />
+
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.sidebarRowText,
+            {
+              color: selectedSubjectId === UNFILED_ID ? palette.accentStrong : palette.text,
+            },
+          ]}
+        >
+          Unfiled
+        </Text>
+
+        <Text style={[styles.sidebarCount, { color: palette.textMuted }]}>
+          {unfiledMaterials.length + unfiledNotes.length}
         </Text>
       </Pressable>
 
@@ -471,6 +495,39 @@ export default function StudyScreen() {
         </Text>
       </Pressable>
 
+      <Pressable
+        onPress={() => openFolder(UNFILED_ID)}
+        style={[
+          styles.mobileFolderChip,
+
+          compact && styles.mobileFolderChipCompact,
+
+          {
+            backgroundColor:
+              selectedSubjectId === UNFILED_ID ? palette.accentSoft : palette.surface,
+
+            borderColor: selectedSubjectId === UNFILED_ID ? palette.accent : palette.border,
+          },
+        ]}
+      >
+        <View style={[styles.folderDot, { backgroundColor: palette.textMuted }]} />
+
+        <Text
+          style={[
+            styles.mobileFolderText,
+            {
+              color: selectedSubjectId === UNFILED_ID ? palette.accentStrong : palette.text,
+            },
+          ]}
+        >
+          Unfiled
+        </Text>
+
+        <Text style={[styles.mobileFolderCount, { color: palette.textMuted }]}>
+          {unfiledMaterials.length + unfiledNotes.length}
+        </Text>
+      </Pressable>
+
       {subjects.data?.map((subject) => {
         const active = selectedSubjectId === subject.id;
 
@@ -530,105 +587,26 @@ export default function StudyScreen() {
   );
 
   const renderOverview = () => {
-    const continuePct = continueMaterial
-      ? pdfReadingProgress(continueMaterial.last_read_page, continueMaterial.page_count ?? 0)
-      : 0;
-
     const sortedSubjects = [...(subjects.data ?? [])].sort(
       (a, b) => getFolderCounts(b.id).total - getFolderCounts(a.id).total,
     );
 
     return (
       <View style={styles.overview}>
-        {/* CONTINUE STUDYING — hero */}
-
-        <View
-          style={[
-            styles.hero,
-            compact && styles.heroCompact,
-            { backgroundColor: palette.lavenderSoft, borderColor: palette.border },
-          ]}
-        >
-          <Ionicons
-            color={palette.lavender}
-            name="heart"
-            size={20}
-            style={styles.heroHeartAccent}
-          />
-
-          {continueMaterial ? (
-            <>
-              <View style={styles.heroTop}>
-                <Text style={[styles.heroLabel, { color: palette.textMuted }]}>
-                  Continue studying
-                </Text>
-                <Text style={[styles.heroPct, { color: palette.text }]}>{continuePct}%</Text>
-              </View>
-
-              <View style={styles.heroMain}>
-                <MotionIcon
-                  backgroundColor={palette.surface}
-                  color={palette.lavender}
-                  iconSize={18}
-                  name="document-text-outline"
-                  size={40}
-                />
-
-                <View style={styles.heroCopy}>
-                  <Text numberOfLines={1} style={[styles.heroTitle, { color: palette.text }]}>
-                    {continueMaterial.title}
-                  </Text>
-                  <Text style={[styles.heroMeta, { color: palette.textMuted }]}>
-                    Page {continueMaterial.last_read_page} of {continueMaterial.page_count ?? '?'} ·{' '}
-                    {bySubject.get(continueMaterial.subject_id)?.name}
-                  </Text>
-                </View>
-              </View>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => openMaterial(continueMaterial)}
-                style={styles.heroBottom}
-              >
-                <View style={styles.heroBar}>
-                  <View
-                    style={[
-                      styles.heroBarFill,
-                      { backgroundColor: palette.lavender, width: `${continuePct}%` },
-                    ]}
-                  />
-                </View>
-
-                <View style={styles.heroResume}>
-                  <Text style={[styles.heroResumeText, { color: palette.textMuted }]}>Resume</Text>
-                  <Ionicons color={palette.textMuted} name="chevron-forward" size={13} />
-                </View>
-              </Pressable>
-            </>
-          ) : (
-            <FeedbackState
-              message="Open a PDF and its reading progress will appear here."
-              title="Nothing in progress"
-            />
-          )}
-        </View>
-
         {/* QUICK ACTIONS */}
 
         <View style={styles.quickActions}>
           <AppButton
-            icon="document-text-outline"
-            label="New note"
-            onPress={() => router.push('/notes/create')}
-            style={styles.quickAction}
+            icon="folder-outline"
+            label="Add folder"
+            onPress={() => router.push('/subjects/create')}
             variant="secondary"
           />
 
           <AppButton
-            icon="cloud-upload-outline"
-            label="Add material"
-            onPress={() => router.push('/materials/create')}
-            style={styles.quickAction}
+            icon="document-text-outline"
+            label="Quick note"
+            onPress={() => router.push('/notes/create')}
             variant="primary"
           />
         </View>
@@ -638,162 +616,67 @@ export default function StudyScreen() {
         <SectionTitle color={palette.text} title="Your folders" />
 
         <View style={styles.folderGrid}>
-          {sortedSubjects.map((subject, index) => {
+          <Pressable
+            onPress={() => openFolder(UNFILED_ID)}
+            style={({ pressed }) => [
+              styles.folderTile,
+              splitLandscape && styles.folderTileLandscape,
+              compact && styles.folderTileCompact,
+              phone && styles.folderTilePhone,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <FolderIcon pack={folderPack} seed="unfiled" size={compact ? 62 : 76} />
+
+            <Text numberOfLines={1} style={[styles.folderTileTitle, { color: palette.text }]}>
+              Unfiled
+            </Text>
+
+            <Text style={[styles.folderTileMeta, { color: palette.textMuted }]}>
+              {unfiledMaterials.length + unfiledNotes.length} items
+            </Text>
+          </Pressable>
+
+          {sortedSubjects.map((subject) => {
             const counts = getFolderCounts(subject.id);
-            const wide = index === 0 && counts.total > 0;
 
             return (
               <Pressable
                 key={subject.id}
                 onPress={() => openFolder(subject.id)}
                 style={({ pressed }) => [
-                  styles.folderCard,
-                  wide && styles.folderCardWide,
-                  !wide && splitLandscape && styles.folderCardLandscape,
-                  !wide && compact && styles.folderCardCompact,
-                  !wide && phone && styles.folderCardPhone,
-                  {
-                    backgroundColor: palette.surface,
-                    borderColor: palette.border,
-                    opacity: pressed ? 0.72 : 1,
-                  },
+                  styles.folderTile,
+                  splitLandscape && styles.folderTileLandscape,
+                  compact && styles.folderTileCompact,
+                  phone && styles.folderTilePhone,
+                  { opacity: pressed ? 0.7 : 1 },
                 ]}
               >
-                {wide ? (
-                  <>
-                    <View style={[styles.folderAvatar, { backgroundColor: palette.surfaceAlt }]}>
-                      <Text
-                        style={[
-                          styles.folderAvatarLetter,
-                          { color: subject.color ?? palette.accentStrong },
-                        ]}
-                      >
-                        {subject.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
+                <FolderIcon
+                  pack={folderPack}
+                  seed={subject.id}
+                  size={compact ? 62 : 76}
+                  skinUrl={
+                    subject.folder_skin_url ? getFolderSkinUrl(subject.folder_skin_url) : null
+                  }
+                />
 
-                    <View style={styles.folderWideCopy}>
-                      <Text
-                        numberOfLines={1}
-                        style={[styles.folderCardTitle, { color: palette.text }]}
-                      >
-                        {subject.name}
-                      </Text>
-                      <Text style={[styles.folderMeta, { color: palette.textMuted }]}>
-                        {counts.materialCount} materials · {counts.noteCount} notes
-                      </Text>
-                    </View>
+                <Text numberOfLines={1} style={[styles.folderTileTitle, { color: palette.text }]}>
+                  {subject.name}
+                </Text>
 
-                    <Text
-                      style={[
-                        styles.folderCountPill,
-                        { backgroundColor: palette.accentSoft, color: palette.accentStrong },
-                      ]}
-                    >
-                      {counts.total}
-                    </Text>
-
-                    <Ionicons color={palette.textMuted} name="chevron-forward" size={15} />
-                  </>
-                ) : (
-                  <>
-                    <View style={styles.folderCardTop}>
-                      <View
-                        style={[
-                          styles.folderDot,
-                          { backgroundColor: subject.color ?? palette.accent },
-                        ]}
-                      />
-                      <Ionicons color={palette.textMuted} name="chevron-forward" size={13} />
-                    </View>
-
-                    <View>
-                      <Text
-                        numberOfLines={2}
-                        style={[
-                          styles.folderCardTitle,
-                          styles.folderCardTitleCompact,
-                          { color: palette.text },
-                        ]}
-                      >
-                        {subject.name}
-                      </Text>
-
-                      <Text style={[styles.folderMeta, { color: palette.textMuted }]}>
-                        {counts.materialCount} materials · {counts.noteCount} notes
-                      </Text>
-                    </View>
-                  </>
-                )}
+                <Text style={[styles.folderTileMeta, { color: palette.textMuted }]}>
+                  {counts.total} items
+                </Text>
               </Pressable>
             );
           })}
-
-          {subjects.data?.length ? (
-            <Pressable
-              onPress={() => router.push('/subjects/create')}
-              style={({ pressed }) => [
-                styles.folderAddTile,
-                { borderColor: palette.border, opacity: pressed ? 0.6 : 1 },
-              ]}
-            >
-              <Ionicons color={palette.textMuted} name="add" size={15} />
-              <Text style={[styles.folderAddText, { color: palette.textMuted }]}>Add subject</Text>
-            </Pressable>
-          ) : null}
         </View>
 
         {!subjects.data?.length ? (
           <FeedbackState
             message="Create subjects first and each subject will get its own study folder."
             title="No folders yet"
-          />
-        ) : null}
-
-        {/* SESSIONS */}
-
-        <SectionTitle color={palette.text} title="Next sessions" />
-
-        <View style={styles.sessionGrid}>
-          {plannedSessions.map((item) => {
-            const subject = bySubject.get(item.subject_id);
-
-            return (
-              <View
-                key={item.id}
-                style={[
-                  styles.sessionItem,
-
-                  splitLandscape && styles.sessionItemLandscape,
-
-                  phone && styles.sessionItemPhone,
-                ]}
-              >
-                <EntityCard
-                  accent={subject?.color}
-                  badge={`${item.planned_duration} MIN`}
-                  metadata={format(new Date(item.planned_at), 'MMM d · h:mm a')}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/sessions/[id]',
-
-                      params: {
-                        id: item.id,
-                      },
-                    })
-                  }
-                  subtitle={subject?.name}
-                  title={item.topic}
-                />
-              </View>
-            );
-          })}
-        </View>
-
-        {!plannedSessions.length ? (
-          <FeedbackState
-            message="Create a study plan from an upcoming exam."
-            title="No sessions planned"
           />
         ) : null}
       </View>
@@ -850,7 +733,7 @@ export default function StudyScreen() {
               },
             ]}
           >
-            {selectedSubject?.name ?? 'Subject'}
+            {selectedSubjectId === UNFILED_ID ? 'Unfiled' : (selectedSubject?.name ?? 'Subject')}
           </Text>
 
           <Text
@@ -1342,6 +1225,23 @@ export default function StudyScreen() {
       empty={false}
       emptyMessage=""
       error={materials.error ?? notes.error ?? sessions.error ?? subjects.error}
+      headerActions={
+        <Pressable
+          accessibilityLabel="Settings"
+          accessibilityRole="button"
+          onPress={() => router.push('/settings')}
+          style={({ pressed }) => [
+            styles.settingsButton,
+            {
+              backgroundColor: palette.surface,
+              borderColor: palette.border,
+              opacity: pressed ? 0.65 : 1,
+            },
+          ]}
+        >
+          <Ionicons color={palette.accentStrong} name="settings-outline" size={19} />
+        </Pressable>
+      }
       loading={loading}
       onRefresh={() =>
         void Promise.all([
@@ -1403,6 +1303,16 @@ function SectionTitle({ color, title }: { color: string; title: string }) {
 }
 
 const styles = StyleSheet.create({
+  settingsButton: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    marginTop: 3,
+    width: 42,
+  },
+
   shell: {
     width: '100%',
   },
@@ -1560,104 +1470,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  hero: {
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    boxShadow: '0 14px 30px rgba(14, 27, 72, 0.08)',
-    gap: spacing.sm,
-    overflow: 'hidden',
-    padding: spacing.lg,
-    position: 'relative',
-  },
-
-  heroCompact: {
-    borderRadius: 16,
-    gap: 7,
-    padding: 13,
-  },
-
-  heroHeartAccent: {
-    opacity: 0.28,
-    position: 'absolute',
-    right: 14,
-    top: 12,
-    transform: [{ rotate: '18deg' }],
-  },
-
-  heroTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-
-  heroLabel: {
-    ...typography.label,
-    fontSize: 10,
-  },
-
-  heroPct: {
-    ...typography.sectionTitle,
-    fontSize: 20,
-  },
-
-  heroMain: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-
-  heroCopy: {
-    flex: 1,
-    gap: 2,
-    minWidth: 0,
-  },
-
-  heroTitle: {
-    ...typography.sectionTitle,
-    fontSize: 15.5,
-  },
-
-  heroMeta: {
-    ...typography.caption,
-    fontSize: 11.5,
-  },
-
-  heroBottom: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-
-  heroBar: {
-    borderRadius: radii.pill,
-    flex: 1,
-    height: 6,
-    overflow: 'hidden',
-  },
-
-  heroBarFill: {
-    borderRadius: radii.pill,
-    height: '100%',
-  },
-
-  heroResume: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 2,
-  },
-
-  heroResumeText: {
-    ...typography.label,
-    fontSize: 10,
-  },
-
   quickActions: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: spacing.sm,
-  },
-
-  quickAction: {
-    flex: 1,
   },
 
   sectionHeading: {
@@ -1683,131 +1498,38 @@ const styles = StyleSheet.create({
   folderGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
   },
 
-  folderCard: {
-    borderRadius: 17,
-    borderWidth: 1,
-    boxShadow: '0 8px 20px rgba(14, 27, 72, 0.05)',
-    gap: 8,
-    minHeight: 108,
-    justifyContent: 'space-between',
-    padding: 13,
-    width: '48.5%',
-  },
-
-  folderCardLandscape: {
-    minHeight: 105,
-    width: '31.5%',
-  },
-
-  folderCardCompact: {
-    borderRadius: 13,
-    gap: 7,
-    minHeight: 82,
-    padding: 10,
-    width: '48%',
-  },
-
-  folderCardPhone: {
-    width: '100%',
-  },
-
-  folderCardWide: {
+  folderTile: {
     alignItems: 'center',
-    boxShadow: '0 10px 24px rgba(14, 27, 72, 0.06)',
-    flexDirection: 'row',
-    minHeight: 0,
-    width: '100%',
+    gap: 6,
+    paddingVertical: 6,
+    width: '21%',
   },
 
-  folderAvatar: {
-    alignItems: 'center',
-    borderRadius: radii.pill,
-    boxShadow: '0 3px 8px rgba(14, 27, 72, 0.10)',
-    height: 32,
-    justifyContent: 'center',
-    width: 32,
+  folderTileLandscape: {
+    width: '14%',
   },
 
-  folderAvatarLetter: {
-    ...typography.sectionTitle,
-    fontSize: 13,
+  folderTileCompact: {
+    width: '29%',
   },
 
-  folderWideCopy: {
-    flex: 1,
-    gap: 2,
-    minWidth: 0,
+  folderTilePhone: {
+    width: '46%',
   },
 
-  folderCountPill: {
+  folderTileTitle: {
     ...typography.label,
-    borderRadius: radii.pill,
-    fontSize: 10,
-    overflow: 'hidden',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    transform: [{ rotate: '-4deg' }],
+    fontSize: 12,
+    textAlign: 'center',
   },
 
-  folderCardTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-
-  folderCardTitle: {
-    ...typography.sectionTitle,
-    fontSize: 15,
-    lineHeight: 20,
-  },
-
-  folderCardTitleCompact: {
-    fontSize: 13,
-    lineHeight: 17,
-  },
-
-  folderMeta: {
+  folderTileMeta: {
     ...typography.caption,
-    fontSize: 8,
-    lineHeight: 12,
-  },
-
-  folderAddTile: {
-    alignItems: 'center',
-    borderRadius: 13,
-    borderStyle: 'dashed',
-    borderWidth: 1.5,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    justifyContent: 'center',
-    minHeight: 44,
-    width: '100%',
-  },
-
-  folderAddText: {
-    ...typography.label,
-    fontSize: 11,
-  },
-
-  sessionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-
-  sessionItem: {
-    width: '100%',
-  },
-
-  sessionItemLandscape: {
-    width: '48.5%',
-  },
-
-  sessionItemPhone: {
-    width: '100%',
+    fontSize: 9,
+    textAlign: 'center',
   },
 
   /*
