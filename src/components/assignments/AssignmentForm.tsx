@@ -38,7 +38,7 @@ const priorities: {
 const statuses: {
   label: string;
   value: AssignmentStatus;
-}[] = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'].map((value) => ({
+}[] = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map((value) => ({
   label: value.replace('_', ' '),
   value: value as AssignmentStatus,
 }));
@@ -60,7 +60,7 @@ const schema = z.object({
 
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
 
-  status: z.enum(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED']),
+  status: z.enum(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
 
   reminder_offsets: z.array(z.number().int().positive()).min(1, 'Choose at least one reminder.'),
 
@@ -158,7 +158,7 @@ export function AssignmentForm({ id, initialTitle, initialDueAt, initialNotes }:
         id,
       );
 
-      if (values.status === 'COMPLETED') {
+      if (values.status === 'COMPLETED' || values.status === 'CANCELLED') {
         return saved;
       }
 

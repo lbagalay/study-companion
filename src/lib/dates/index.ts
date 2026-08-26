@@ -7,7 +7,7 @@ export function isClassCurrent(startTime: string, endTime: string, now = new Dat
 }
 
 export function assignmentUrgency(item: Assignment, now = new Date()) {
-  if (item.status === 'COMPLETED') return 99;
+  if (item.status === 'COMPLETED' || item.status === 'CANCELLED') return 99;
   const days = differenceInCalendarDays(new Date(item.due_at), now);
   return days < 0 ? 0 : isSameDay(new Date(item.due_at), now) ? 1 : days <= 3 ? 3 : 5;
 }

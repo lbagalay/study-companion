@@ -43,7 +43,7 @@ export type ClassSchedule = Timestamps & {
 };
 
 export type AssignmentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-export type AssignmentStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+export type AssignmentStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
 export type Assignment = Timestamps & {
   id: string;

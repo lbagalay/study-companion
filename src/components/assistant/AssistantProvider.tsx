@@ -28,6 +28,9 @@ export type ChatMessage = {
 /** Routes where the assistant must stay out of the way, even if a session exists. */
 const HIDDEN_ROUTES = new Set(['/reset-password']);
 
+/** How long a PDF stays "remembered" after the student navigates away from it. */
+const LAST_PDF_CONTEXT_TTL_MS = 30 * 60 * 1000;
+
 type AssistantContextValue = {
   visible: boolean;
   open: boolean;
@@ -53,8 +56,29 @@ export function AssistantProvider({ children }: PropsWithChildren) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
-  const [screenContext, setScreenContext] = useState<ScreenContext | null>(null);
+  const [screenContext, setScreenContextState] = useState<ScreenContext | null>(null);
   const loadedRef = useRef(false);
+  /*
+   * The PDF reader clears its context on unmount (see
+   * useAssistantScreenContext below), so navigating away from a PDF to a
+   * generic screen (Home, the Study list, ...) would normally make "this
+   * pdf" unresolvable. Instead, the last PDF a student had open stays
+   * remembered here — separate from the live `screenContext` shown in the
+   * sheet header — until either another PDF is opened, some other specific
+   * item is opened (a note, a task, ...), or it goes stale.
+   */
+  const lastPdfContextRef = useRef<{ context: ScreenContext; setAt: number } | null>(null);
+
+  const setScreenContext = useCallback((context: ScreenContext | null) => {
+    if (context?.type === 'pdf' && context.materialId) {
+      lastPdfContextRef.current = { context, setAt: Date.now() };
+    } else if (context?.id || context?.materialId) {
+      // A different specific item is now open — the remembered PDF no longer applies.
+      lastPdfContextRef.current = null;
+    }
+
+    setScreenContextState(context);
+  }, []);
   /*
    * `sending` (React state) can't guard against a double-tap: two calls to
    * `send` made in the same tick both close over the pre-update value, so
@@ -94,7 +118,25 @@ export function AssistantProvider({ children }: PropsWithChildren) {
       setMessages((prev) => [...prev, { id: createClientUuid(), role: 'user', content: trimmed }]);
       setSending(true);
 
-      const input = { conversationId, message: trimmed, route: pathname, context: screenContext };
+      /*
+       * A generic current screen (no id/materialId of its own) doesn't
+       * override a still-fresh remembered PDF — see setScreenContext above.
+       */
+      const remembered = lastPdfContextRef.current;
+      const effectiveContext =
+        !screenContext?.id &&
+        !screenContext?.materialId &&
+        remembered &&
+        Date.now() - remembered.setAt < LAST_PDF_CONTEXT_TTL_MS
+          ? remembered.context
+          : screenContext;
+
+      const input = {
+        conversationId,
+        message: trimmed,
+        route: pathname,
+        context: effectiveContext,
+      };
       const finish = () => {
         sendingRef.current = false;
         setSending(false);
@@ -222,6 +264,7 @@ export function AssistantProvider({ children }: PropsWithChildren) {
       sending,
       send,
       screenContext,
+      setScreenContext,
       startNewChat,
       openConversation,
       clearMessageAction,

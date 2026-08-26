@@ -1859,7 +1859,15 @@ export function PdfAnnotationProvider({
 
   const [lineStyle, setLineStyle] = useState<LineStyle>('SOLID');
 
-  const [stylusOnly, setStylusOnly] = useState(true);
+  /*
+   * Defaults to off: most students draw with a finger, not a stylus, and
+   * with this on a finger touch is deliberately ignored while a drawing
+   * tool is active (so it stays free for native scrolling) — meaning
+   * drawing silently does nothing for anyone without a stylus. The Hand
+   * tool (the very first tool, selected by default) is the actual way to
+   * scroll; switch to it, scroll, then switch back to draw.
+   */
+  const [stylusOnly, setStylusOnly] = useState(false);
 
   const [pageStates, setPageStates] = useState<Record<number, PageUiState>>({});
 
@@ -1948,7 +1956,7 @@ export function PdfAnnotationProvider({
 
     setWidthIndex(1);
 
-    setStylusOnly(true);
+    setStylusOnly(false);
 
     setColor(tool === 'HIGHLIGHTER' ? HIGHLIGHTER_COLORS[5] : PEN_COLORS[0]);
   }, [tool]);

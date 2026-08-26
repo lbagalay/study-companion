@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format, formatDistanceToNow, isThisWeek, parse } from 'date-fns';
+import { differenceInCalendarDays, format, formatDistanceToNow, isThisWeek } from 'date-fns';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { AppButton } from '@/components/ui/AppButton';
+import { DailyQuoteCard } from '@/components/ui/DailyQuoteCard';
+import { DailyQuoteModal } from '@/components/ui/DailyQuoteModal';
 import { EditorialBackdrop } from '@/components/ui/EditorialBackdrop';
 import { EntityCard } from '@/components/ui/EntityCard';
 import { FeedbackState } from '@/components/ui/FeedbackState';
@@ -31,7 +33,7 @@ import {
 } from '@/hooks/useStudyData';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useAuth } from '@/providers/AuthProvider';
-import { assignmentUrgency, examUrgency, isClassCurrent } from '@/lib/dates';
+import { assignmentUrgency, examUrgency } from '@/lib/dates';
 
 type Upcoming = {
   accent?: string;
@@ -43,14 +45,11 @@ type Upcoming = {
   subtitle: string;
   title: string;
 };
-const clock = (value: string) => format(parse(value, 'HH:mm:ss', new Date()), 'h:mm a');
-
 export default function HomeScreen() {
   const palette = useAppTheme();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const compact = width < 640;
-  const wide = width >= 900;
   const { user } = useAuth();
 
   useAssistantScreenContext(useMemo(() => ({ type: 'home', label: 'Home' }), []));
@@ -66,10 +65,9 @@ export default function HomeScreen() {
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const name = profile.data?.preferred_name || profile.data?.full_name.split(' ')[0] || 'Student';
-  const todayClasses = schedules.data?.filter((s) => s.day_of_week === now.getDay()) ?? [];
   const upcoming: Upcoming[] = [
     ...(assignments.data
-      ?.filter((a) => a.status !== 'COMPLETED')
+      ?.filter((a) => a.status !== 'COMPLETED' && a.status !== 'CANCELLED')
       .map((a) => {
         const date = new Date(a.due_at);
         const days = differenceInCalendarDays(date, now);
@@ -114,6 +112,7 @@ export default function HomeScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <EditorialBackdrop />
+      <DailyQuoteModal />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View
           style={[
@@ -181,6 +180,7 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+        <DailyQuoteCard />
         <View style={styles.quickActions}>
           <QuickAction
             color={palette.accent}
@@ -210,61 +210,25 @@ export default function HomeScreen() {
             textColor={palette.text}
           />
         </View>
-        <View style={wide ? styles.sectionRow : styles.sectionStack}>
-          <Section
-            color={palette.text}
-            index="01"
-            style={wide ? styles.sectionHalf : undefined}
-            tint={palette.lavenderSoft}
-            title="Today"
-          >
-            {todayClasses.map((item) => {
-              const subject = bySubject.get(item.subject_id);
-              const current = isClassCurrent(item.start_time, item.end_time, now);
-              return (
-                <EntityCard
-                  accent={subject?.color}
-                  badge={current ? 'NOW' : clock(item.start_time)}
-                  key={item.id}
-                  metadata={item.room || subject?.room}
-                  onPress={() =>
-                    router.push({ pathname: '/schedule/[id]', params: { id: item.id } })
-                  }
-                  subtitle={`${clock(item.start_time)}–${clock(item.end_time)}`}
-                  title={subject?.name ?? 'Class'}
-                />
-              );
-            })}
-            {!todayClasses.length ? (
-              <FeedbackState message="No classes are scheduled today." title="A clear day" />
-            ) : null}
-          </Section>
-          <Section
-            color={palette.text}
-            index="02"
-            style={wide ? styles.sectionHalf : undefined}
-            tint={palette.peachSoft}
-            title="Coming up"
-          >
-            {upcoming.map((item) => (
-              <EntityCard
-                accent={item.accent}
-                badge={item.badge}
-                key={`${item.href}-${item.id}`}
-                onPress={() => router.push({ pathname: item.href, params: { id: item.id } })}
-                subtitle={item.subtitle}
-                title={item.title}
-              />
-            ))}
-            {!upcoming.length ? (
-              <FeedbackState
-                message="Everything currently recorded is complete."
-                title="You’re caught up"
-              />
-            ) : null}
-          </Section>
-        </View>
-        <Section color={palette.text} index="03" tint={palette.lavenderSoft} title="This week">
+        <Section color={palette.text} index="01" tint={palette.peachSoft} title="Coming up">
+          {upcoming.map((item) => (
+            <EntityCard
+              accent={item.accent}
+              badge={item.badge}
+              key={`${item.href}-${item.id}`}
+              onPress={() => router.push({ pathname: item.href, params: { id: item.id } })}
+              subtitle={item.subtitle}
+              title={item.title}
+            />
+          ))}
+          {!upcoming.length ? (
+            <FeedbackState
+              message="Everything currently recorded is complete."
+              title="You’re caught up"
+            />
+          ) : null}
+        </Section>
+        <Section color={palette.text} index="02" tint={palette.lavenderSoft} title="This week">
           <View style={styles.stats}>
             <Stat
               color={palette.text}
@@ -283,7 +247,11 @@ export default function HomeScreen() {
               icon="hourglass-outline"
               label="Remaining"
               surface={palette.surface}
-              value={assignments.data?.filter((a) => a.status !== 'COMPLETED').length ?? 0}
+              value={
+                assignments.data?.filter(
+                  (a) => a.status !== 'COMPLETED' && a.status !== 'CANCELLED',
+                ).length ?? 0
+              }
             />
             <Stat
               color={palette.text}
@@ -464,9 +432,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   quickActions: { flexDirection: 'row', gap: spacing.sm },
-  sectionStack: { gap: spacing.xl },
-  sectionRow: { flexDirection: 'row', gap: spacing.lg },
-  sectionHalf: { flex: 1, minWidth: 0 },
   quickAction: {
     alignItems: 'center',
     borderRadius: radii.lg,

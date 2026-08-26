@@ -34,6 +34,7 @@ type CalendarEvent = {
   color: string;
   kind: 'ASSIGNMENT' | 'QUIZ' | 'EXAM';
   completed?: boolean;
+  cancelled?: boolean;
   overdue?: boolean;
   onPress: () => void;
 };
@@ -68,6 +69,7 @@ export default function TasksScreen() {
         const date = new Date(item.due_at);
 
         const completed = item.status === 'COMPLETED';
+        const cancelled = item.status === 'CANCELLED';
 
         return {
           id: `assignment-${item.id}`,
@@ -76,7 +78,8 @@ export default function TasksScreen() {
           kind: 'ASSIGNMENT' as const,
           color: TASK_COLORS.ASSIGNMENT,
           completed,
-          overdue: !completed && isBefore(date, new Date()),
+          cancelled,
+          overdue: !completed && !cancelled && isBefore(date, new Date()),
 
           onPress: () =>
             router.push({
@@ -91,6 +94,7 @@ export default function TasksScreen() {
     const examEvents =
       exams.data?.map((item) => {
         const isQuiz = item.type === 'QUIZ';
+        const cancelled = item.status === 'CANCELLED';
 
         return {
           id: `exam-${item.id}`,
@@ -100,6 +104,7 @@ export default function TasksScreen() {
           kind: isQuiz ? ('QUIZ' as const) : ('EXAM' as const),
 
           color: isQuiz ? TASK_COLORS.QUIZ : TASK_COLORS.EXAM,
+          cancelled,
 
           onPress: () =>
             router.push({
@@ -410,7 +415,7 @@ export default function TasksScreen() {
                     <View style={styles.events}>
                       {visibleEvents.map((event) => (
                         <Pressable
-                          accessibilityLabel={`${event.kind === 'QUIZ' ? 'Quiz' : event.kind === 'EXAM' ? 'Exam' : 'Assignment'}: ${event.title}${event.completed ? ', completed' : event.overdue ? ', overdue' : ''}`}
+                          accessibilityLabel={`${event.kind === 'QUIZ' ? 'Quiz' : event.kind === 'EXAM' ? 'Exam' : 'Assignment'}: ${event.title}${event.completed ? ', completed' : event.cancelled ? ', cancelled' : event.overdue ? ', overdue' : ''}`}
                           accessibilityRole="button"
                           key={event.id}
                           onPress={event.onPress}
@@ -420,7 +425,8 @@ export default function TasksScreen() {
                             {
                               backgroundColor: event.color,
 
-                              opacity: event.completed ? 0.45 : pressed ? 0.75 : 1,
+                              opacity:
+                                event.completed || event.cancelled ? 0.45 : pressed ? 0.75 : 1,
                             },
                           ]}
                         >
@@ -429,7 +435,7 @@ export default function TasksScreen() {
                             style={[
                               styles.eventText,
 
-                              event.completed ? styles.completedText : null,
+                              event.completed || event.cancelled ? styles.completedText : null,
                             ]}
                           >
                             {event.title}
