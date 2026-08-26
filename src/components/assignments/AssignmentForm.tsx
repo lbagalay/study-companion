@@ -2,11 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { DateTimeField } from '@/components/forms/DateTimeField';
 import { SubjectField } from '@/components/forms/SubjectField';
 import { AppButton } from '@/components/ui/AppButton';
@@ -68,7 +69,14 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export function AssignmentForm({ id }: { id?: string }) {
+type Props = {
+  id?: string;
+  initialTitle?: string;
+  initialDueAt?: string;
+  initialNotes?: string;
+};
+
+export function AssignmentForm({ id, initialTitle, initialDueAt, initialNotes }: Props) {
   const router = useRouter();
   const client = useQueryClient();
   const subjects = useSubjects();
@@ -78,6 +86,13 @@ export function AssignmentForm({ id }: { id?: string }) {
     queryFn: () => getAssignment(id!),
     enabled: Boolean(id),
   });
+
+  useAssistantScreenContext(
+    useMemo(
+      () => ({ type: 'task', id, label: item.data?.title ?? (id ? 'Task' : 'New task') }),
+      [id, item.data?.title],
+    ),
+  );
 
   const {
     control,
@@ -89,13 +104,13 @@ export function AssignmentForm({ id }: { id?: string }) {
 
     defaultValues: {
       subject_id: '',
-      title: '',
+      title: initialTitle ?? '',
       description: '',
-      due_at: addDays(new Date(), 1).toISOString(),
+      due_at: initialDueAt ?? addDays(new Date(), 1).toISOString(),
       priority: 'MEDIUM',
       status: 'NOT_STARTED',
       reminder_offsets: [1440, 180, 60],
-      notes: '',
+      notes: initialNotes ?? '',
     },
   });
 

@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { Alert, Linking } from 'react-native';
 
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { AppButton } from '@/components/ui/AppButton';
 import { FeedbackState } from '@/components/ui/FeedbackState';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -14,6 +16,13 @@ export function PdfReader({ materialId }: { initialPage?: number; materialId: st
     queryFn: () => getMaterial(materialId),
     enabled: Boolean(materialId),
   });
+
+  useAssistantScreenContext(
+    useMemo(
+      () => ({ type: 'pdf', materialId, label: material.data?.title ?? 'PDF' }),
+      [materialId, material.data?.title],
+    ),
+  );
   if (material.isLoading)
     return <FeedbackState loading message="Checking your private material." title="Opening PDF" />;
   if (material.error)

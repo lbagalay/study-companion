@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { AppButton } from '@/components/ui/AppButton';
 import { EntityList } from '@/components/ui/EntityList';
 import { FeedbackState } from '@/components/ui/FeedbackState';
@@ -86,6 +87,16 @@ export default function StudyScreen() {
   const [search, setSearch] = useState('');
 
   const bySubject = useSubjectMap();
+
+  useAssistantScreenContext(
+    useMemo(
+      () => ({
+        type: filter === 'NOTES' ? 'note' : 'study_material',
+        label: filter === 'NOTES' ? 'Notes' : filter === 'MATERIALS' ? 'Study Materials' : 'Study',
+      }),
+      [filter],
+    ),
+  );
 
   const loading =
     materials.isLoading || notes.isLoading || sessions.isLoading || subjects.isLoading;

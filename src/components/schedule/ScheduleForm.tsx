@@ -2,11 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, set } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, StyleSheet, View } from 'react-native';
 import { confirmDestructive } from '@/lib/confirm';
 import { z } from 'zod';
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { DateTimeField } from '@/components/forms/DateTimeField';
 import { SubjectField } from '@/components/forms/SubjectField';
 import { AppButton } from '@/components/ui/AppButton';
@@ -57,6 +58,21 @@ export function ScheduleForm({ id }: { id?: string }) {
     queryFn: () => getSchedule(id!),
     enabled: Boolean(id),
   });
+
+  useAssistantScreenContext(
+    useMemo(
+      () => ({
+        type: 'schedule',
+        id,
+        label: item.data
+          ? `${days[item.data.day_of_week]} class`
+          : id
+            ? 'Schedule entry'
+            : 'New schedule entry',
+      }),
+      [id, item.data],
+    ),
+  );
   const {
     control,
     handleSubmit,

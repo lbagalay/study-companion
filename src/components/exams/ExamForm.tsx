@@ -2,11 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { DateTimeField } from '@/components/forms/DateTimeField';
 import { SubjectField } from '@/components/forms/SubjectField';
 import { AppButton } from '@/components/ui/AppButton';
@@ -80,6 +81,17 @@ export function ExamForm({ id }: { id?: string }) {
     queryFn: () => getExam(id!),
     enabled: Boolean(id),
   });
+
+  useAssistantScreenContext(
+    useMemo(
+      () => ({
+        type: 'assessment',
+        id,
+        label: item.data?.title ?? (id ? 'Assessment' : 'New assessment'),
+      }),
+      [id, item.data?.title],
+    ),
+  );
 
   const {
     control,

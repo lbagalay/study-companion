@@ -1,6 +1,7 @@
 import { differenceInCalendarDays, format, formatDistanceToNow, isThisWeek, parse } from 'date-fns';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import {
   Image,
   Pressable,
@@ -12,6 +13,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { AppButton } from '@/components/ui/AppButton';
 import { EditorialBackdrop } from '@/components/ui/EditorialBackdrop';
 import { EntityCard } from '@/components/ui/EntityCard';
@@ -50,6 +52,9 @@ export default function HomeScreen() {
   const compact = width < 640;
   const wide = width >= 900;
   const { user } = useAuth();
+
+  useAssistantScreenContext(useMemo(() => ({ type: 'home', label: 'Home' }), []));
+
   const profile = useProfile(user?.id);
   const subjects = useSubjects();
   const schedules = useSchedules();

@@ -1,8 +1,9 @@
 import { format, parse } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { days } from '@/components/schedule/ScheduleForm';
 import { ChoiceField } from '@/components/ui/ChoiceField';
 import { EntityList } from '@/components/ui/EntityList';
@@ -20,7 +21,9 @@ const SLOT_HEIGHT = 28;
 
 const TIME_COLUMN_WIDTH = 52;
 
-const DAY_COLUMN_WIDTH = 130;
+const DAY_COLUMN_WIDTH_FALLBACK = 130;
+const DAY_COLUMN_WIDTH_MIN = 76;
+const DAY_COLUMN_WIDTH_MAX = 220;
 
 const WEEK_DAYS = [
   {
@@ -116,6 +119,8 @@ export default function ScheduleScreen() {
 
   const subjects = useSubjects();
 
+  useAssistantScreenContext(useMemo(() => ({ type: 'schedule', label: 'Schedule' }), []));
+
   const [mode, setMode] = useState<'WEEK' | 'TODAY'>('WEEK');
 
   const subjectById = useSubjectMap();
@@ -197,6 +202,18 @@ export default function ScheduleScreen() {
         ]
       : WEEK_DAYS;
   }, [mode, schedules.data, today]);
+
+  const [gridWidth, setGridWidth] = useState(0);
+
+  const dayColumnWidth = (() => {
+    const available = gridWidth - TIME_COLUMN_WIDTH;
+    if (!displayedDays.length || available <= 0) return DAY_COLUMN_WIDTH_FALLBACK;
+
+    return Math.min(
+      DAY_COLUMN_WIDTH_MAX,
+      Math.max(DAY_COLUMN_WIDTH_MIN, Math.floor(available / displayedDays.length)),
+    );
+  })();
 
   const renderClass = (item: NonNullable<typeof schedules.data>[number]) => {
     const subject = subjectById.get(item.subject_id);
@@ -358,6 +375,7 @@ export default function ScheduleScreen() {
 
       {visible.length ? (
         <View
+          onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
           style={[
             styles.scheduleCard,
             {
@@ -367,132 +385,134 @@ export default function ScheduleScreen() {
             },
           ]}
         >
-          <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false}>
-            <View>
-              {/* DAY HEADERS */}
+          <View>
+            {/* DAY HEADERS */}
 
-              <View style={styles.headerRow}>
+            <View style={styles.headerRow}>
+              <View
+                style={[
+                  styles.timeHeader,
+                  {
+                    borderColor: palette.border,
+                  },
+                ]}
+              />
+
+              {displayedDays.map((day) => (
                 <View
+                  key={day.value}
                   style={[
-                    styles.timeHeader,
+                    styles.dayHeader,
                     {
+                      backgroundColor: day.value === today ? palette.accentSoft : palette.surface,
+
                       borderColor: palette.border,
+
+                      width: dayColumnWidth,
                     },
                   ]}
-                />
-
-                {displayedDays.map((day) => (
-                  <View
-                    key={day.value}
+                >
+                  <Text
                     style={[
-                      styles.dayHeader,
+                      styles.dayText,
                       {
-                        backgroundColor: day.value === today ? palette.accentSoft : palette.surface,
-
-                        borderColor: palette.border,
+                        color: day.value === today ? palette.accentStrong : palette.textMuted,
                       },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.dayText,
-                        {
-                          color: day.value === today ? palette.accentStrong : palette.textMuted,
-                        },
-                      ]}
-                    >
-                      {day.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* TIMELINE */}
-
-              <View style={styles.timelineRow}>
-                {/* TIME COLUMN */}
-
-                <View
-                  style={{
-                    width: TIME_COLUMN_WIDTH,
-                  }}
-                >
-                  {timeSlots.map((minutes, index) => {
-                    const isHour = minutes % 60 === 0;
-
-                    return (
-                      <View
-                        key={minutes}
-                        style={{
-                          height: index === timeSlots.length - 1 ? 0 : SLOT_HEIGHT,
-
-                          position: 'relative',
-                        }}
-                      >
-                        {isHour ? (
-                          <Text
-                            style={[
-                              styles.timeLabel,
-                              {
-                                color: palette.textMuted,
-                              },
-                            ]}
-                          >
-                            {minutesToLabel(minutes)}
-                          </Text>
-                        ) : null}
-                      </View>
-                    );
-                  })}
+                    {day.label}
+                  </Text>
                 </View>
+              ))}
+            </View>
 
-                {/* DAYS */}
+            {/* TIMELINE */}
 
-                {displayedDays.map((day) => {
-                  const dayClasses = visible.filter((item) => item.day_of_week === day.value);
+            <View style={styles.timelineRow}>
+              {/* TIME COLUMN */}
+
+              <View
+                style={{
+                  width: TIME_COLUMN_WIDTH,
+                }}
+              >
+                {timeSlots.map((minutes, index) => {
+                  const isHour = minutes % 60 === 0;
 
                   return (
                     <View
-                      key={day.value}
-                      style={[
-                        styles.dayColumn,
-                        {
-                          borderColor: palette.border,
+                      key={minutes}
+                      style={{
+                        height: index === timeSlots.length - 1 ? 0 : SLOT_HEIGHT,
 
-                          height: timelineHeight,
-                        },
-                      ]}
+                        position: 'relative',
+                      }}
                     >
-                      {/* GRID LINES */}
-
-                      {timeSlots.slice(0, -1).map((minutes, index) => {
-                        const isHour = minutes % 60 === 0;
-
-                        return (
-                          <View
-                            key={minutes}
-                            pointerEvents="none"
-                            style={[
-                              styles.gridLine,
-                              {
-                                borderTopColor: palette.border,
-
-                                opacity: isHour ? 0.8 : 0.35,
-
-                                top: index * SLOT_HEIGHT,
-                              },
-                            ]}
-                          />
-                        );
-                      })}
-
-                      {dayClasses.map(renderClass)}
+                      {isHour ? (
+                        <Text
+                          style={[
+                            styles.timeLabel,
+                            {
+                              color: palette.textMuted,
+                            },
+                          ]}
+                        >
+                          {minutesToLabel(minutes)}
+                        </Text>
+                      ) : null}
                     </View>
                   );
                 })}
               </View>
+
+              {/* DAYS */}
+
+              {displayedDays.map((day) => {
+                const dayClasses = visible.filter((item) => item.day_of_week === day.value);
+
+                return (
+                  <View
+                    key={day.value}
+                    style={[
+                      styles.dayColumn,
+                      {
+                        borderColor: palette.border,
+
+                        height: timelineHeight,
+
+                        width: dayColumnWidth,
+                      },
+                    ]}
+                  >
+                    {/* GRID LINES */}
+
+                    {timeSlots.slice(0, -1).map((minutes, index) => {
+                      const isHour = minutes % 60 === 0;
+
+                      return (
+                        <View
+                          key={minutes}
+                          pointerEvents="none"
+                          style={[
+                            styles.gridLine,
+                            {
+                              borderTopColor: palette.border,
+
+                              opacity: isHour ? 0.8 : 0.35,
+
+                              top: index * SLOT_HEIGHT,
+                            },
+                          ]}
+                        />
+                      );
+                    })}
+
+                    {dayClasses.map(renderClass)}
+                  </View>
+                );
+              })}
             </View>
-          </ScrollView>
+          </View>
         </View>
       ) : schedules.data?.length ? (
         <FeedbackState message="No classes are scheduled today." title="A clear day" />
@@ -534,8 +554,6 @@ const styles = StyleSheet.create({
     height: 54,
 
     justifyContent: 'center',
-
-    width: DAY_COLUMN_WIDTH,
   },
 
   dayText: {
@@ -570,8 +588,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
 
     position: 'relative',
-
-    width: DAY_COLUMN_WIDTH,
   },
 
   gridLine: {

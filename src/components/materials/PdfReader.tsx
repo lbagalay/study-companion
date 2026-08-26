@@ -12,11 +12,13 @@ import type {
   RenderTask,
 } from 'pdfjs-dist';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 
 import {
   PdfAnnotationPage,
@@ -45,6 +47,7 @@ import { clampPdfPage, pdfReadingProgress, scalePdfZoom } from '@/lib/pdf/progre
 import { createSaveQueue } from '@/lib/pdf/saveQueue';
 
 import {
+  cacheMaterialPageText,
   getMaterial,
   getMaterialUrl,
   listPdfAnnotations,
@@ -55,6 +58,7 @@ import type { StudyMaterial } from '@/types/database';
 
 type ContinuousPdfPageProps = {
   availableWidth: number;
+  materialId: string;
   onElement: (pageNumber: number, element: HTMLDivElement | null) => void;
   onVisibilityChange: (pageNumber: number, ratio: number) => void;
   pageNumber: number;
@@ -64,6 +68,7 @@ type ContinuousPdfPageProps = {
 
 function ContinuousPdfPage({
   availableWidth,
+  materialId,
   onElement,
   onVisibilityChange,
   pageNumber,
@@ -149,6 +154,43 @@ function ContinuousPdfPage({
       active = false;
     };
   }, [availableWidth, pageNumber, pdfDocument, zoom]);
+
+  /**
+   * Cache this page's text for the AI assistant, once, the first time
+   * anyone views it — never re-extracted after that. Best-effort: a
+   * failure here must never interrupt reading.
+   */
+  useEffect(() => {
+    if (!pdfPage) {
+      return;
+    }
+
+    let active = true;
+
+    void (async () => {
+      const textContent = await pdfPage.getTextContent();
+
+      if (!active) {
+        return;
+      }
+
+      const text = textContent.items
+        .map((item) => ('str' in item ? item.str : ''))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (text) {
+        await cacheMaterialPageText(materialId, pageNumber, text);
+      }
+    })().catch(() => {
+      // Best-effort caching for the assistant — never interrupt reading.
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [materialId, pageNumber, pdfPage]);
 
   /**
    * Lazy-load a page when it gets
@@ -452,6 +494,18 @@ export function PdfReader({
    * page gets rendered.
    */
   const [currentPage, setCurrentPage] = useState(1);
+
+  useAssistantScreenContext(
+    useMemo(
+      () => ({
+        type: 'pdf',
+        materialId,
+        page: currentPage,
+        label: material.data?.title ?? 'PDF',
+      }),
+      [materialId, currentPage, material.data?.title],
+    ),
+  );
 
   const [resumedFromPage, setResumedFromPage] = useState<number | null>(null);
 
@@ -982,6 +1036,7 @@ export function PdfReader({
             <ContinuousPdfPage
               availableWidth={availableWidth}
               key={pageNumber}
+              materialId={materialId}
               onElement={registerPageElement}
               onVisibilityChange={handlePageVisibility}
               pageNumber={pageNumber}

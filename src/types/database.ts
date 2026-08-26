@@ -152,6 +152,36 @@ export type StudySession = Timestamps & {
   notification_id: string | null;
 };
 
+export type AssistantRole = 'user' | 'assistant';
+
+export type AssistantConversation = Timestamps & {
+  id: string;
+  user_id: string;
+  title: string;
+};
+
+export type AssistantMessage = {
+  id: string;
+  conversation_id: string;
+  role: AssistantRole;
+  content: string;
+  route: string;
+  context_type: string;
+  context_id: string | null;
+  material_id: string | null;
+  page_number: number | null;
+  created_at: string;
+};
+
+export type StudyMaterialPage = {
+  id: string;
+  material_id: string;
+  user_id: string;
+  page_number: number;
+  content: string;
+  created_at: string;
+};
+
 export type WebPushSubscription = Timestamps & {
   endpoint: string;
   user_id: string;
@@ -248,6 +278,24 @@ export type Database = {
           Pick<StudySession, 'subject_id' | 'topic' | 'planned_at'> &
           Partial<Omit<StudySession, keyof CreateFields | 'subject_id' | 'topic' | 'planned_at'>>,
         Partial<StudySession>
+      >;
+      assistant_conversations: TableDefinition<
+        AssistantConversation,
+        CreateFields & Partial<Omit<AssistantConversation, keyof CreateFields>>,
+        Partial<AssistantConversation>
+      >;
+      assistant_messages: TableDefinition<
+        AssistantMessage,
+        Pick<AssistantMessage, 'conversation_id' | 'role' | 'content'> &
+          Partial<
+            Omit<AssistantMessage, 'id' | 'conversation_id' | 'role' | 'content' | 'created_at'>
+          >,
+        Partial<AssistantMessage>
+      >;
+      study_material_pages: TableDefinition<
+        StudyMaterialPage,
+        Pick<StudyMaterialPage, 'material_id' | 'page_number' | 'content'>,
+        never
       >;
       web_push_subscriptions: TableDefinition<
         WebPushSubscription,

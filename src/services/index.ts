@@ -15,7 +15,7 @@ type EntityTableName = Exclude<
 >;
 export type InsertOf<T extends TableName> = Tables[T]['Insert'];
 export type UpdateOf<T extends TableName> = Tables[T]['Update'];
-function check(error: { message: string } | null) {
+export function check(error: { message: string } | null) {
   if (!error) return;
   const value = error.message.toLowerCase();
   if (value.includes('row-level security') || value.includes('permission'))
@@ -280,6 +280,25 @@ export async function getMaterialUrl(path: string, expiresIn = 300) {
     .createSignedUrl(path, expiresIn);
   check(error);
   return data!.signedUrl;
+}
+/**
+ * Caches a PDF page's extracted text so the assistant can ground answers in
+ * it without re-parsing the PDF on every question. Safe to call every time a
+ * page loads — the unique (material_id, page_number) constraint plus
+ * `ignoreDuplicates` means a page already cached is a no-op, not an error.
+ */
+export async function cacheMaterialPageText(
+  materialId: string,
+  pageNumber: number,
+  content: string,
+) {
+  const { error } = await requireSupabaseClient()
+    .from('study_material_pages')
+    .upsert(
+      { material_id: materialId, page_number: pageNumber, content },
+      { onConflict: 'material_id,page_number', ignoreDuplicates: true },
+    );
+  check(error);
 }
 export async function updatePdfReadingProgress(
   materialId: string,

@@ -3,10 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { confirmDestructive } from '@/lib/confirm';
 import { z } from 'zod';
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
 import { FeedbackState } from '@/components/ui/FeedbackState';
@@ -77,6 +78,17 @@ export function SubjectForm({ id }: { id?: string }) {
     queryFn: () => getSubject(id!),
     enabled: Boolean(id),
   });
+
+  useAssistantScreenContext(
+    useMemo(
+      () => ({
+        type: 'subject',
+        id,
+        label: subject.data?.name ?? (id ? 'Subject' : 'New subject'),
+      }),
+      [id, subject.data?.name],
+    ),
+  );
   const {
     control,
     handleSubmit,

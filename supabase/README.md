@@ -22,7 +22,11 @@ If you use the dashboard SQL editor instead, run these files in order:
 4. `migrations/202608220004_pdf_reader_phase_one.sql`
 5. `migrations/202608220005_pdf_reader_function_privileges.sql`
 6. `migrations/202608230006_pdf_page_notes_phase_two.sql`
-7. `tests/security_assertions.sql`
+7. `migrations/202608230007_pdf_ink_annotations.sql`
+8. `migrations/202608260008_assistant_conversations.sql`
+9. `migrations/202608260009_study_material_pages.sql`
+10. `migrations/202608260010_function_privileges_hardening.sql`
+11. `tests/security_assertions.sql`
 
 ## 2. Configure the app
 
@@ -59,7 +63,22 @@ npx supabase functions deploy send-reminders
 
 Finally, replace the placeholders in `setup_web_push_cron.sql` and run it once in the SQL editor. It stores the function URL and cron secret in Vault and invokes the dispatcher every minute.
 
-## 5. Verify
+## 5. Deploy the AI Study Assistant
+
+The assistant runs entirely server-side. The Gemini API key never reaches the app bundle — the client only calls the authenticated `assistant` Edge Function, which is the sole place the key is used.
+
+Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey), then set it as a function secret and deploy:
+
+```sh
+npx supabase secrets set GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+npx supabase functions deploy assistant
+```
+
+Unlike `send-reminders`, this function keeps Supabase's default JWT verification enabled (no `[functions.assistant]` entry in `config.toml`), so every request must carry a valid signed-in user's session — the same session the rest of the app already uses. `assistant_conversations`/`assistant_messages` (added by `migrations/202608260008_assistant_conversations.sql`) are owner-only via RLS, same as every other table.
+
+`study_material_pages` (added by `migrations/202608260009_study_material_pages.sql`) caches PDF text extracted client-side per page, the first time each page is viewed, so the assistant can ground answers about a PDF in the actual page text without re-extracting it on every question. It's insert-only cache storage — no update policy — deduped by a unique `(material_id, page_number)` constraint.
+
+## 6. Verify
 
 Run `tests/security_assertions.sql`, then inspect Edge Function logs and the `cron.job_run_details` table after creating an activity or exam whose reminder time is due.
 

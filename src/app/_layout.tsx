@@ -15,6 +15,9 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AssistantButton } from '@/components/assistant/AssistantButton';
+import { AssistantProvider } from '@/components/assistant/AssistantProvider';
+import { AssistantSheet } from '@/components/assistant/AssistantSheet';
 import { FeedbackState } from '@/components/ui/FeedbackState';
 import { LaunchAnimation } from '@/components/ui/LaunchAnimation';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
@@ -104,7 +107,7 @@ function RootNavigator() {
   }
 
   return (
-    <>
+    <AssistantProvider>
       <OfflineBanner />
 
       <Stack
@@ -145,8 +148,11 @@ function RootNavigator() {
         </Stack.Protected>
       </Stack>
 
+      <AssistantButton />
+      <AssistantSheet />
+
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-    </>
+    </AssistantProvider>
   );
 }
 

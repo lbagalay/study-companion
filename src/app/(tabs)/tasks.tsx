@@ -13,8 +13,9 @@ import {
 } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { EntityList } from '@/components/ui/EntityList';
 import { radii, spacing, typography } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -37,7 +38,9 @@ type CalendarEvent = {
   onPress: () => void;
 };
 
-const DAY_WIDTH = 122;
+const DAY_WIDTH_FALLBACK = 122;
+const DAY_WIDTH_MIN = 40;
+const DAY_WIDTH_MAX = 140;
 const MAX_EVENTS = 4;
 
 const WEEK_DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -50,7 +53,14 @@ export default function TasksScreen() {
   const exams = useExams();
   const subjects = useSubjects();
 
+  useAssistantScreenContext(useMemo(() => ({ type: 'task', label: 'Tasks' }), []));
+
   const [month, setMonth] = useState(startOfMonth(new Date()));
+  const [calendarWidth, setCalendarWidth] = useState(0);
+
+  const dayWidth = calendarWidth
+    ? Math.min(DAY_WIDTH_MAX, Math.max(DAY_WIDTH_MIN, Math.floor(calendarWidth / 7)))
+    : DAY_WIDTH_FALLBACK;
 
   const events = useMemo<CalendarEvent[]>(() => {
     const assignmentEvents =
@@ -301,6 +311,7 @@ export default function TasksScreen() {
 
       {/* CALENDAR */}
       <View
+        onLayout={(event) => setCalendarWidth(event.nativeEvent.layout.width)}
         style={[
           styles.calendarShell,
           {
@@ -309,143 +320,144 @@ export default function TasksScreen() {
           },
         ]}
       >
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View>
-            {/* DAYS */}
-            <View style={styles.weekHeader}>
-              {WEEK_DAYS.map((day) => (
-                <View
-                  key={day}
+        <View>
+          {/* DAYS */}
+          <View style={styles.weekHeader}>
+            {WEEK_DAYS.map((day) => (
+              <View
+                key={day}
+                style={[
+                  styles.weekHeaderCell,
+                  {
+                    borderColor: palette.border,
+                    width: dayWidth,
+                  },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.weekHeaderCell,
+                    styles.weekDay,
                     {
-                      borderColor: palette.border,
+                      color: palette.textMuted,
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.weekDay,
-                      {
-                        color: palette.textMuted,
-                      },
-                    ]}
-                  >
-                    {day}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            {/* WEEKS */}
-            {weeks.map((week, weekIndex) => (
-              <View key={weekIndex} style={styles.weekRow}>
-                {week.map((day) => {
-                  const dayEvents = eventsForDay(day);
-
-                  const visibleEvents = dayEvents.slice(0, MAX_EVENTS);
-
-                  const hiddenCount = Math.max(0, dayEvents.length - MAX_EVENTS);
-
-                  const currentMonth = isSameMonth(day, month);
-
-                  const today = isSameDay(day, new Date());
-
-                  return (
-                    <View
-                      key={day.toISOString()}
-                      style={[
-                        styles.dayCell,
-                        {
-                          borderColor: palette.border,
-
-                          backgroundColor: currentMonth ? palette.surface : palette.surfaceAlt,
-                        },
-                      ]}
-                    >
-                      {/* DATE NUMBER */}
-                      <View style={styles.dayNumberRow}>
-                        <View
-                          style={[
-                            styles.dayNumberBubble,
-
-                            today
-                              ? {
-                                  backgroundColor: palette.accentSolid,
-                                }
-                              : null,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.dayNumber,
-                              {
-                                color: today
-                                  ? '#FFFFFF'
-                                  : currentMonth
-                                    ? palette.text
-                                    : palette.textMuted,
-                              },
-                            ]}
-                          >
-                            {format(day, 'd')}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* EVENTS */}
-                      <View style={styles.events}>
-                        {visibleEvents.map((event) => (
-                          <Pressable
-                            accessibilityLabel={`${event.kind === 'QUIZ' ? 'Quiz' : event.kind === 'EXAM' ? 'Exam' : 'Assignment'}: ${event.title}${event.completed ? ', completed' : event.overdue ? ', overdue' : ''}`}
-                            accessibilityRole="button"
-                            key={event.id}
-                            onPress={event.onPress}
-                            style={({ pressed }) => [
-                              styles.event,
-
-                              {
-                                backgroundColor: event.color,
-
-                                opacity: event.completed ? 0.45 : pressed ? 0.75 : 1,
-                              },
-                            ]}
-                          >
-                            <Text
-                              numberOfLines={1}
-                              style={[
-                                styles.eventText,
-
-                                event.completed ? styles.completedText : null,
-                              ]}
-                            >
-                              {event.title}
-                            </Text>
-
-                            {event.overdue ? <View style={styles.overdueDot} /> : null}
-                          </Pressable>
-                        ))}
-
-                        {hiddenCount > 0 ? (
-                          <Text
-                            style={[
-                              styles.moreText,
-                              {
-                                color: palette.textMuted,
-                              },
-                            ]}
-                          >
-                            +{hiddenCount} more
-                          </Text>
-                        ) : null}
-                      </View>
-                    </View>
-                  );
-                })}
+                  {day}
+                </Text>
               </View>
             ))}
           </View>
-        </ScrollView>
+
+          {/* WEEKS */}
+          {weeks.map((week, weekIndex) => (
+            <View key={weekIndex} style={styles.weekRow}>
+              {week.map((day) => {
+                const dayEvents = eventsForDay(day);
+
+                const visibleEvents = dayEvents.slice(0, MAX_EVENTS);
+
+                const hiddenCount = Math.max(0, dayEvents.length - MAX_EVENTS);
+
+                const currentMonth = isSameMonth(day, month);
+
+                const today = isSameDay(day, new Date());
+
+                return (
+                  <View
+                    key={day.toISOString()}
+                    style={[
+                      styles.dayCell,
+                      {
+                        borderColor: palette.border,
+
+                        backgroundColor: currentMonth ? palette.surface : palette.surfaceAlt,
+
+                        width: dayWidth,
+                      },
+                    ]}
+                  >
+                    {/* DATE NUMBER */}
+                    <View style={styles.dayNumberRow}>
+                      <View
+                        style={[
+                          styles.dayNumberBubble,
+
+                          today
+                            ? {
+                                backgroundColor: palette.accentSolid,
+                              }
+                            : null,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.dayNumber,
+                            {
+                              color: today
+                                ? '#FFFFFF'
+                                : currentMonth
+                                  ? palette.text
+                                  : palette.textMuted,
+                            },
+                          ]}
+                        >
+                          {format(day, 'd')}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* EVENTS */}
+                    <View style={styles.events}>
+                      {visibleEvents.map((event) => (
+                        <Pressable
+                          accessibilityLabel={`${event.kind === 'QUIZ' ? 'Quiz' : event.kind === 'EXAM' ? 'Exam' : 'Assignment'}: ${event.title}${event.completed ? ', completed' : event.overdue ? ', overdue' : ''}`}
+                          accessibilityRole="button"
+                          key={event.id}
+                          onPress={event.onPress}
+                          style={({ pressed }) => [
+                            styles.event,
+
+                            {
+                              backgroundColor: event.color,
+
+                              opacity: event.completed ? 0.45 : pressed ? 0.75 : 1,
+                            },
+                          ]}
+                        >
+                          <Text
+                            numberOfLines={1}
+                            style={[
+                              styles.eventText,
+
+                              event.completed ? styles.completedText : null,
+                            ]}
+                          >
+                            {event.title}
+                          </Text>
+
+                          {event.overdue ? <View style={styles.overdueDot} /> : null}
+                        </Pressable>
+                      ))}
+
+                      {hiddenCount > 0 ? (
+                        <Text
+                          style={[
+                            styles.moreText,
+                            {
+                              color: palette.textMuted,
+                            },
+                          ]}
+                        >
+                          +{hiddenCount} more
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </View>
       </View>
 
       <View style={styles.bottomSpace} />
@@ -533,7 +545,6 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     height: 40,
     justifyContent: 'center',
-    width: DAY_WIDTH,
   },
 
   weekDay: {
@@ -552,7 +563,6 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     minHeight: 112,
     padding: 5,
-    width: DAY_WIDTH,
   },
 
   dayNumberRow: {

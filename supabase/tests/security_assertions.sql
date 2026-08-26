@@ -10,7 +10,7 @@ begin
   from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
   where n.nspname = 'public'
-    and c.relname = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'pdf_annotations', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries'])
+    and c.relname = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'pdf_annotations', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries', 'assistant_conversations', 'assistant_messages', 'study_material_pages'])
     and not c.relrowsecurity;
 
   if missing_rls is not null then
@@ -20,10 +20,10 @@ begin
   select count(*) into policy_count
   from pg_policies
   where schemaname = 'public'
-    and tablename = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'pdf_annotations', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries']);
+    and tablename = any(array['profiles', 'subjects', 'class_schedules', 'assignments', 'exams', 'study_materials', 'notes', 'pdf_annotations', 'study_sessions', 'web_push_subscriptions', 'notification_deliveries', 'assistant_conversations', 'assistant_messages', 'study_material_pages']);
 
-  if policy_count <> 39 then
-    raise exception 'Expected 39 public-table policies, found %', policy_count;
+  if policy_count <> 49 then
+    raise exception 'Expected 49 public-table policies, found %', policy_count;
   end if;
 
   select public into bucket_is_public from storage.buckets where id = 'study-materials';
@@ -76,6 +76,30 @@ begin
     where table_schema = 'public' and table_name = 'pdf_annotations' and column_name = 'strokes' and data_type = 'jsonb'
   ) then
     raise exception 'Private per-page PDF annotation storage is missing';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'assistant_messages' and column_name = 'context_type'
+  ) then
+    raise exception 'Assistant message context columns are missing';
+  end if;
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'assistant_messages' and column_name = 'user_id'
+  ) then
+    raise exception 'assistant_messages must derive ownership from its conversation, not its own user_id';
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.study_material_pages'::regclass and contype = 'u'
+  ) then
+    raise exception 'study_material_pages must have a unique (material_id, page_number) constraint to dedupe cached PDF text';
+  end if;
+  if exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'study_material_pages' and cmd = 'UPDATE'
+  ) then
+    raise exception 'study_material_pages is insert-only cache storage and must not be updatable';
   end if;
 end;
 $$;

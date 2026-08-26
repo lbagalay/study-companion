@@ -2,10 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { SubjectField } from '@/components/forms/SubjectField';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
@@ -75,6 +76,17 @@ export function MaterialForm({ id }: { id?: string }) {
     queryFn: () => getMaterial(id!),
     enabled: Boolean(id),
   });
+
+  useAssistantScreenContext(
+    useMemo(
+      () => ({
+        type: 'study_material',
+        id,
+        label: item.data?.title ?? (id ? 'Study material' : 'New study material'),
+      }),
+      [id, item.data?.title],
+    ),
+  );
   const {
     control,
     getValues,

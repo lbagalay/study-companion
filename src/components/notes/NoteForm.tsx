@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, StyleSheet, View } from 'react-native';
 import { confirmDestructive } from '@/lib/confirm';
 import { z } from 'zod';
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { SubjectField } from '@/components/forms/SubjectField';
 import { AppButton } from '@/components/ui/AppButton';
 import { ChoiceField } from '@/components/ui/ChoiceField';
@@ -38,6 +39,13 @@ export function NoteForm({ id }: { id?: string }) {
     queryFn: () => getNote(id!),
     enabled: Boolean(id),
   });
+
+  useAssistantScreenContext(
+    useMemo(
+      () => ({ type: 'note', id, label: item.data?.title ?? (id ? 'Note' : 'New note') }),
+      [id, item.data?.title],
+    ),
+  );
   const {
     control,
     handleSubmit,

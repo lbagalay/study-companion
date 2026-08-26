@@ -1,5 +1,7 @@
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { EntityCard } from '@/components/ui/EntityCard';
 import { EntityList } from '@/components/ui/EntityList';
 import { spacing } from '@/constants/theme';
@@ -10,6 +12,8 @@ export default function SubjectsScreen() {
   const query = useSubjects();
   const { width } = useWindowDimensions();
   const twoColumn = width >= 760;
+
+  useAssistantScreenContext(useMemo(() => ({ type: 'subject', label: 'Subjects' }), []));
   return (
     <EntityList
       addLabel="Add subject manually"
