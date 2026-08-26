@@ -287,19 +287,6 @@ export default function HomeScreen() {
             />
             <Stat
               color={palette.text}
-              icon="book-outline"
-              label="Study sessions"
-              surface={palette.surface}
-              value={
-                sessions.data?.filter(
-                  (s) =>
-                    s.status === 'COMPLETED' &&
-                    isThisWeek(new Date(s.updated_at), { weekStartsOn: 1 }),
-                ).length ?? 0
-              }
-            />
-            <Stat
-              color={palette.text}
               icon="school-outline"
               label="Upcoming exams"
               surface={palette.surface}
