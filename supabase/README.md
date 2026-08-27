@@ -27,7 +27,8 @@ If you use the dashboard SQL editor instead, run these files in order:
 9. `migrations/202608260009_study_material_pages.sql`
 10. `migrations/202608260010_function_privileges_hardening.sql`
 11. `migrations/202608260011_assignment_cancelled_status.sql`
-12. `tests/security_assertions.sql`
+12. `migrations/202608260012_canvas_notes.sql`
+13. `tests/security_assertions.sql`
 
 ## 2. Configure the app
 

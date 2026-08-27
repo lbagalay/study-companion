@@ -68,6 +68,37 @@ type PointerPosition = {
   y: number;
 };
 
+function centroidOf(points: PointerPosition[]): PointerPosition | null {
+  if (points.length < 2) return null;
+  return {
+    x: (points[0].x + points[1].x) / 2,
+    y: (points[0].y + points[1].y) / 2,
+  };
+}
+
+/**
+ * Walks up from the canvas to find whatever actually scrolls it — the
+ * focus-mode viewer div, or (outside focus mode) the RN Web ScrollView's
+ * underlying scrollable div. Falls back to the document itself.
+ */
+function findScrollParent(node: HTMLElement | null): HTMLElement | null {
+  let el = node?.parentElement ?? null;
+
+  while (el) {
+    const style = window.getComputedStyle(el);
+    const canScrollY = /(auto|scroll)/.test(style.overflowY) && el.scrollHeight > el.clientHeight;
+    const canScrollX = /(auto|scroll)/.test(style.overflowX) && el.scrollWidth > el.clientWidth;
+
+    if (canScrollY || canScrollX) {
+      return el;
+    }
+
+    el = el.parentElement;
+  }
+
+  return document.scrollingElement as HTMLElement | null;
+}
+
 type StrokeMeta = {
   lineStyle: LineStyle;
   mode: InkMode;
@@ -1052,6 +1083,8 @@ const PdfInkCanvas = forwardRef<
 
   const pinchDistanceRef = useRef<number | null>(null);
 
+  const panScrollElRef = useRef<HTMLElement | null>(null);
+
   const enqueueSave = useRef(createSaveQueue()).current;
 
   const lastFailedRef = useRef<PdfInkStroke[] | null>(null);
@@ -1386,6 +1419,8 @@ const PdfInkCanvas = forwardRef<
 
           pinchDistanceRef.current = currentPinchDistance();
 
+          panScrollElRef.current = findScrollParent(canvas);
+
           return;
         }
 
@@ -1456,6 +1491,8 @@ const PdfInkCanvas = forwardRef<
       const stylus = looksLikeStylus(event);
 
       if (isTouch && touchPointersRef.current.has(event.pointerId)) {
+        const previousCentroid = centroidOf(Array.from(touchPointersRef.current.values()));
+
         touchPointersRef.current.set(
           event.pointerId,
 
@@ -1466,12 +1503,26 @@ const PdfInkCanvas = forwardRef<
           },
         );
 
+        const nextCentroid = centroidOf(Array.from(touchPointersRef.current.values()));
+
         const previousDistance = pinchDistanceRef.current;
 
         const nextDistance = currentPinchDistance();
 
         if (previousDistance !== null && nextDistance !== null) {
           event.preventDefault();
+
+          /*
+           * Two fingers always pan, whether or not their spread is also
+           * changing — this is what lets scrolling work no matter which
+           * drawing tool is selected, instead of only via the Hand tool.
+           */
+          if (previousCentroid && nextCentroid && panScrollElRef.current) {
+            panScrollElRef.current.scrollBy({
+              left: previousCentroid.x - nextCentroid.x,
+              top: previousCentroid.y - nextCentroid.y,
+            });
+          }
 
           if (previousDistance > 0 && Math.abs(nextDistance - previousDistance) >= 2) {
             onPinchZoom(
@@ -1609,6 +1660,7 @@ const PdfInkCanvas = forwardRef<
 
           if (touchPointersRef.current.size < 2) {
             pinchDistanceRef.current = null;
+            panScrollElRef.current = null;
           }
 
           return;
@@ -1737,7 +1789,7 @@ const PdfInkCanvas = forwardRef<
  */
 
 type AnnotationContextValue = {
-  activeState: PageUiState;
+  canExport: boolean;
 
   chooseColor: (color: string) => void;
 
@@ -1764,8 +1816,6 @@ type AnnotationContextValue = {
   onExport: () => void;
 
   onPinchZoom: (distanceRatio: number) => void;
-
-  pageStates: Record<number, PageUiState>;
 
   redoActive: () => void;
 
@@ -1816,12 +1866,38 @@ function useAnnotationContext() {
   return context;
 }
 
+/*
+ * Split out from AnnotationContext on purpose: `pageStates` changes on
+ * every stroke commit, undo, redo, and save-state transition — for ANY
+ * page. A PDF reader keeps every page a student has scrolled past mounted
+ * (see PdfReader's `shouldRender`), so folding this into the main context
+ * meant every one of those mounted canvases re-rendered on every single
+ * annotation action anywhere in the document, which is what made undo/redo
+ * feel laggy on longer documents. Only the toolbar actually reads this.
+ */
+type PageStatusContextValue = {
+  pageStates: Record<number, PageUiState>;
+};
+
+const PageStatusContext = createContext<PageStatusContextValue | undefined>(undefined);
+
+function usePageStatus() {
+  const context = useContext(PageStatusContext);
+
+  if (!context) {
+    throw new Error('PDF annotation components must be inside PdfAnnotationProvider.');
+  }
+
+  return context;
+}
+
 /* ============================================================
  * PROVIDER
  * ============================================================
  */
 
 export function PdfAnnotationProvider({
+  canExport = true,
   children,
   currentPage,
   exportError,
@@ -1831,6 +1907,9 @@ export function PdfAnnotationProvider({
   onExport,
   onPinchZoom,
 }: {
+  /** False for a blank-canvas note — there's no source PDF to export a copy of. */
+  canExport?: boolean;
+
   children: ReactNode;
 
   currentPage: number;
@@ -1981,11 +2060,9 @@ export function PdfAnnotationProvider({
     pageHandlesRef.current.get(currentPage)?.reload();
   }, [currentPage]);
 
-  const activeState = pageStates[currentPage] ?? DEFAULT_PAGE_STATE;
-
   const value = useMemo<AnnotationContextValue>(
     () => ({
-      activeState,
+      canExport,
       chooseColor,
       chooseTool,
       clearActive,
@@ -1999,7 +2076,6 @@ export function PdfAnnotationProvider({
       materialId,
       onExport,
       onPinchZoom,
-      pageStates,
       redoActive,
       registerPageHandle,
       reloadActive,
@@ -2017,7 +2093,7 @@ export function PdfAnnotationProvider({
     }),
 
     [
-      activeState,
+      canExport,
       chooseColor,
       chooseTool,
       clearActive,
@@ -2031,7 +2107,6 @@ export function PdfAnnotationProvider({
       materialId,
       onExport,
       onPinchZoom,
-      pageStates,
       redoActive,
       registerPageHandle,
       reloadActive,
@@ -2045,7 +2120,13 @@ export function PdfAnnotationProvider({
     ],
   );
 
-  return <AnnotationContext.Provider value={value}>{children}</AnnotationContext.Provider>;
+  const pageStatusValue = useMemo<PageStatusContextValue>(() => ({ pageStates }), [pageStates]);
+
+  return (
+    <AnnotationContext.Provider value={value}>
+      <PageStatusContext.Provider value={pageStatusValue}>{children}</PageStatusContext.Provider>
+    </AnnotationContext.Provider>
+  );
 }
 
 /* ============================================================
@@ -2633,7 +2714,7 @@ function AnnotationMoreMenu({
 }) {
   const palette = useAppTheme();
 
-  const { clearActive, exporting, onExport, tool } = useAnnotationContext();
+  const { canExport, clearActive, exporting, onExport, tool } = useAnnotationContext();
 
   return (
     <div
@@ -2682,17 +2763,19 @@ function AnnotationMoreMenu({
           />
         ) : null}
 
-        <MenuRow
-          icon="download-outline"
-          label={exporting ? 'Preparing PDF…' : 'Download annotated PDF'}
-          onPress={() => {
-            onClose();
+        {canExport ? (
+          <MenuRow
+            icon="download-outline"
+            label={exporting ? 'Preparing PDF…' : 'Download annotated PDF'}
+            onPress={() => {
+              onClose();
 
-            if (!exporting) {
-              onExport();
-            }
-          }}
-        />
+              if (!exporting) {
+                onExport();
+              }
+            }}
+          />
+        ) : null}
 
         <MenuRow
           danger
@@ -2761,14 +2844,12 @@ export function PdfAnnotationToolbar({ focusMode = false }: { focusMode?: boolea
   const palette = useAppTheme();
 
   const {
-    activeState,
     chooseColor,
     chooseTool,
     color,
     currentPage,
     exportError,
     exportSuccess,
-    pageStates,
     redoActive,
     reloadActive,
     retryActive,
@@ -2777,6 +2858,10 @@ export function PdfAnnotationToolbar({ focusMode = false }: { focusMode?: boolea
     tool,
     undoActive,
   } = useAnnotationContext();
+
+  const { pageStates } = usePageStatus();
+
+  const activeState = pageStates[currentPage] ?? DEFAULT_PAGE_STATE;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 

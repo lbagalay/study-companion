@@ -206,7 +206,20 @@ export async function saveMaterial(input: InsertOf<'study_materials'>, id?: stri
     : requireSupabaseClient().from('study_materials').insert(input).select().single();
   const { data, error } = await query;
   check(error);
-  return data;
+  return data!;
+}
+/**
+ * A blank-canvas quick note: a study material with no file, annotated with
+ * the same ink tools as a PDF page. `page_count: 1` satisfies the same
+ * pdf_annotations RLS check a real PDF page relies on.
+ */
+export async function createCanvasNote(subjectId: string, title: string) {
+  return saveMaterial({
+    page_count: 1,
+    subject_id: subjectId,
+    title,
+    type: 'CANVAS',
+  } as InsertOf<'study_materials'>);
 }
 export async function savePdfMaterial(
   input: Pick<

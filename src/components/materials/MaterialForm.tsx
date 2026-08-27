@@ -4,7 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 import { useAssistantScreenContext } from '@/components/assistant/AssistantProvider';
 import { SubjectField } from '@/components/forms/SubjectField';
@@ -112,7 +112,8 @@ export function MaterialForm({ id }: { id?: string }) {
       setValue('subject_id', subjects.data[0].id, { shouldValidate: true });
   }, [getValues, id, setValue, subjects.data]);
   useEffect(() => {
-    if (item.data)
+    // Canvas notes never reach this form's fields — see the CANVAS guard below.
+    if (item.data && item.data.type !== 'CANVAS')
       reset({
         subject_id: item.data.subject_id,
         title: item.data.title,
@@ -210,6 +211,25 @@ export function MaterialForm({ id }: { id?: string }) {
     );
   if (id && item.isLoading)
     return <FeedbackState loading message="Loading material." title="One moment" />;
+  /*
+   * A canvas note has no file/description fields for this generic form to
+   * edit — it's opened and renamed from its own drawing screen instead.
+   */
+  if (id && item.data?.type === 'CANVAS') {
+    return Platform.OS === 'web' ? (
+      <FeedbackState
+        actionLabel="Open canvas note"
+        message="Canvas notes are opened and renamed from their own drawing screen."
+        onAction={() => router.replace(`/materials/${id}/canvas` as never)}
+        title="This is a canvas note"
+      />
+    ) : (
+      <FeedbackState
+        message="Canvas notes can only be opened in the web app so far."
+        title="This is a canvas note"
+      />
+    );
+  }
   return (
     <>
       <ScreenContainer>

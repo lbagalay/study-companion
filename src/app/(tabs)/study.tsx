@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -37,9 +38,12 @@ import { pdfReadingProgress } from '@/lib/pdf/progress';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import {
+  createCanvasNote,
   deleteMaterial as deleteMaterialService,
   deleteRecord,
   getFolderSkinUrl,
+  type InsertOf,
+  saveSubject,
 } from '@/services';
 
 type LibraryFilter = 'ALL' | 'MATERIALS' | 'NOTES';
@@ -134,9 +138,72 @@ export default function StudyScreen() {
     },
   });
 
+  const [renamingFolder, setRenamingFolder] = useState(false);
+
+  const [renameDraft, setRenameDraft] = useState('');
+
+  const renameSubject = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      saveSubject({ name } as InsertOf<'subjects'>, id),
+
+    onSuccess: async () => {
+      setRenamingFolder(false);
+      await subjects.refetch();
+    },
+
+    onError: (error) => {
+      Alert.alert('Could not rename folder', getErrorMessage(error));
+    },
+  });
+
+  const addCanvasNote = useMutation({
+    mutationFn: (subjectId: string) => createCanvasNote(subjectId, 'Untitled canvas'),
+
+    onSuccess: async (created) => {
+      await materials.refetch();
+      router.push(`/materials/${created.id}/canvas` as never);
+    },
+
+    onError: (error) => {
+      Alert.alert('Could not create canvas note', getErrorMessage(error));
+    },
+  });
+
+  const startRenamingFolder = () => {
+    setRenameDraft(selectedSubject?.name ?? '');
+    setRenamingFolder(true);
+  };
+
+  const confirmRenamingFolder = () => {
+    const trimmed = renameDraft.trim();
+
+    if (!trimmed || !selectedSubjectId || renameSubject.isPending) {
+      return;
+    }
+
+    if (trimmed === selectedSubject?.name) {
+      setRenamingFolder(false);
+      return;
+    }
+
+    renameSubject.mutate({ id: selectedSubjectId, name: trimmed });
+  };
+
   const openMaterial = (item: NonNullable<typeof materials.data>[number]) => {
     if (item.type === 'PDF' && item.file_url) {
       router.push(`/materials/${item.id}/reader` as never);
+
+      return;
+    }
+
+    if (item.type === 'CANVAS') {
+      if (Platform.OS !== 'web') {
+        Alert.alert('Web only for now', 'Canvas notes can only be opened in the web app so far.');
+
+        return;
+      }
+
+      router.push(`/materials/${item.id}/canvas` as never);
 
       return;
     }
@@ -194,6 +261,8 @@ export default function StudyScreen() {
     setFilter('ALL');
 
     setSearch('');
+
+    setRenamingFolder(false);
   };
 
   const closeFolder = () => {
@@ -202,6 +271,8 @@ export default function StudyScreen() {
     setFilter('ALL');
 
     setSearch('');
+
+    setRenamingFolder(false);
   };
 
   const getFolderCounts = (subjectId: string) => {
@@ -732,20 +803,79 @@ export default function StudyScreen() {
         </View>
 
         <View style={styles.folderHeaderCopy}>
-          <Text
-            numberOfLines={2}
-            style={[
-              styles.folderTitle,
+          {renamingFolder ? (
+            <View style={styles.renameRow}>
+              <TextInput
+                autoFocus
+                onChangeText={setRenameDraft}
+                onSubmitEditing={confirmRenamingFolder}
+                returnKeyType="done"
+                selectionColor={palette.accent}
+                style={[
+                  styles.renameInput,
+                  compact && styles.folderTitleCompact,
+                  {
+                    borderColor: palette.border,
+                    color: palette.text,
+                  },
+                ]}
+                value={renameDraft}
+              />
 
-              compact && styles.folderTitleCompact,
+              <Pressable
+                accessibilityLabel="Save folder name"
+                disabled={renameSubject.isPending}
+                onPress={confirmRenamingFolder}
+                style={[styles.renameIconButton, { backgroundColor: palette.accentSolid }]}
+              >
+                <Ionicons color="#FFFFFF" name="checkmark" size={16} />
+              </Pressable>
 
-              {
-                color: palette.text,
-              },
-            ]}
-          >
-            {selectedSubjectId === UNFILED_ID ? 'Unfiled' : (selectedSubject?.name ?? 'Subject')}
-          </Text>
+              <Pressable
+                accessibilityLabel="Cancel rename"
+                onPress={() => setRenamingFolder(false)}
+                style={[
+                  styles.renameIconButton,
+                  {
+                    backgroundColor: palette.surfaceAlt,
+                    borderColor: palette.border,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Ionicons color={palette.text} name="close" size={16} />
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.renameRow}>
+              <Text
+                numberOfLines={2}
+                style={[
+                  styles.folderTitle,
+
+                  compact && styles.folderTitleCompact,
+
+                  {
+                    color: palette.text,
+                  },
+                ]}
+              >
+                {selectedSubjectId === UNFILED_ID
+                  ? 'Unfiled'
+                  : (selectedSubject?.name ?? 'Subject')}
+              </Text>
+
+              {selectedSubjectId !== UNFILED_ID ? (
+                <Pressable
+                  accessibilityLabel="Rename folder"
+                  hitSlop={8}
+                  onPress={startRenamingFolder}
+                >
+                  <Ionicons color={palette.textMuted} name="pencil-outline" size={16} />
+                </Pressable>
+              ) : null}
+            </View>
+          )}
 
           <Text
             style={[
@@ -758,6 +888,29 @@ export default function StudyScreen() {
             {folderMaterials.length} materials · {folderNotes.length} notes
           </Text>
         </View>
+
+        {Platform.OS === 'web' && selectedSubjectId && selectedSubjectId !== UNFILED_ID ? (
+          <Pressable
+            accessibilityLabel="New canvas note"
+            disabled={addCanvasNote.isPending}
+            onPress={() => addCanvasNote.mutate(selectedSubjectId)}
+            style={[
+              styles.addHeaderButton,
+              {
+                backgroundColor: palette.surfaceAlt,
+                borderColor: palette.border,
+                borderWidth: 1,
+                opacity: addCanvasNote.isPending ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Ionicons color={palette.text} name="brush-outline" size={18} />
+
+            {!phone ? (
+              <Text style={[styles.addHeaderText, { color: palette.text }]}>Draw</Text>
+            ) : null}
+          </Pressable>
+        ) : null}
 
         <Pressable
           onPress={() => router.push('/materials/create')}
@@ -915,7 +1068,13 @@ export default function StudyScreen() {
                   >
                     <Ionicons
                       color={item.type === 'PDF' ? palette.accentStrong : palette.lavender}
-                      name={item.type === 'PDF' ? 'document-text-outline' : 'link-outline'}
+                      name={
+                        item.type === 'PDF'
+                          ? 'document-text-outline'
+                          : item.type === 'CANVAS'
+                            ? 'brush-outline'
+                            : 'link-outline'
+                      }
                       size={compact ? 25 : 30}
                     />
 
@@ -968,7 +1127,9 @@ export default function StudyScreen() {
                         ? item.page_count
                           ? `${item.page_count} pages`
                           : 'PDF'
-                        : item.type}
+                        : item.type === 'CANVAS'
+                          ? 'Canvas note'
+                          : item.type}
                     </Text>
                   </View>
                 </Pressable>
@@ -1510,6 +1671,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'center',
   },
 
   folderTile: {
@@ -1595,6 +1757,30 @@ const styles = StyleSheet.create({
   folderTitleCompact: {
     fontSize: 18,
     lineHeight: 23,
+  },
+
+  renameRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  renameInput: {
+    ...typography.sectionTitle,
+    borderBottomWidth: 1,
+    flexShrink: 1,
+    fontSize: 22,
+    lineHeight: 28,
+    minWidth: 0,
+    paddingVertical: 2,
+  },
+
+  renameIconButton: {
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
   },
 
   folderSubtitle: {

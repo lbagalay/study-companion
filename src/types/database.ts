@@ -80,7 +80,8 @@ export type Exam = Timestamps & {
   notification_ids: string[];
 };
 
-export type MaterialType = 'PDF' | 'IMAGE' | 'DOCUMENT' | 'LINK' | 'VIDEO_LINK' | 'NOTE' | 'OTHER';
+export type MaterialType =
+  'PDF' | 'IMAGE' | 'DOCUMENT' | 'LINK' | 'VIDEO_LINK' | 'NOTE' | 'CANVAS' | 'OTHER';
 
 export type StudyMaterial = Timestamps & {
   id: string;
