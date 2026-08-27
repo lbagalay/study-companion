@@ -56,7 +56,7 @@ const schema = z.object({
 
   type: z.enum(['QUIZ', 'EXAM', 'MIDTERM', 'FINAL', 'PRACTICAL', 'PRESENTATION', 'OTHER']),
 
-  exam_at: z.string().datetime('Choose a valid exam date.'),
+  exam_at: z.string().datetime({ message: 'Choose a valid exam date.', offset: true }),
 
   room: z.string().trim().max(50, 'Keep the room under 50 characters.'),
 

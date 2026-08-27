@@ -33,7 +33,7 @@ const schema = z.object({
       'Enter 5–480 minutes.',
     ),
   availableDays: z.array(z.number().min(0).max(6)).min(1, 'Choose at least one day.'),
-  time: z.string().datetime(),
+  time: z.string().datetime({ offset: true }),
 });
 type Values = z.infer<typeof schema>;
 export default function CreatePlanScreen() {

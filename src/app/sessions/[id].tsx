@@ -37,7 +37,7 @@ const schema = z.object({
     .trim()
     .min(1, 'Enter a study topic.')
     .max(300, 'Keep the topic under 300 characters.'),
-  plannedAt: z.string().datetime('Choose a valid date.'),
+  plannedAt: z.string().datetime({ message: 'Choose a valid date.', offset: true }),
   duration: z
     .string()
     .refine(

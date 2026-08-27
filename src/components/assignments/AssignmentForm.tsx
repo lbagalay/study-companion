@@ -56,7 +56,7 @@ const schema = z.object({
 
   description: z.string().trim().max(3000, 'Keep the description under 3,000 characters.'),
 
-  due_at: z.string().datetime('Choose a valid due date.'),
+  due_at: z.string().datetime({ message: 'Choose a valid due date.', offset: true }),
 
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
 

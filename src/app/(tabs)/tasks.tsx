@@ -422,24 +422,33 @@ export default function TasksScreen() {
                           style={({ pressed }) => [
                             styles.event,
 
-                            {
-                              backgroundColor: event.color,
-
-                              opacity:
-                                event.completed || event.cancelled ? 0.45 : pressed ? 0.75 : 1,
-                            },
+                            event.cancelled
+                              ? {
+                                  backgroundColor: 'transparent',
+                                  borderColor: event.color,
+                                  borderWidth: 1.5,
+                                }
+                              : {
+                                  backgroundColor: event.color,
+                                  opacity: event.completed ? 0.45 : pressed ? 0.75 : 1,
+                                },
                           ]}
                         >
                           <Text
                             numberOfLines={1}
                             style={[
                               styles.eventText,
-
-                              event.completed || event.cancelled ? styles.completedText : null,
+                              event.cancelled ? { color: event.color } : null,
                             ]}
                           >
                             {event.title}
                           </Text>
+
+                          {event.completed ? <View style={styles.crashOutLine} /> : null}
+
+                          {event.cancelled ? (
+                            <View style={[styles.crashOutLine, { backgroundColor: event.color }]} />
+                          ) : null}
 
                           {event.overdue ? <View style={styles.overdueDot} /> : null}
                         </Pressable>
@@ -611,8 +620,14 @@ const styles = StyleSheet.create({
     paddingRight: 5,
   },
 
-  completedText: {
-    textDecorationLine: 'line-through',
+  crashOutLine: {
+    backgroundColor: '#FFFFFF',
+    height: 1,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    transform: [{ translateY: -0.5 }],
   },
 
   overdueDot: {
